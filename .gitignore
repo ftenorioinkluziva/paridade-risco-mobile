@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+.npm/
 
 # Expo
 .expo/
@@ -26,6 +27,18 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# next
+.next/
+apps/api/.next/
+apps/api/out/
+
+# drizzle
+apps/api/drizzle/
+
+# env
+.env
+apps/api/.env
+
 # macOS
 .DS_Store
 *.pem
@@ -39,3 +52,25 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Environment & Secrets (AIOX)
+.env.local
+.env.*.local
+
+# Dependencies (AIOX)
+node_modules
+
+# Build & Logs (AIOX)
+build/
+*.log
+logs/
+
+# IDE & OS (AIOX)
+Thumbs.db
+.idea/
+*.swp
+
+# AIOX Local (AIOX)
+.aiox-core/local/
+.claude/settings.local.json
+.aiox/install-log.txt

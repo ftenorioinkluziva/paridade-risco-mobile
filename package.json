@@ -1,22 +1,33 @@
 {
-  "name": "paridade-risco-mobile",
-  "version": "1.0.0",
-  "main": "index.ts",
+  "name": "paridade-risco-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
-  },
-  "dependencies": {
-    "expo": "~54.0.33",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5"
+    "sync:ide": "node .aiox-core/infrastructure/scripts/ide-sync/index.js sync",
+    "sync:ide:check": "node .aiox-core/infrastructure/scripts/ide-sync/index.js validate --strict",
+    "sync:skills:codex": "node .aiox-core/infrastructure/scripts/codex-skills-sync/index.js",
+    "sync:skills:codex:global": "node .aiox-core/infrastructure/scripts/codex-skills-sync/index.js --global",
+    "validate:structure": "node .aiox-core/infrastructure/scripts/validate-paths.js",
+    "validate:agents": "node .aiox-core/infrastructure/scripts/validate-agents.js",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:mobile": "npm run start --workspace @paridade-risco/mobile",
+    "android": "npm run android --workspace @paridade-risco/mobile",
+    "web": "npm run web --workspace @paridade-risco/mobile",
+    "dev:api": "npm run dev --workspace @paridade-risco/api",
+    "build:api": "npm run build --workspace @paridade-risco/api",
+    "lint:api": "npm run lint --workspace @paridade-risco/api",
+    "typecheck:mobile": "npm run typecheck --workspace @paridade-risco/mobile",
+    "typecheck:api": "npm run typecheck --workspace @paridade-risco/api",
+    "db:generate": "npm run db:generate --workspace @paridade-risco/api",
+    "db:migrate": "npm run db:migrate --workspace @paridade-risco/api",
+    "db:studio": "npm run db:studio --workspace @paridade-risco/api"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
-  },
-  "private": true
+    "next": "^16.2.3"
+  }
 }

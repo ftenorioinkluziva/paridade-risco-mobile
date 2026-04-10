@@ -1,0 +1,15 @@
+pm_tool:
+  type: linear
+  config:
+    api_key: "${LINEAR_API_KEY}"
+    team_id: "${LINEAR_TEAM_ID}"
+    team_key: "${LINEAR_TEAM_KEY}"
+    project_id: "${LINEAR_PROJECT_ID}"
+    project_name: "Paridade de Risco"
+    project_url: "https://linear.app/blackboxinovacao/project/paridade-de-risco-b43d9df4fe4c/"
+    auto_assign_active_cycle: true
+    state_mapping:
+      Draft: "Backlog"
+      InProgress: "In Progress"
+      Review: "In Review"
+      Done: "Done"
