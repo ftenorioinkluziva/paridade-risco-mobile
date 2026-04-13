@@ -1,9 +1,17 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { resolveUserId } from "@/lib/session";
+
+const updateProfileSchema = z.object({
+  birthDate: z.string().datetime().optional().nullable(),
+  image: z.string().url().optional().nullable(),
+  phone: z.string().max(40).optional().nullable(),
+  role: z.enum(["ADMIN", "USER"]).optional(),
+});
 
 export async function GET(request: Request) {
   const userId = await resolveUserId(request);
@@ -31,13 +39,57 @@ export async function GET(request: Request) {
     id: user.id,
     name: user.name,
     email: user.email,
+    phone: user.phone,
+    image: user.image,
+    role: user.role,
+    birthDate: user.birthDate?.toISOString() ?? null,
     initials: user.name
       .split(" ")
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join(""),
-    roleLabel: "Investidor",
+    roleLabel: user.role === "ADMIN" ? "Administrador" : "Investidor",
     activeBasketName: user.selectedBasket?.name ?? "Sem cesta ativa",
+  });
+}
+
+export async function PUT(request: Request) {
+  const userId = await resolveUserId(request);
+
+  if (!userId) {
+    return NextResponse.json({ error: "No user available" }, { status: 404 });
+  }
+
+  const body = await request.json();
+  const parsed = updateProfileSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      birthDate: parsed.data.birthDate ? new Date(parsed.data.birthDate) : null,
+      image: parsed.data.image ?? null,
+      phone: parsed.data.phone ?? null,
+      role: parsed.data.role,
+    })
+    .where(eq(users.id, userId))
+    .returning({
+      birthDate: users.birthDate,
+      id: users.id,
+      image: users.image,
+      phone: users.phone,
+      role: users.role,
+    });
+
+  return NextResponse.json({
+    birthDate: updatedUser.birthDate?.toISOString() ?? null,
+    id: updatedUser.id,
+    image: updatedUser.image,
+    phone: updatedUser.phone,
+    role: updatedUser.role,
   });
 }

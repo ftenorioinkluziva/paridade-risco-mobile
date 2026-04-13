@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { createTransactionSchema } from "@paridade-risco/shared";
@@ -14,8 +14,46 @@ export async function GET(request: Request) {
     return NextResponse.json([]);
   }
 
+  const url = new URL(request.url);
+  const typeFilter = url.searchParams.get("type");
+  const assetTickerFilter = url.searchParams.get("assetTicker")?.toUpperCase();
+  const fromFilter = url.searchParams.get("from");
+  const toFilter = url.searchParams.get("to");
+
+  const fromDate = fromFilter ? new Date(fromFilter) : null;
+  const toDate = toFilter ? new Date(toFilter) : null;
+
+  const whereConditions = [eq(transactions.userId, userId)];
+
+  if (typeFilter === "COMPRA" || typeFilter === "VENDA") {
+    whereConditions.push(eq(transactions.type, typeFilter));
+  }
+
+  if (fromDate && !Number.isNaN(fromDate.getTime())) {
+    whereConditions.push(gte(transactions.tradedAt, fromDate));
+  }
+
+  if (toDate && !Number.isNaN(toDate.getTime())) {
+    whereConditions.push(lte(transactions.tradedAt, toDate));
+  }
+
+  if (assetTickerFilter) {
+    const matchingAssets = await db.query.assets.findMany({
+      where: eq(assets.ticker, assetTickerFilter),
+      columns: {
+        id: true,
+      },
+    });
+
+    if (matchingAssets.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    whereConditions.push(inArray(transactions.assetId, matchingAssets.map((asset) => asset.id)));
+  }
+
   const rows = await db.query.transactions.findMany({
-    where: eq(transactions.userId, userId),
+    where: and(...whereConditions),
     with: {
       asset: {
         columns: {
@@ -33,7 +71,10 @@ export async function GET(request: Request) {
       assetTicker: row.asset.ticker,
       assetName: row.asset.name,
       type: row.type,
+      shares: Number(row.shares),
+      pricePerShare: Number(row.pricePerShare),
       amount: Number(row.shares) * Number(row.pricePerShare),
+      tradedAt: new Date(row.tradedAt).toISOString(),
       dateLabel: new Intl.DateTimeFormat("pt-BR", {
         day: "2-digit",
         month: "short",
@@ -58,8 +99,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const normalizedTicker = parsed.data.assetTicker.trim().toUpperCase();
+
   const asset = await db.query.assets.findFirst({
-    where: eq(assets.ticker, parsed.data.assetTicker),
+    where: eq(assets.ticker, normalizedTicker),
     columns: {
       id: true,
       ticker: true,
@@ -95,6 +138,7 @@ export async function POST(request: Request) {
     assetName: asset.name,
     type: transaction.type,
     amount: Number(transaction.shares) * Number(transaction.pricePerShare),
+    tradedAt: new Date(transaction.tradedAt).toISOString(),
     dateLabel: new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
       month: "short",

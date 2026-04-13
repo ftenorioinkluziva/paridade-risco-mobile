@@ -1,7 +1,7 @@
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { basketAllocations, baskets, historicalPrices, transactions, users } from "@/db/schema";
+import { basketAllocations, baskets, investmentFunds, portfolios, transactions, users } from "@/db/schema";
 import { toNumber } from "./number";
 
 type Position = {
@@ -31,6 +31,21 @@ export async function getPortfolioSnapshot(userId: string) {
   });
 
   const positionMap = new Map<string, Position>();
+  const [portfolioRow, userFunds] = await Promise.all([
+    db.query.portfolios.findFirst({
+      where: eq(portfolios.userId, userId),
+      columns: {
+        cashBalance: true,
+      },
+    }),
+    db.query.investmentFunds.findMany({
+      where: eq(investmentFunds.userId, userId),
+      columns: {
+        currentValue: true,
+        initialInvestment: true,
+      },
+    }),
+  ]);
 
   for (const transaction of userTransactions) {
     const signedShares = toNumber(transaction.shares) * (transaction.type === "COMPRA" ? 1 : -1);
@@ -53,31 +68,22 @@ export async function getPortfolioSnapshot(userId: string) {
 
   const openPositions = Array.from(positionMap.values()).filter((position) => position.shares > 0);
 
-  if (openPositions.length === 0) {
-    return {
-      totalValue: 0,
-      unrealizedGain: 0,
-      positions: [],
-    };
-  }
-
-  const latestPriceRows = await db
-    .select({
-      assetId: historicalPrices.assetId,
-      price: historicalPrices.price,
-      rowNumber:
-        sql<number>`row_number() over (partition by ${historicalPrices.assetId} order by ${historicalPrices.priceDate} desc)`.as(
-          "row_number",
-        ),
-    })
-    .from(historicalPrices)
-    .where(inArray(historicalPrices.assetId, openPositions.map((position) => position.assetId)));
-
+  // Get latest prices using DISTINCT ON — returns exactly 1 row per asset
   const latestPriceMap = new Map<string, number>();
 
-  for (const row of latestPriceRows) {
-    if (row.rowNumber === 1) {
-      latestPriceMap.set(row.assetId, toNumber(row.price));
+  if (openPositions.length > 0) {
+    const assetIds = openPositions.map((position) => position.assetId);
+    const latestPriceRows = await db.execute<{ asset_id: string; price: string }>(
+      sql`
+        SELECT DISTINCT ON (asset_id) asset_id, price
+        FROM historical_prices
+        WHERE asset_id = ANY(ARRAY[${sql.join(assetIds.map((id) => sql`${id}`), sql`, `)}]::text[])
+        ORDER BY asset_id, price_date DESC
+      `,
+    );
+
+    for (const row of latestPriceRows) {
+      latestPriceMap.set(row.asset_id, toNumber(row.price));
     }
   }
 
@@ -89,15 +95,28 @@ export async function getPortfolioSnapshot(userId: string) {
     totalValue += position.currentValue;
   }
 
+  const fundsCurrentValue = userFunds.reduce((sum, fund) => sum + toNumber(fund.currentValue), 0);
+  const fundsGain = userFunds.reduce(
+    (sum, fund) => sum + (toNumber(fund.currentValue) - toNumber(fund.initialInvestment)),
+    0,
+  );
+  const cashBalance = toNumber(portfolioRow?.cashBalance ?? 0);
+  totalValue += fundsCurrentValue + cashBalance;
+
   for (const position of openPositions) {
     position.allocationPercentage = totalValue > 0 ? (position.currentValue / totalValue) * 100 : 0;
   }
 
-  const unrealizedGain = openPositions.reduce((sum, position) => sum + (position.currentValue - position.costBasis), 0);
+  const unrealizedGain =
+    openPositions.reduce((sum, position) => sum + (position.currentValue - position.costBasis), 0) + fundsGain;
+  const positionsValue = openPositions.reduce((sum, position) => sum + position.currentValue, 0);
 
   return {
     totalValue,
     unrealizedGain,
+    cashBalance,
+    fundsValue: fundsCurrentValue,
+    positionsValue,
     positions: openPositions.sort((left, right) => right.currentValue - left.currentValue),
   };
 }
@@ -161,6 +180,7 @@ export function buildRebalancePreview(args: {
     | null;
   positions: Position[];
   totalValue: number;
+  indexedFundValuesByTicker?: Record<string, number>;
 }) {
   if (!args.basket) {
     return {
@@ -172,17 +192,23 @@ export function buildRebalancePreview(args: {
   }
 
   const positionByTicker = new Map(args.positions.map((position) => [position.ticker, position]));
+  const indexedFundValuesByTicker = args.indexedFundValuesByTicker ?? {};
   const actions = args.basket.allocations
     .map((allocation, index) => {
       const targetPercentage = toNumber(allocation.targetPercentage);
-      const currentPercentage = positionByTicker.get(allocation.asset.ticker)?.allocationPercentage ?? 0;
-      const diff = targetPercentage - currentPercentage;
+      const position = positionByTicker.get(allocation.asset.ticker);
+      const indexedFundValue = indexedFundValuesByTicker[allocation.asset.ticker] ?? 0;
+      const currentValue = (position?.currentValue ?? 0) + indexedFundValue;
+      const currentPercentage = args.totalValue > 0 ? (currentValue / args.totalValue) * 100 : 0;
+      const targetValue = (targetPercentage / 100) * args.totalValue;
+      const diffValue = targetValue - currentValue;
 
       return {
         id: `${args.basket?.id}-${index}`,
         ticker: allocation.asset.ticker,
-        action: diff >= 0 ? "APORTAR" : "REDUZIR",
-        amount: Math.abs((diff / 100) * args.totalValue),
+        action: diffValue >= 0 ? "APORTAR" : "REDUZIR",
+        amount: Math.abs(diffValue),
+        currentPrice: position?.currentPrice ?? 0,
         currentPercentage,
         targetPercentage,
       };
@@ -198,5 +224,30 @@ export function buildRebalancePreview(args: {
     driftPercentage,
     targetBasketName: args.basket.name,
     actions,
+  };
+}
+
+export function getRebalanceEligibility(args: {
+  birthDate: Date | null;
+  phone: string | null;
+  role: "ADMIN" | "USER";
+}) {
+  const missingProfileFields: string[] = [];
+
+  if (!args.phone) {
+    missingProfileFields.push("phone");
+  }
+
+  if (!args.birthDate) {
+    missingProfileFields.push("birthDate");
+  }
+
+  if (!args.role) {
+    missingProfileFields.push("role");
+  }
+
+  return {
+    eligibleForRebalance: missingProfileFields.length === 0,
+    missingProfileFields,
   };
 }

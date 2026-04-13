@@ -2,6 +2,7 @@ import type { PropsWithChildren, ReactNode } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { colors } from "../theme/colors";
+import { layout } from "../theme/layout";
 import { typography } from "../theme/typography";
 
 type ScreenProps = PropsWithChildren<{
@@ -13,16 +14,22 @@ type ScreenProps = PropsWithChildren<{
 export function Screen({ title, subtitle, action, children }: ScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.titleBlock}>
-            <Text style={styles.kicker}>// MOBILE_CONSOLE</Text>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>{subtitle}</Text>
+      <ScrollView
+        contentContainerStyle={styles.contentOuter}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.contentInner}>
+          <View style={styles.header}>
+            <View style={styles.titleBlock}>
+              <Text style={styles.kicker}>// MOBILE_CONSOLE</Text>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{subtitle}</Text>
+            </View>
+            {action ? <View>{action}</View> : null}
           </View>
-          {action ? <View>{action}</View> : null}
+          {children}
         </View>
-        {children}
       </ScrollView>
     </SafeAreaView>
   );
@@ -33,17 +40,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-    gap: 16,
+  contentOuter: {
+    alignItems: "center",
+    paddingBottom: layout.space.xxxl,
+  },
+  contentInner: {
+    gap: layout.space.lg,
+    maxWidth: layout.contentMaxWidth,
+    paddingHorizontal: layout.space.xl,
+    paddingTop: layout.space.xl,
+    width: "100%",
   },
   header: {
-    gap: 12,
+    gap: layout.space.md,
   },
   titleBlock: {
-    gap: 6,
+    gap: layout.space.xs,
   },
   kicker: {
     color: colors.textSoft,

@@ -1,5 +1,6 @@
 export type RootTabParamList = {
   Resumo: undefined;
+  Fundos: undefined;
   Transacoes: undefined;
   Cestas: undefined;
   Perfil: undefined;

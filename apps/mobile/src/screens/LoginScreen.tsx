@@ -1,6 +1,7 @@
 import type { LoginInput } from "@paridade-risco/shared";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import type { FormEvent } from "react";
+import { Alert, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
@@ -32,14 +33,29 @@ export function LoginScreen() {
     }
   }
 
+  function handleWebSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void handleLogin();
+  }
+
+  const loginFields = (
+    <>
+      <Text style={styles.sectionLabel}>// ACESSO</Text>
+      <Field label="Email" onChangeText={setEmail} value={email} />
+      <Field label="Senha" onChangeText={setPassword} secureTextEntry value={password} />
+      <PrimaryButton label={isSubmitting ? "Entrando" : "Entrar"} onPress={handleLogin} />
+    </>
+  );
+
   return (
-    <Screen title="Login" subtitle="Acesse sua carteira v2 com sessao real e segura.">
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>// AUTH_ACCESS</Text>
-        <Field label="Email" onChangeText={setEmail} value={email} />
-        <Field label="Senha" onChangeText={setPassword} secureTextEntry value={password} />
-        <PrimaryButton label={isSubmitting ? "Entrando" : "Entrar"} onPress={handleLogin} />
-      </View>
+    <Screen title="Acesso" subtitle="Acesse sua carteira com sessao real e segura.">
+      {Platform.OS === "web" ? (
+        <form onSubmit={handleWebSubmit} style={styles.webForm}>
+          <View style={styles.section}>{loginFields}</View>
+        </form>
+      ) : (
+        <View style={styles.section}>{loginFields}</View>
+      )}
     </Screen>
   );
 }
@@ -65,6 +81,9 @@ function Field(props: {
 }
 
 const styles = StyleSheet.create({
+  webForm: {
+    width: "100%",
+  },
   section: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

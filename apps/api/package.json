@@ -11,7 +11,13 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "migrate:legacy:plan": "tsx src/scripts/migrate-legacy.ts"
+    "migrate:legacy:plan": "tsx src/scripts/migrate-legacy.ts",
+    "fetch:prices:all": "tsx src/scripts/fetch-prices.ts update-all",
+    "fetch:prices:one": "tsx src/scripts/fetch-prices.ts update-one",
+    "fetch:prices:status": "tsx src/scripts/fetch-prices.ts status",
+    "fetch:prices:count": "tsx src/scripts/fetch-prices.ts count",
+    "scheduler:prices": "tsx src/scripts/price-scheduler.ts",
+    "scheduler:prices:run-now": "tsx src/scripts/price-scheduler.ts --run-on-start"
   },
   "dependencies": {
     "@paridade-risco/shared": "*",
@@ -19,6 +25,7 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.44.5",
     "next": "16.2.3",
+    "node-cron": "^4.2.1",
     "postgres": "^3.4.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",

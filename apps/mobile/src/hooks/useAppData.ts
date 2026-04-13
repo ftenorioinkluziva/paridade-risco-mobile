@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   ActiveBasket,
   AssetOption,
   BasketDetail,
   BasketListItem,
+  InvestmentFund,
   PortfolioSummary,
   TransactionItem,
   UserProfile,
@@ -23,24 +24,29 @@ function useAsyncData<T>(loader: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const loaderRef = useRef(loader);
 
-  async function refetch() {
+  useEffect(() => {
+    loaderRef.current = loader;
+  }, [loader]);
+
+  const refetch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const nextData = await loader();
+      const nextData = await loaderRef.current();
       setData(nextData);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Unexpected error");
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void refetch();
-  }, []);
+  }, [refetch]);
 
   return {
     data,
@@ -54,8 +60,42 @@ export function usePortfolioSummary() {
   return useAsyncData<PortfolioSummary>(() => apiClient.getPortfolioSummary());
 }
 
-export function useTransactions() {
-  return useAsyncData<TransactionItem[]>(() => apiClient.listTransactions());
+export function useTransactions(filters?: {
+  assetTicker?: string;
+  from?: string;
+  to?: string;
+  type?: "COMPRA" | "VENDA";
+}) {
+  const [data, setData] = useState<TransactionItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const filterKey = JSON.stringify(filters ?? {});
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const nextData = await apiClient.listTransactions(filters);
+      setData(nextData);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Unexpected error");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filterKey]);
+
+  useEffect(() => {
+    void refetch();
+  }, [refetch]);
+
+  return {
+    data,
+    error,
+    isLoading,
+    refetch,
+  } satisfies AsyncState<TransactionItem[]>;
 }
 
 export function useAssetOptions() {
@@ -63,7 +103,7 @@ export function useAssetOptions() {
 }
 
 export function useActiveBasket() {
-  return useAsyncData<ActiveBasket>(() => apiClient.getActiveBasket());
+  return useAsyncData<ActiveBasket | null>(() => apiClient.getActiveBasket());
 }
 
 export function useBaskets() {
@@ -75,7 +115,7 @@ export function useBasketDetail(basketId: string) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function refetch() {
+  const refetch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -87,11 +127,11 @@ export function useBasketDetail(basketId: string) {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [basketId]);
 
   useEffect(() => {
     void refetch();
-  }, [basketId]);
+  }, [refetch]);
 
   return {
     data,
@@ -106,5 +146,36 @@ export function useProfile() {
 }
 
 export function useRebalancePreview() {
-  return useAsyncData<RebalancePreview>(() => apiClient.getRebalancePreview());
+  const [data, setData] = useState<RebalancePreview | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const nextData = await apiClient.getRebalancePreview();
+      setData(nextData);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Unexpected error");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refetch();
+  }, [refetch]);
+
+  return {
+    data,
+    error,
+    isLoading,
+    refetch,
+  } satisfies AsyncState<RebalancePreview>;
+}
+
+export function useFunds() {
+  return useAsyncData<InvestmentFund[]>(() => apiClient.listFunds());
 }

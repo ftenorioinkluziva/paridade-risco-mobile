@@ -1,7 +1,8 @@
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet } from "react-native";
+import { BarChart3, TrendingUp, ArrowRightLeft, Layers, User } from "lucide-react-native";
 
 import { BasketsScreen } from "../screens/BasketsScreen";
 import { BasketDetailScreen } from "../screens/BasketDetailScreen";
@@ -9,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { LoginScreen } from "../screens/LoginScreen";
 import { NewTransactionScreen } from "../screens/NewTransactionScreen";
 import { OverviewScreen } from "../screens/OverviewScreen";
+import { FundsScreen } from "../screens/FundsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { RebalanceScreen } from "../screens/RebalanceScreen";
 import { TransactionsScreen } from "../screens/TransactionsScreen";
@@ -65,22 +67,23 @@ function TabsNavigator() {
   return (
     <Tab.Navigator
       initialRouteName="Resumo"
+      screenListeners={{
+        tabPress: () => {
+          blurActiveWebElement();
+        },
+      }}
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.text,
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused }) => (
-          <View style={[styles.icon, focused ? styles.iconFocused : undefined]}>
-            <Text style={[styles.iconText, focused ? styles.iconTextFocused : undefined]}>
-              {getTabIcon(route.name)}
-            </Text>
-          </View>
-        ),
+        tabBarItemStyle: styles.tabItem,
+        tabBarIcon: ({ color, size }) => getTabIcon(route.name, color, size),
+        tabBarLabel: () => null,
       })}
     >
       <Tab.Screen name="Resumo" component={OverviewScreen} />
+      <Tab.Screen name="Fundos" component={FundsScreen} />
       <Tab.Screen name="Transacoes" component={TransactionsScreen} />
       <Tab.Screen name="Cestas" component={BasketsScreen} />
       <Tab.Screen name="Perfil" component={ProfileScreen} />
@@ -88,18 +91,32 @@ function TabsNavigator() {
   );
 }
 
-function getTabIcon(routeName: keyof RootTabParamList) {
+function blurActiveWebElement() {
+  if (Platform.OS !== "web") {
+    return;
+  }
+
+  const activeElement = document.activeElement;
+
+  if (activeElement && "blur" in activeElement) {
+    (activeElement as HTMLElement).blur();
+  }
+}
+
+function getTabIcon(routeName: keyof RootTabParamList, color: string, size: number) {
   switch (routeName) {
     case "Resumo":
-      return "RS";
+      return <BarChart3 color={color} size={size} strokeWidth={1.5} />;
+    case "Fundos":
+      return <TrendingUp color={color} size={size} strokeWidth={1.5} />;
     case "Transacoes":
-      return "TR";
+      return <ArrowRightLeft color={color} size={size} strokeWidth={1.5} />;
     case "Cestas":
-      return "CS";
+      return <Layers color={color} size={size} strokeWidth={1.5} />;
     case "Perfil":
-      return "PF";
+      return <User color={color} size={size} strokeWidth={1.5} />;
     default:
-      return "--";
+      return null;
   }
 }
 
@@ -108,32 +125,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    height: 86,
-    paddingBottom: 10,
-    paddingTop: 10,
+    height: 60,
+    paddingBottom: 8,
+    paddingTop: 8,
   },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginBottom: 4,
-    textTransform: "uppercase",
-  },
-  icon: {
-    alignItems: "center",
-    borderRadius: 4,
-    height: 28,
-    justifyContent: "center",
-    width: 40,
-  },
-  iconFocused: {
-    backgroundColor: colors.primary,
-  },
-  iconText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  iconTextFocused: {
-    color: "#0F1115",
+  tabItem: {
+    borderRadius: 6,
+    marginHorizontal: 2,
+    paddingVertical: 4,
   },
 });

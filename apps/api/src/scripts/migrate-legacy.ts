@@ -7,7 +7,11 @@ type LegacyUserRow = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   password: string;
+  image: string | null;
+  role: "ADMIN" | "USER" | null;
+  dataNascimento: string | null;
   selectedBasketId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -17,6 +21,7 @@ type LegacyAssetRow = {
   ticker: string;
   name: string;
   type: string;
+  calculationType?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -50,6 +55,17 @@ type LegacyPriceRow = {
   date: string;
   price: string | null;
 };
+type LegacyFundRow = {
+  id: string;
+  name: string;
+  initialInvestment: string;
+  currentValue: string;
+  investmentDate: string;
+  userId: string;
+  indiceId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 function normalizeAssetType(type: string) {
   const normalized = type.trim().toUpperCase();
@@ -69,6 +85,16 @@ function normalizeAssetType(type: string) {
   }
 
   return "OUTRO";
+}
+
+function normalizeAssetCalculationType(calculationType: string | null | undefined) {
+  const normalized = calculationType?.trim().toUpperCase();
+
+  if (normalized === "PERCENTUAL") {
+    return "PERCENTUAL";
+  }
+
+  return "PRECO";
 }
 
 async function logCounts(label: string, client: postgres.Sql) {
@@ -95,18 +121,22 @@ async function logCounts(label: string, client: postgres.Sql) {
 
 async function migrateUsers(legacy: postgres.Sql, v2: postgres.Sql) {
   const rows = await legacy<LegacyUserRow[]>`
-    select id, name, email, password, "selectedBasketId", "createdAt", "updatedAt"
+    select id, name, email, phone, password, image, role, "dataNascimento", "selectedBasketId", "createdAt", "updatedAt"
     from "User"
   `;
 
   for (const row of rows) {
     await v2`
-      insert into users (id, name, email, password_hash, is_active, selected_basket_id, created_at, updated_at)
-      values (${row.id}, ${row.name}, ${row.email}, ${row.password}, true, null, ${row.createdAt}, ${row.updatedAt})
+      insert into users (id, name, email, phone, password_hash, image, role, birth_date, is_active, selected_basket_id, created_at, updated_at)
+      values (${row.id}, ${row.name}, ${row.email}, ${row.phone}, ${row.password}, ${row.image}, ${row.role ?? "USER"}, ${row.dataNascimento}, true, null, ${row.createdAt}, ${row.updatedAt})
       on conflict (id) do update
       set name = excluded.name,
           email = excluded.email,
+          phone = excluded.phone,
           password_hash = excluded.password_hash,
+          image = excluded.image,
+          role = excluded.role,
+          birth_date = excluded.birth_date,
           is_active = excluded.is_active,
           updated_at = excluded.updated_at
     `;
@@ -115,20 +145,45 @@ async function migrateUsers(legacy: postgres.Sql, v2: postgres.Sql) {
   console.log(`Migrated users: ${rows.length}`);
 }
 
+async function migrateInvestmentFunds(legacy: postgres.Sql, v2: postgres.Sql) {
+  const rows = await legacy<LegacyFundRow[]>`
+    select id, name, "initialInvestment", "currentValue", "investmentDate", "userId", "indiceId", "createdAt", "updatedAt"
+    from "FundoInvestimento"
+  `;
+
+  for (const row of rows) {
+    await v2`
+      insert into investment_funds (id, name, initial_investment, current_value, investment_date, user_id, index_asset_id, created_at, updated_at)
+      values (${row.id}, ${row.name}, ${row.initialInvestment}, ${row.currentValue}, ${row.investmentDate}, ${row.userId}, ${row.indiceId}, ${row.createdAt}, ${row.updatedAt})
+      on conflict (id) do update
+      set name = excluded.name,
+          initial_investment = excluded.initial_investment,
+          current_value = excluded.current_value,
+          investment_date = excluded.investment_date,
+          user_id = excluded.user_id,
+          index_asset_id = excluded.index_asset_id,
+          updated_at = excluded.updated_at
+    `;
+  }
+
+  console.log(`Migrated investment funds: ${rows.length}`);
+}
+
 async function migrateAssets(legacy: postgres.Sql, v2: postgres.Sql) {
   const rows = await legacy<LegacyAssetRow[]>`
-    select id, ticker, name, type
+    select id, ticker, name, type, "calculationType"
     from "Ativo"
   `;
 
   for (const row of rows) {
     await v2`
-      insert into assets (id, ticker, name, type, is_active)
-      values (${row.id}, ${row.ticker}, ${row.name}, ${normalizeAssetType(row.type)}, true)
+      insert into assets (id, ticker, name, type, calculation_type, is_active)
+      values (${row.id}, ${row.ticker}, ${row.name}, ${normalizeAssetType(row.type)}, ${normalizeAssetCalculationType(row.calculationType)}, true)
       on conflict (id) do update
       set ticker = excluded.ticker,
           name = excluded.name,
           type = excluded.type,
+          calculation_type = excluded.calculation_type,
           is_active = excluded.is_active
     `;
   }
@@ -244,23 +299,37 @@ async function migrateTransactions(legacy: postgres.Sql, v2: postgres.Sql) {
 
 async function migrateHistoricalPrices(legacy: postgres.Sql, v2: postgres.Sql) {
   const batchSize = 1000;
-  let offset = 0;
+  let lastId: string | null = null;
   let total = 0;
+  const existingRows = await v2<{ id: string }[]>`select id from historical_prices`;
+  const existingIds = new Set(existingRows.map((row) => row.id));
 
   while (true) {
-    const rows = await legacy<LegacyPriceRow[]>`
-      select id, "ativoId", date, price
-      from "DadoHistorico"
-      where price is not null
-      order by id
-      limit ${batchSize} offset ${offset}
-    `;
+    const rows: LegacyPriceRow[] = lastId
+      ? await legacy<LegacyPriceRow[]>`
+          select id, "ativoId", date, price
+          from "DadoHistorico"
+          where price is not null and id > ${lastId}
+          order by id
+          limit ${batchSize}
+        `
+      : await legacy<LegacyPriceRow[]>`
+          select id, "ativoId", date, price
+          from "DadoHistorico"
+          where price is not null
+          order by id
+          limit ${batchSize}
+        `;
 
     if (rows.length === 0) {
       break;
     }
 
     for (const row of rows) {
+      if (existingIds.has(row.id)) {
+        continue;
+      }
+
       await v2`
         insert into historical_prices (id, asset_id, price_date, price)
         values (${row.id}, ${row.ativoId}, ${row.date}, ${row.price})
@@ -269,10 +338,12 @@ async function migrateHistoricalPrices(legacy: postgres.Sql, v2: postgres.Sql) {
             price_date = excluded.price_date,
             price = excluded.price
       `;
+
+      existingIds.add(row.id);
     }
 
     total += rows.length;
-    offset += batchSize;
+    lastId = rows[rows.length - 1]?.id ?? lastId;
     console.log(`Migrated historical prices batch, total: ${total}`);
   }
 
@@ -293,9 +364,14 @@ async function main() {
 
   const legacy = postgres(legacyUrl, { max: 1 });
   const v2 = postgres(v2Url, { max: 1 });
+  const skipCounts = process.env.SKIP_MIGRATION_COUNTS === "true";
+  const skipHistoricalPrices = process.env.SKIP_HISTORICAL_PRICES === "true";
 
   try {
-    await logCounts("V2 before migration:", v2);
+    if (!skipCounts) {
+      await logCounts("V2 before migration:", v2);
+    }
+
     await migrateUsers(legacy, v2);
     await migrateAssets(legacy, v2);
     await migratePortfolios(legacy, v2);
@@ -303,8 +379,15 @@ async function main() {
     await migrateAllocations(legacy, v2);
     await migrateSelectedBasket(legacy, v2);
     await migrateTransactions(legacy, v2);
-    await migrateHistoricalPrices(legacy, v2);
-    await logCounts("V2 after migration:", v2);
+    await migrateInvestmentFunds(legacy, v2);
+
+    if (!skipHistoricalPrices) {
+      await migrateHistoricalPrices(legacy, v2);
+    }
+
+    if (!skipCounts) {
+      await logCounts("V2 after migration:", v2);
+    }
   } finally {
     await legacy.end();
     await v2.end();

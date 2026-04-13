@@ -2,15 +2,46 @@ export type TransactionType = "COMPRA" | "VENDA";
 
 export type AllocationSlice = {
   id: string;
+  ticker: string;
   label: string;
   percentage: number;
+  targetPercentage: number;
+};
+
+export type FundSnapshot = {
+  id: string;
+  name: string;
+  indexTicker?: string;
+  initialInvestment: number;
+  currentValue: number;
+  gain: number;
+  gainPercentage: number;
+  investmentDate: string;
 };
 
 export type PortfolioSummary = {
   totalValue: number;
+  positionsValue: number;
+  fundsValue: number;
+  cashBalance: number;
+  positionCount: number;
   basketDriftPercentage: number;
   unrealizedGain: number;
   allocation: AllocationSlice[];
+  positions: PositionSnapshot[];
+  funds: FundSnapshot[];
+};
+
+export type PositionSnapshot = {
+  id: string;
+  ticker: string;
+  name: string;
+  shares: number;
+  averagePrice: number;
+  currentPrice: number;
+  currentValue: number;
+  gain: number;
+  gainPercentage: number;
 };
 
 export type TransactionItem = {
@@ -18,7 +49,10 @@ export type TransactionItem = {
   assetTicker: string;
   assetName: string;
   type: TransactionType;
+  shares: number;
+  pricePerShare: number;
   amount: number;
+  tradedAt: string;
   dateLabel: string;
 };
 
@@ -60,7 +94,22 @@ export type UserProfile = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
+  image: string | null;
+  role: "ADMIN" | "USER";
+  birthDate: string | null;
   initials: string;
   roleLabel: string;
   activeBasketName: string;
+};
+
+export type InvestmentFund = {
+  id: string;
+  name: string;
+  initialInvestment: number;
+  currentValue: number;
+  investmentDate: string;
+  updatedAt: string;
+  indexAssetTicker: string | null;
+  indexAssetName: string | null;
 };

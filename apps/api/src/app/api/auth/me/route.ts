@@ -13,12 +13,16 @@ export async function GET(request: Request) {
     id: user.id,
     name: user.name,
     email: user.email,
+    phone: user.phone,
+    image: user.image,
+    role: user.role,
+    birthDate: user.birthDate?.toISOString() ?? null,
     initials: user.name
       .split(" ")
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join(""),
-    roleLabel: "Investidor",
+    roleLabel: user.role === "ADMIN" ? "Administrador" : "Investidor",
   });
 }

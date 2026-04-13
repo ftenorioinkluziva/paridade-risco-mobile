@@ -21,15 +21,23 @@ export const assetTypeEnum = pgEnum("asset_type", [
   "OUTRO",
 ]);
 
+export const assetCalculationTypeEnum = pgEnum("asset_calculation_type", ["PRECO", "PERCENTUAL"]);
+
 export const transactionTypeEnum = pgEnum("transaction_type", ["COMPRA", "VENDA"]);
 
 export const basketStatusEnum = pgEnum("basket_status", ["ATIVA", "RASCUNHO"]);
+
+export const userRoleEnum = pgEnum("user_role", ["ADMIN", "USER"]);
 
 export const users = pgTable("users", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()::text`),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  phone: text("phone"),
   passwordHash: text("password_hash").notNull(),
+  image: text("image"),
+  role: userRoleEnum("role").notNull().default("USER"),
+  birthDate: timestamp("birth_date", { withTimezone: true }),
   isActive: boolean("is_active").notNull().default(true),
   selectedBasketId: text("selected_basket_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -54,6 +62,7 @@ export const assets = pgTable("assets", {
   ticker: text("ticker").notNull(),
   name: text("name").notNull(),
   type: assetTypeEnum("type").notNull(),
+  calculationType: assetCalculationTypeEnum("calculation_type").notNull().default("PRECO"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdateFn(() => new Date()),
@@ -118,12 +127,28 @@ export const basketAllocations = pgTable("basket_allocations", {
   pk: primaryKey({ columns: [table.basketId, table.assetId], name: "basket_allocations_pk" }),
 }));
 
+export const investmentFunds = pgTable("investment_funds", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  name: text("name").notNull(),
+  initialInvestment: numeric("initial_investment", { precision: 16, scale: 2 }).notNull(),
+  currentValue: numeric("current_value", { precision: 16, scale: 2 }).notNull(),
+  investmentDate: timestamp("investment_date", { withTimezone: true }).notNull(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  indexAssetId: text("index_asset_id").references(() => assets.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdateFn(() => new Date()),
+}, (table) => ({
+  userIdx: index("investment_funds_user_idx").on(table.userId),
+  indexAssetIdx: index("investment_funds_index_asset_idx").on(table.indexAssetId),
+}));
+
 export const usersRelations = relations(users, ({ many, one }) => ({
   baskets: many(baskets),
   portfolio: one(portfolios, { fields: [users.id], references: [portfolios.userId] }),
   transactions: many(transactions),
   selectedBasket: one(baskets, { fields: [users.selectedBasketId], references: [baskets.id] }),
   sessions: many(sessions),
+  investmentFunds: many(investmentFunds),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -134,6 +159,7 @@ export const assetsRelations = relations(assets, ({ many }) => ({
   prices: many(historicalPrices),
   transactions: many(transactions),
   basketAllocations: many(basketAllocations),
+  indexFunds: many(investmentFunds),
 }));
 
 export const portfoliosRelations = relations(portfolios, ({ one }) => ({
@@ -159,6 +185,11 @@ export const historicalPricesRelations = relations(historicalPrices, ({ one }) =
   asset: one(assets, { fields: [historicalPrices.assetId], references: [assets.id] }),
 }));
 
+export const investmentFundsRelations = relations(investmentFunds, ({ one }) => ({
+  user: one(users, { fields: [investmentFunds.userId], references: [users.id] }),
+  indexAsset: one(assets, { fields: [investmentFunds.indexAssetId], references: [assets.id] }),
+}));
+
 export const tables = {
   users,
   sessions,
@@ -168,6 +199,7 @@ export const tables = {
   transactions,
   baskets,
   basketAllocations,
+  investmentFunds,
 };
 
 export const nowSql = sql`now()`;

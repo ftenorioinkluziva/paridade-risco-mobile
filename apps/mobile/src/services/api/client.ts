@@ -5,6 +5,7 @@ import type {
   AssetOption,
   BasketDetail,
   BasketListItem,
+  InvestmentFund,
   PortfolioSummary,
   TransactionItem,
   UserProfile,
@@ -45,16 +46,59 @@ export const apiClient = {
     return requestJson<PortfolioSummary>("/api/portfolio/summary");
   },
 
-  async listTransactions(): Promise<TransactionItem[]> {
-    return requestJson<TransactionItem[]>("/api/transactions");
+  async listTransactions(filters?: {
+    assetTicker?: string;
+    from?: string;
+    to?: string;
+    type?: "COMPRA" | "VENDA";
+  }): Promise<TransactionItem[]> {
+    const params = new URLSearchParams();
+
+    if (filters?.type) {
+      params.set("type", filters.type);
+    }
+
+    if (filters?.assetTicker) {
+      params.set("assetTicker", filters.assetTicker);
+    }
+
+    if (filters?.from) {
+      params.set("from", filters.from);
+    }
+
+    if (filters?.to) {
+      params.set("to", filters.to);
+    }
+
+    const suffix = params.size > 0 ? `?${params.toString()}` : "";
+    return requestJson<TransactionItem[]>(`/api/transactions${suffix}`);
   },
 
   async listAssets(): Promise<AssetOption[]> {
     return requestJson<AssetOption[]>("/api/assets");
   },
 
-  async getActiveBasket(): Promise<ActiveBasket> {
-    return requestJson<ActiveBasket>("/api/baskets/active");
+  async getActiveBasket(): Promise<ActiveBasket | null> {
+    if (!API_BASE_URL) {
+      throw new Error("EXPO_PUBLIC_API_URL is not configured");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/baskets/active`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+      },
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    return (await response.json()) as ActiveBasket;
   },
 
   async listBaskets(): Promise<BasketListItem[]> {
@@ -67,6 +111,71 @@ export const apiClient = {
 
   async getProfile(): Promise<UserProfile> {
     return requestJson<UserProfile>("/api/profile");
+  },
+
+  async updateProfile(input: {
+    birthDate?: string | null;
+    image?: string | null;
+    phone?: string | null;
+    role?: "ADMIN" | "USER";
+  }): Promise<Pick<UserProfile, "birthDate" | "id" | "image" | "phone" | "role">> {
+    return requestJson<Pick<UserProfile, "birthDate" | "id" | "image" | "phone" | "role">>("/api/profile", {
+      body: JSON.stringify(input),
+      method: "PUT",
+    });
+  },
+
+  async updateCashBalance(cashBalance: number): Promise<{ cashBalance: number; id: string; userId: string }> {
+    return requestJson<{ cashBalance: number; id: string; userId: string }>("/api/portfolio/cash", {
+      body: JSON.stringify({ cashBalance }),
+      method: "PUT",
+    });
+  },
+
+  async listFunds(): Promise<InvestmentFund[]> {
+    return requestJson<InvestmentFund[]>("/api/funds");
+  },
+
+  async createFund(input: {
+    currentValue: number;
+    indexAssetId?: string | null;
+    initialInvestment: number;
+    investmentDate: string;
+    name: string;
+  }): Promise<InvestmentFund> {
+    return requestJson<InvestmentFund>("/api/funds", {
+      body: JSON.stringify(input),
+      method: "POST",
+    });
+  },
+
+  async updateFund(
+    fundId: string,
+    input: {
+      currentValue?: number;
+      indexAssetId?: string | null;
+      initialInvestment?: number;
+      investmentDate?: string;
+      name?: string;
+    },
+  ): Promise<InvestmentFund> {
+    return requestJson<InvestmentFund>(`/api/funds/${fundId}`, {
+      body: JSON.stringify(input),
+      method: "PUT",
+    });
+  },
+
+  async updateFundValue(fundId: string, currentValue: number): Promise<InvestmentFund> {
+    return requestJson<InvestmentFund>(`/api/funds/${fundId}`, {
+      body: JSON.stringify({ currentValue }),
+      method: "PUT",
+    });
+  },
+
+  async deleteFund(fundId: string): Promise<void> {
+    await requestJson<{ ok: true; id: string }>(`/api/funds/${fundId}`, {
+      method: "DELETE",
+    });
   },
 
   async getRebalancePreview(): Promise<RebalancePreview> {

@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { colors } from "../theme/colors";
-import { typography } from "../theme/typography";
+import { layout } from "../theme/layout";
+import { typography, typographyScale } from "../theme/typography";
 
 type SummaryCardProps = {
   eyebrow: string;
@@ -33,31 +34,32 @@ export function SummaryCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 4,
+    borderRadius: layout.radius.md,
     borderWidth: 1,
-    padding: 18,
-    gap: 10,
+    padding: layout.space.lg,
+    gap: layout.space.sm,
   },
   content: {
-    gap: 6,
+    gap: layout.space.xs,
   },
   eyebrow: {
     color: colors.textSoft,
     fontFamily: typography.mono,
-    fontSize: 12,
+    fontSize: typographyScale.xs.fontSize,
     fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
   title: {
     color: colors.text,
-    fontSize: 26,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "600",
+    lineHeight: 26,
   },
   detail: {
     color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: typographyScale.sm.fontSize,
+    fontWeight: typographyScale.sm.fontWeight,
+    lineHeight: 18,
   },
 });
 
