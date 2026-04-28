@@ -1,3 +1,14 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(vercel --version)",
+      "Bash(vercel whoami *)",
+      "Bash(vercel login *)",
+      "WebFetch(domain:vercel.com)",
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__get_project",
+      "mcp__claude_ai_Vercel__list_deployments"
+    ]
+  },
   "language": "portuguese"
 }
