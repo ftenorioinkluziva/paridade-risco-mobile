@@ -12,6 +12,7 @@ type Position = {
   costBasis: number;
   currentPrice: number;
   currentValue: number;
+  dailyChangePercentage: number | null;
   allocationPercentage: number;
 };
 
@@ -58,6 +59,7 @@ export async function getPortfolioSnapshot(userId: string) {
       costBasis: 0,
       currentPrice: 0,
       currentValue: 0,
+      dailyChangePercentage: null,
       allocationPercentage: 0,
     };
 
@@ -68,22 +70,40 @@ export async function getPortfolioSnapshot(userId: string) {
 
   const openPositions = Array.from(positionMap.values()).filter((position) => position.shares > 0);
 
-  // Get latest prices using DISTINCT ON — returns exactly 1 row per asset
+  // Get the two most recent prices per asset in one query.
   const latestPriceMap = new Map<string, number>();
+  const previousPriceMap = new Map<string, number>();
 
   if (openPositions.length > 0) {
     const assetIds = openPositions.map((position) => position.assetId);
-    const latestPriceRows = await db.execute<{ asset_id: string; price: string }>(
+    const recentPriceRows = await db.execute<{ asset_id: string; price: string; price_rank: number | string }>(
       sql`
-        SELECT DISTINCT ON (asset_id) asset_id, price
-        FROM historical_prices
-        WHERE asset_id = ANY(ARRAY[${sql.join(assetIds.map((id) => sql`${id}`), sql`, `)}]::text[])
-        ORDER BY asset_id, price_date DESC
+        WITH ranked_prices AS (
+          SELECT
+            asset_id,
+            price,
+            ROW_NUMBER() OVER (PARTITION BY asset_id ORDER BY price_date DESC) AS price_rank
+          FROM historical_prices
+          WHERE asset_id = ANY(ARRAY[${sql.join(assetIds.map((id) => sql`${id}`), sql`, `)}]::text[])
+        )
+        SELECT asset_id, price, price_rank
+        FROM ranked_prices
+        WHERE price_rank <= 2
+        ORDER BY asset_id, price_rank
       `,
     );
 
-    for (const row of latestPriceRows) {
-      latestPriceMap.set(row.asset_id, toNumber(row.price));
+    for (const row of recentPriceRows) {
+      const priceRank = Number(row.price_rank);
+      const price = toNumber(row.price);
+
+      if (priceRank === 1) {
+        latestPriceMap.set(row.asset_id, price);
+      }
+
+      if (priceRank === 2) {
+        previousPriceMap.set(row.asset_id, price);
+      }
     }
   }
 
@@ -91,6 +111,14 @@ export async function getPortfolioSnapshot(userId: string) {
 
   for (const position of openPositions) {
     position.currentPrice = latestPriceMap.get(position.assetId) ?? 0;
+    const previousPrice = previousPriceMap.get(position.assetId);
+    position.dailyChangePercentage =
+      previousPrice != null &&
+      previousPrice !== 0 &&
+      Number.isFinite(position.currentPrice) &&
+      Number.isFinite(previousPrice)
+        ? ((position.currentPrice - previousPrice) / previousPrice) * 100
+        : null;
     position.currentValue = position.currentPrice * position.shares;
     totalValue += position.currentValue;
   }

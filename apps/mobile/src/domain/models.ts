@@ -42,6 +42,7 @@ export type PositionSnapshot = {
   currentValue: number;
   gain: number;
   gainPercentage: number;
+  dailyChangePercentage: number | null;
 };
 
 export type TransactionItem = {

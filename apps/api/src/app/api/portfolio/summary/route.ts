@@ -123,6 +123,7 @@ export async function GET(request: Request) {
         currentValue: position.currentValue,
         gain,
         gainPercentage,
+        dailyChangePercentage: position.dailyChangePercentage,
       };
     }),
     funds: allFunds.map((fund) => {
