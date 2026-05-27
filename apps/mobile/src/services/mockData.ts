@@ -111,7 +111,7 @@ export const mockActiveBasket: ActiveBasket = {
   id: "basket-1",
   name: "Risk Parity Brasil",
   description:
-    "A cesta ativa serve como referencia para o rebalanceamento e para a leitura de desvio da carteira.",
+    "A cesta ativa define o alvo usado para sugerir compras e vendas.",
 };
 
 export const mockBaskets: BasketListItem[] = [
@@ -134,7 +134,7 @@ export const mockBasketDetails: Record<string, BasketDetail> = {
     id: "basket-1",
     name: "Risk Parity Brasil",
     status: "ATIVA",
-    description: "Cesta principal usada para rebalanceamento tatico e leitura de desvio.",
+    description: "Alvo principal usado para calcular as ordens de rebalanceamento.",
     allocations: [
       { id: "ba-1", ticker: "IVVB11", name: "S&P 500 ETF", targetPercentage: 22 },
       { id: "ba-2", ticker: "B5P211", name: "Tesouro IPCA", targetPercentage: 15 },

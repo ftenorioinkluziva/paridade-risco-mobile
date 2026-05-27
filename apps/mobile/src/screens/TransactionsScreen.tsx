@@ -70,7 +70,7 @@ export function TransactionsScreen() {
     const cashValue = parseFloat(cashInput.replace(",", "."));
 
     if (!Number.isFinite(cashValue) || cashValue < 0) {
-      Alert.alert("Valor inválido", "Digite um valor numérico válido e positivo.");
+      Alert.alert("Caixa invalido", "Informe o valor disponivel em caixa, sem sinal negativo.");
       return;
     }
 
@@ -79,9 +79,9 @@ export function TransactionsScreen() {
       await apiClient.updateCashBalance(cashValue);
       await Promise.all([refetch(), refetchSummary()]);
       setIsEditingCash(false);
-      Alert.alert("Saldo atualizado", `Novo saldo em caixa: ${formatCurrency(cashValue)}`);
+      Alert.alert("Caixa atualizado", `Novo caixa disponivel: ${formatCurrency(cashValue)}`);
     } catch {
-      Alert.alert("Falha ao atualizar", "Não foi possível atualizar o saldo em caixa.");
+      Alert.alert("Caixa nao atualizado", "Tente novamente antes de calcular o proximo rebalanceamento.");
     } finally {
       setIsSavingCash(false);
     }
@@ -90,12 +90,12 @@ export function TransactionsScreen() {
   return (
     <Screen
       title="Transacoes"
-      subtitle="Fluxo operacional com saldo, lancamento rapido, historico filtravel e analise por periodo."
+      subtitle="Registre operacoes e mantenha o caixa usado no rebalanceamento."
       action={<PrimaryButton label="Nova transacao" onPress={() => navigation.navigate("NovaTransacao")} />}
     >
       {isEditingCash ? (
         <View style={styles.balanceCardEdit}>
-          <Text style={styles.balanceLabel}>Novo saldo</Text>
+          <Text style={styles.balanceLabel}>Novo caixa disponivel</Text>
           <TextInput
             keyboardType="decimal-pad"
             onChangeText={setCashInput}
@@ -106,12 +106,12 @@ export function TransactionsScreen() {
           />
           <View style={styles.balanceActions}>
             <PrimaryButton label="Cancelar" onPress={() => setIsEditingCash(false)} tone="neutral" />
-            <PrimaryButton label={isSavingCash ? "Salvando" : "Confirmar"} onPress={() => void handleSaveCash()} />
+            <PrimaryButton label={isSavingCash ? "Salvando" : "Salvar caixa"} onPress={() => void handleSaveCash()} />
           </View>
         </View>
       ) : (
         <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Saldo disponivel</Text>
+          <Text style={styles.balanceLabel}>Caixa disponivel</Text>
           <Text style={styles.balanceValue}>{formatCurrency(summary?.cashBalance ?? 0)}</Text>
           <PrimaryButton label="Editar" onPress={startEditCash} tone="neutral" />
         </View>
@@ -132,11 +132,11 @@ export function TransactionsScreen() {
       {activeTab === "NOVA" ? (
         <View style={styles.sectionCard}>
           <Text style={styles.sectionLabel}>// NOVA_TRANSACAO</Text>
-          <Text style={styles.sectionTitle}>Registro rapido</Text>
+          <Text style={styles.sectionTitle}>Registrar compra ou venda</Text>
           <Text style={styles.sectionText}>
-            Abra o formulario operacional completo para lancar compra ou venda com ativo, quantidade, preco e data.
+            Informe ativo, quantidade, preco e data para manter a carteira atualizada.
           </Text>
-          <PrimaryButton label="Abrir formulario" onPress={() => navigation.navigate("NovaTransacao")} />
+          <PrimaryButton label="Registrar operacao" onPress={() => navigation.navigate("NovaTransacao")} />
         </View>
       ) : null}
 
@@ -199,9 +199,9 @@ export function TransactionsScreen() {
               );
             })}
             {isLoading ? <Text style={styles.loading}>Carregando transacoes...</Text> : null}
-            {error ? <Text style={styles.loading}>Falha ao carregar transacoes.</Text> : null}
+            {error ? <Text style={styles.loading}>Nao foi possivel carregar o historico. Atualize os dados.</Text> : null}
             {!isLoading && !error && (data?.length ?? 0) === 0 ? (
-              <Text style={styles.loading}>Nenhuma transacao encontrada para os filtros selecionados.</Text>
+              <Text style={styles.loading}>Nenhuma operacao encontrada para estes filtros.</Text>
             ) : null}
           </View>
         </View>
@@ -210,7 +210,7 @@ export function TransactionsScreen() {
       {activeTab === "ANALISE" ? (
         <View style={styles.sectionCard}>
           <Text style={styles.sectionLabel}>// ANALISE_PERIODO</Text>
-          <Text style={styles.sectionTitle}>Consolidado do periodo</Text>
+          <Text style={styles.sectionTitle}>Movimento do periodo</Text>
           <View style={styles.analyticsCard}>
             <Text style={styles.analyticsLabel}>Compras</Text>
             <Text style={styles.analyticsValue}>{formatCurrency(analytics.buys)}</Text>
@@ -220,12 +220,12 @@ export function TransactionsScreen() {
             <Text style={styles.analyticsValue}>{formatCurrency(analytics.sells)}</Text>
           </View>
           <View style={styles.analyticsCard}>
-            <Text style={styles.analyticsLabel}>Fluxo liquido</Text>
+            <Text style={styles.analyticsLabel}>Entrada menos saida</Text>
             <Text style={[styles.analyticsValue, analytics.netFlow >= 0 ? styles.positiveText : styles.warningText]}>
               {formatSignedCurrency(analytics.netFlow)}
             </Text>
           </View>
-          <Text style={styles.analyticsMeta}>{`${analytics.total} transacoes no recorte atual`}</Text>
+          <Text style={styles.analyticsMeta}>{`${analytics.total} operacao${analytics.total === 1 ? "" : "es"} neste periodo`}</Text>
         </View>
       ) : null}
 

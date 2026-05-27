@@ -37,7 +37,7 @@ export function ProfileScreen() {
       await refetchProfile();
       setIsEditing(false);
     } catch {
-      Alert.alert("Falha ao salvar perfil", "Revise os dados e tente novamente.");
+      Alert.alert("Perfil nao salvo", "Revise telefone e data de nascimento antes de tentar novamente.");
     } finally {
       setIsSaving(false);
     }
@@ -48,14 +48,14 @@ export function ProfileScreen() {
     { label: "Email", value: profile?.email ?? "..." },
     { label: "Telefone", value: profile?.phone ?? "Nao informado" },
     { label: "Nascimento", value: profile?.birthDate ? new Date(profile.birthDate).toLocaleDateString("pt-BR") : "Nao informado" },
-    { label: "Regra de perfil", value: profile?.role ?? "USER" },
-    { label: "Cesta ativa", value: profile?.activeBasketName ?? "..." },
+    { label: "Tipo de acesso", value: profile?.roleLabel ?? profile?.role ?? "Investidor" },
+    { label: "Alvo ativo", value: profile?.activeBasketName ?? "..." },
   ];
 
   return (
     <Screen
       title="Perfil"
-      subtitle="Configuracoes essenciais da conta e preferencia de alocacao."
+      subtitle="Dados da conta usados para acesso e calculo da carteira."
       action={
         <PrimaryButton
           label={isEditing ? "Cancelar" : "Editar"}
@@ -93,13 +93,13 @@ export function ProfileScreen() {
 
       {isEditing ? (
         <View style={styles.editorCard}>
-          <Text style={styles.editorTitle}>Editar perfil para rebalance</Text>
+          <Text style={styles.editorTitle}>Completar dados da conta</Text>
           <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Telefone</Text>
             <TextInput onChangeText={setPhoneInput} style={styles.fieldInput} value={phoneInput} />
           </View>
           <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Nascimento (AAAA-MM-DD)</Text>
+            <Text style={styles.fieldLabel}>Data de nascimento (AAAA-MM-DD)</Text>
             <TextInput onChangeText={setBirthDateInput} style={styles.fieldInput} value={birthDateInput} />
           </View>
           <PrimaryButton label={isSaving ? "Salvando" : "Salvar perfil"} onPress={() => void handleSaveProfile()} />
@@ -109,7 +109,7 @@ export function ProfileScreen() {
       <View style={styles.logoutCard}>
         <Text style={styles.logoutTitle}>Sessao</Text>
         <Text style={styles.logoutText}>
-          A autenticacao da V2 sera unificada e sem dependencias de localStorage.
+          Encerre o acesso quando terminar de consultar sua carteira neste dispositivo.
         </Text>
         <PrimaryButton label="Sair" onPress={() => void signOut()} />
       </View>

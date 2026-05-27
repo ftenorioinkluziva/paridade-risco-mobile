@@ -2,7 +2,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { InlineAlert } from "../components/InlineAlert";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { RebalanceDecisionCard } from "../components/RebalanceDecisionCard";
 import { Screen } from "../components/Screen";
 import { TypeBadge } from "../components/TypeBadge";
 import { useRebalancePreview } from "../hooks/useAppData";
@@ -14,68 +16,43 @@ import { typography, typographyScale } from "../theme/typography";
 
 export function RebalanceScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { data, isLoading } = useRebalancePreview();
+  const { data, error, isLoading, refetch } = useRebalancePreview();
 
   const actions = data?.actions ?? [];
 
   return (
     <Screen
       title="Rebalanceamento"
-      subtitle="Plano de ajuste com base de calculo obrigatoriamente incluindo caixa."
+      subtitle="Veja se precisa agir e quais ordens usar na corretora."
       action={<PrimaryButton label="Voltar" onPress={() => navigation.goBack()} tone="neutral" />}
     >
-      <View style={styles.heroCard}>
-        <Text style={styles.heroLabel}>// CESTA_ALVO</Text>
-        <Text style={styles.heroTitle}>{data?.targetBasketName ?? "Carregando"}</Text>
-        <Text style={styles.heroText}>
-          {isLoading
-            ? "Calculando desvio e sugestoes."
-            : `Carteira total ${formatCurrency(data?.portfolioValue ?? 0)} com desvio de ${formatPercentage(data?.driftPercentage ?? 0)}.`}
-        </Text>
-      </View>
-
-      <View style={styles.metricsGrid}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Valor investido</Text>
-          <Text style={styles.metricValue}>{formatCurrency(data?.investedValue ?? 0)}</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Caixa disponivel</Text>
-          <Text style={styles.metricValue}>{formatCurrency(data?.cashAvailable ?? 0)}</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Base de calculo</Text>
-          <Text style={styles.metricValue}>{formatCurrency(data?.calculationBaseValue ?? 0)}</Text>
-        </View>
-      </View>
-
-      <View style={styles.metricsGrid}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Custo do rebalanceamento</Text>
-          <Text style={styles.metricValue}>{formatCurrency(data?.rebalanceCost ?? 0)}</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Saldo apos rebalanceamento</Text>
-          <Text style={[styles.metricValue, (data?.postRebalanceCash ?? 0) >= 0 ? styles.positive : styles.warning]}>
-            {formatCurrency(data?.postRebalanceCash ?? 0)}
-          </Text>
-        </View>
-      </View>
+      <RebalanceDecisionCard
+        data={data}
+        error={error}
+        isLoading={isLoading}
+        showActions={false}
+        showMetrics={false}
+      />
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>// ACOES_SUGERIDAS</Text>
+        {error && !data ? (
+          <InlineAlert
+            actionLabel="Tentar novamente"
+            message="O plano nao carregou. Atualize antes de comprar ou vender."
+            onAction={refetch}
+            title="Plano nao disponivel"
+          />
+        ) : null}
         {data && !data.eligibleForRebalance ? (
           <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>Perfil incompleto para rebalanceamento</Text>
+            <Text style={styles.warningTitle}>Dados pendentes para calcular</Text>
             <Text style={styles.warningText}>
               {`Preencha: ${data.missingProfileFields.join(", ")}`}
             </Text>
           </View>
         ) : null}
-        {actions.map((item) => {
-          const progress = item.targetPercentage > 0 ? Math.min((item.currentPercentage / item.targetPercentage) * 100, 200) : 0;
-
-          return (
+        {actions.map((item) => (
           <View key={item.id} style={styles.actionCard}>
             <View style={styles.actionHeader}>
               <Text style={styles.actionTicker}>{item.ticker}</Text>
@@ -90,74 +67,31 @@ export function RebalanceScreen() {
               </Text>
             ) : null}
             <Text style={styles.actionMeta}>
-              {`Atual ${formatPercentage(item.currentPercentage)} → Alvo ${formatPercentage(item.targetPercentage)}`}
+              {`Hoje ${formatPercentage(item.currentPercentage)} | Alvo ${formatPercentage(item.targetPercentage)}`}
             </Text>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${Math.max(0, Math.min(progress, 100))}%` }]} />
-            </View>
           </View>
-          );
-        })}
+        ))}
         {!isLoading && data?.eligibleForRebalance && actions.length === 0 ? (
-          <Text style={styles.emptyText}>Carteira ja alinhada com a cesta alvo. Nenhum ajuste necessario.</Text>
+          <Text style={styles.emptyText}>Carteira dentro do alvo. Nenhuma ordem sugerida.</Text>
         ) : null}
-        <PrimaryButton label="Usar este plano" />
+        {actions.length > 0 ? (
+          <View style={styles.guidanceCard}>
+            <Text style={styles.guidanceText}>
+              Use como referencia na corretora. O app nao executa as ordens.
+            </Text>
+          </View>
+        ) : null}
+        {data ? (
+          <Text style={styles.contextLine}>
+            {`Valor usado no calculo ${formatCurrency(data.calculationBaseValue)} | Caixa ${formatCurrency(data.cashAvailable)}`}
+          </Text>
+        ) : null}
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  heroCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.primary,
-    borderRadius: 4,
-    borderWidth: 1,
-    gap: 10,
-    padding: 18,
-  },
-  heroLabel: {
-    color: colors.textSoft,
-    fontFamily: typography.mono,
-    fontSize: typographyScale.xs.fontSize,
-    fontWeight: "700",
-    letterSpacing: 0,
-  },
-  heroTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: "600",
-    lineHeight: 26,
-  },
-  heroText: {
-    color: colors.textMuted,
-    fontSize: typographyScale.md.fontSize,
-    fontWeight: typographyScale.md.fontWeight,
-    lineHeight: 20,
-  },
-  metricsGrid: {
-    gap: 10,
-  },
-  metricCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 4,
-    borderWidth: 1,
-    gap: 4,
-    padding: 12,
-  },
-  metricLabel: {
-    color: colors.textSoft,
-    fontFamily: typography.mono,
-    fontSize: typographyScale.xs.fontSize,
-    fontWeight: "600",
-  },
-  metricValue: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "600",
-    lineHeight: 24,
-  },
   section: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -192,11 +126,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 22,
   },
-  actionType: {
-    fontFamily: typography.mono,
-    fontSize: typographyScale.sm.fontSize,
-    fontWeight: "600",
-  },
   positive: {
     color: colors.primary,
   },
@@ -206,7 +135,7 @@ const styles = StyleSheet.create({
   warningCard: {
     backgroundColor: colors.accentPanel,
     borderColor: colors.warning,
-    borderRadius: 4,
+    borderRadius: layout.radius.sm,
     borderWidth: 1,
     gap: 6,
     padding: 12,
@@ -222,6 +151,20 @@ const styles = StyleSheet.create({
     fontSize: typographyScale.xs.fontSize,
     fontWeight: typographyScale.xs.fontWeight,
     lineHeight: 14,
+  },
+  guidanceCard: {
+    backgroundColor: colors.accentPanel,
+    borderColor: colors.border,
+    borderRadius: layout.radius.sm,
+    borderWidth: 1,
+    gap: layout.space.xs,
+    padding: layout.space.md,
+  },
+  guidanceText: {
+    color: colors.textMuted,
+    fontSize: typographyScale.sm.fontSize,
+    fontWeight: typographyScale.sm.fontWeight,
+    lineHeight: 18,
   },
   actionAmount: {
     fontFamily: typography.mono,
@@ -246,14 +189,10 @@ const styles = StyleSheet.create({
     fontWeight: typographyScale.md.fontWeight,
     lineHeight: 20,
   },
-  progressTrack: {
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: 2,
-    height: 8,
-    overflow: "hidden",
-  },
-  progressFill: {
-    backgroundColor: colors.primary,
-    height: "100%",
+  contextLine: {
+    color: colors.textSoft,
+    fontFamily: typography.mono,
+    fontSize: typographyScale.xs.fontSize,
+    fontWeight: typographyScale.xs.fontWeight,
   },
 });

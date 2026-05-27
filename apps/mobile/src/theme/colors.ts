@@ -13,4 +13,6 @@ export const colors = {
   danger: "#EF4444",
   accentCyan: "#22D3EE",
   accentPanel: "#181A1F",
+  commandInk: "#0F1115",
+  buyBlue: "#60A5FA",
 } as const;

@@ -36,9 +36,11 @@ async function executeUpdate(mode: SchedulerMode): Promise<void> {
     const fetcher = await getFinancialDataFetcher();
     const result = await fetcher.updateAllAssets(mode === "incremental");
     const insertedTotal = result.results.reduce((sum, row) => sum + row.inserted, 0);
+    const updatedTotal = result.results.reduce((sum, row) => sum + row.updated, 0);
+    const skippedTotal = result.results.reduce((sum, row) => sum + row.skipped, 0);
 
     console.log(
-      `[scheduler] ${mode} update finished. assets=${result.results.length}, inserted=${insertedTotal}, durationMs=${Date.now() - startedAt}`,
+      `[scheduler] ${mode} update finished. assets=${result.results.length}, inserted=${insertedTotal}, updated=${updatedTotal}, skipped=${skippedTotal}, durationMs=${Date.now() - startedAt}`,
     );
   } catch (error) {
     console.error(`[scheduler] ${mode} update failed:`, error);

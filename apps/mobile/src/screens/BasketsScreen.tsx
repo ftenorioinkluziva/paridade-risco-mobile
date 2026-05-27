@@ -21,18 +21,18 @@ export function BasketsScreen() {
   return (
     <Screen
       title="Cestas"
-      subtitle="Defina a alocacao alvo e acompanhe o desvio atual da carteira."
+      subtitle="Defina o alvo da carteira e compare com a posicao atual."
       action={<PrimaryButton disabled label="Em breve" tone="neutral" />}
     >
       <View style={styles.highlightCard}>
         <Text style={styles.highlightEyebrow}>// CESTA_ATIVA</Text>
         <Text style={styles.highlightTitle}>{activeBasket?.name ?? "..."}</Text>
-        <Text style={styles.highlightText}>{activeBasket?.description ?? "Carregando cesta ativa."}</Text>
+        <Text style={styles.highlightText}>{activeBasket?.description ?? "Carregando alvo ativo."}</Text>
       </View>
 
       <View style={styles.list}>
         <Text style={styles.sectionLabel}>// CESTAS_DISPONIVEIS</Text>
-        {(baskets?.length ?? 0) === 0 ? <Text style={styles.emptyText}>Nenhuma cesta disponivel no momento.</Text> : null}
+        {(baskets?.length ?? 0) === 0 ? <Text style={styles.emptyText}>Nenhum alvo cadastrado ainda.</Text> : null}
         {(baskets ?? []).map((item) => (
           <Pressable
             key={item.name}

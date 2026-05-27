@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   badgeBuyText: {
-    color: "#60A5FA",
+    color: colors.buyBlue,
   },
   badgeSellText: {
     color: colors.warning,

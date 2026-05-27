@@ -27,17 +27,32 @@
 
 **Endpoints:**
 ```
-POST /api/admin/prices/update-all
+POST /api/admin/prices
   { action: "update-all", incremental: true|false }
   → Retorna { success, message, results[], timestamp }
 
-POST /api/admin/prices/update-one
-  { action: "update-one", ticker: "TICKER" }
-  → Retorna { success, message, timestamp }
+POST /api/admin/prices
+  { action: "update-one", ticker: "TICKER", incremental: true|false }
+  → Retorna { success, message, result, timestamp }
 
-GET /api/admin/prices/status
+GET /api/admin/prices
   → Retorna { status[], timestamp } com staleness info
 ```
+
+**Autorizacao:**
+- Uso manual/admin: enviar `x-user-id` de um usuario `ADMIN`.
+- Cron de producao: enviar `Authorization: Bearer <PRICE_UPDATE_CRON_SECRET>`.
+
+**Cron diario sugerido:**
+```
+POST /api/admin/prices
+Authorization: Bearer <PRICE_UPDATE_CRON_SECRET>
+Content-Type: application/json
+
+{ "action": "update-all", "incremental": true }
+```
+
+O upsert atualiza precos existentes para o mesmo `asset_id + price_date` e reporta `fetched`, `inserted`, `updated`, `skipped`, `lastDateBefore`, `lastDateAfter` e `source` por ativo.
 
 **CLI Scripts** (via npm):
 ```bash

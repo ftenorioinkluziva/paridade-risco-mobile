@@ -25,6 +25,7 @@ export function SegmentedControl<T extends string | number>({ options, value, on
           <Pressable
             key={String(option.value)}
             accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
             onPress={() => onChange(option.value)}
             style={({ pressed }) => [
               styles.button,
@@ -70,6 +71,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   labelActive: {
-    color: "#0F1115",
+    color: colors.commandInk,
   },
 });

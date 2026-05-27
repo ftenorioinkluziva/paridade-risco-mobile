@@ -65,7 +65,7 @@ export function FundsScreen() {
     const currentValue = parseMoney(currentInput);
 
     if (!nameInput.trim() || initialInvestment === null || currentValue === null || !investmentDateInput.trim()) {
-      Alert.alert("Dados invalidos", "Preencha nome, investimento inicial, valor atual e data (AAAA-MM-DD).");
+      Alert.alert("Dados incompletos", "Preencha nome, valor aplicado, valor atual e data no formato AAAA-MM-DD.");
       return;
     }
 
@@ -91,14 +91,14 @@ export function FundsScreen() {
       await refetch();
       resetForm();
     } catch {
-      Alert.alert("Falha ao salvar fundo", "Revise os dados e tente novamente.");
+      Alert.alert("Fundo nao salvo", "Revise nome, valores e data antes de tentar novamente.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDeleteFund(fundId: string) {
-    Alert.alert("Excluir fundo", "Confirma exclusao deste fundo?", [
+    Alert.alert("Excluir fundo", "Remover este fundo da sua carteira?", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Excluir",
@@ -113,7 +113,7 @@ export function FundsScreen() {
                 resetForm();
               }
             } catch {
-              Alert.alert("Falha ao excluir", "Nao foi possivel excluir o fundo agora.");
+              Alert.alert("Fundo nao excluido", "Tente novamente antes de atualizar o rebalanceamento.");
             }
           })();
         },
@@ -139,7 +139,7 @@ export function FundsScreen() {
     const parsedValue = parseMoney(quickValueByFundId[fundId] ?? "");
 
     if (parsedValue === null) {
-      Alert.alert("Valor invalido", "Informe um valor atual valido para o fundo.");
+      Alert.alert("Valor atual invalido", "Informe quanto o fundo vale hoje, sem sinal negativo.");
       return;
     }
 
@@ -148,23 +148,23 @@ export function FundsScreen() {
       await refetch();
       setQuickValueByFundId((previous) => ({ ...previous, [fundId]: "" }));
     } catch {
-      Alert.alert("Falha ao atualizar valor", "Nao foi possivel atualizar o valor atual do fundo.");
+      Alert.alert("Valor nao atualizado", "Tente novamente antes de calcular o rebalanceamento.");
     }
   }
 
   return (
     <Screen
       title="Fundos"
-      subtitle="Gestao completa dos fundos para consolidacao de patrimonio e rebalanceamento."
+      subtitle="Atualize fundos para que o rebalanceamento use o patrimonio correto."
       action={<PrimaryButton label={editingFundId ? "Cancelar" : "Novo fundo"} onPress={resetForm} tone="neutral" />}
     >
       <View style={styles.grid}>
         <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Total investido</Text>
+          <Text style={styles.metricLabel}>Valor aplicado</Text>
           <Text style={styles.metricValue}>{formatCurrency(summary.totalInvested)}</Text>
         </View>
         <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Valor atual</Text>
+          <Text style={styles.metricLabel}>Valor hoje</Text>
           <Text style={styles.metricValue}>{formatCurrency(summary.currentValue)}</Text>
         </View>
         <View style={styles.metricCard}>
@@ -184,9 +184,9 @@ export function FundsScreen() {
       <View style={styles.formCard}>
         <Text style={styles.formTitle}>{editingFundId ? "Editar fundo" : "Novo fundo"}</Text>
         <TextInput onChangeText={setNameInput} placeholder="Nome do fundo" placeholderTextColor={colors.textSoft} style={styles.input} value={nameInput} />
-        <TextInput onChangeText={setInitialInput} placeholder="Investimento inicial (ex: 9000)" placeholderTextColor={colors.textSoft} style={styles.input} value={initialInput} />
-        <TextInput onChangeText={setCurrentInput} placeholder="Valor atual (ex: 10708.61)" placeholderTextColor={colors.textSoft} style={styles.input} value={currentInput} />
-        <TextInput onChangeText={setInvestmentDateInput} placeholder="Data (AAAA-MM-DD)" placeholderTextColor={colors.textSoft} style={styles.input} value={investmentDateInput} />
+        <TextInput onChangeText={setInitialInput} placeholder="Valor aplicado (ex: 9000)" placeholderTextColor={colors.textSoft} style={styles.input} value={initialInput} />
+        <TextInput onChangeText={setCurrentInput} placeholder="Valor hoje (ex: 10708.61)" placeholderTextColor={colors.textSoft} style={styles.input} value={currentInput} />
+        <TextInput onChangeText={setInvestmentDateInput} placeholder="Data da aplicacao (AAAA-MM-DD)" placeholderTextColor={colors.textSoft} style={styles.input} value={investmentDateInput} />
         <PrimaryButton label={isSubmitting ? "Salvando" : editingFundId ? "Salvar fundo" : "Criar fundo"} onPress={() => void handleSubmitFund()} />
       </View>
 
@@ -196,7 +196,7 @@ export function FundsScreen() {
         {!isLoading && (funds?.length ?? 0) === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>Nenhum fundo cadastrado.</Text>
-            <Text style={styles.emptyHint}>Use o formulario acima para registrar seu primeiro fundo.</Text>
+            <Text style={styles.emptyHint}>Cadastre fundos para incluir esse valor no rebalanceamento.</Text>
           </View>
         ) : null}
         {(funds ?? []).map((fund) => {
@@ -217,13 +217,13 @@ export function FundsScreen() {
               </View>
 
               <View style={styles.fundMetricsRow}>
-                <Text style={styles.fundMetric}>{`Inicial: ${formatCurrency(fund.initialInvestment)}`}</Text>
-                <Text style={styles.fundMetric}>{`Atual: ${formatCurrency(fund.currentValue)}`}</Text>
+                <Text style={styles.fundMetric}>{`Aplicado: ${formatCurrency(fund.initialInvestment)}`}</Text>
+                <Text style={styles.fundMetric}>{`Hoje: ${formatCurrency(fund.currentValue)}`}</Text>
                 <Text style={[styles.fundMetric, gain >= 0 ? styles.positiveText : styles.warningText]}>
-                  {`G/P: ${formatSignedCurrency(gain)}`}
+                  {`Resultado: ${formatSignedCurrency(gain)}`}
                 </Text>
                 <Text style={[styles.fundMetric, profitability >= 0 ? styles.positiveText : styles.warningText]}>
-                  {`Rent: ${formatPercentage(profitability)}`}
+                  {`Retorno: ${formatPercentage(profitability)}`}
                 </Text>
               </View>
 
@@ -235,7 +235,7 @@ export function FundsScreen() {
                       [fund.id]: value,
                     }))
                   }
-                  placeholder="Novo valor atual"
+                  placeholder="Novo valor hoje"
                   placeholderTextColor={colors.textSoft}
                   style={[styles.input, styles.quickInput]}
                   value={quickValueByFundId[fund.id] ?? ""}

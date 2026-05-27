@@ -24,8 +24,8 @@ export function SummaryCard({
     <View style={[styles.card, toneStyles[tone]]}>
       <View style={styles.content}>
         <Text style={styles.eyebrow}>{eyebrow}</Text>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.detail}>{detail}</Text>
+        <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.title}>{title}</Text>
+        <Text numberOfLines={3} style={styles.detail}>{detail}</Text>
       </View>
       {trailing ? <View>{trailing}</View> : null}
     </View>

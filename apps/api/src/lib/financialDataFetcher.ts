@@ -1,10 +1,30 @@
 import { db } from "@/db/client";
 import { assets, historicalPrices } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 
 interface PriceDataPoint {
   date: Date;
   price: string;
+}
+
+interface LastPricePoint {
+  priceDate: Date;
+  price: string;
+}
+
+type PriceSource = "YAHOO_FINANCE" | "BCB";
+
+export interface AssetPriceUpdateResult {
+  ticker: string;
+  source: PriceSource | null;
+  fetched: number;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  lastDateBefore: Date | null;
+  lastDateAfter: Date | null;
+  success: boolean;
+  message?: string;
 }
 
 interface YahooFinanceResponse {
@@ -32,21 +52,20 @@ export class FinancialDataFetcher {
   /**
    * Get last update date for a given asset ticker
    */
-  private async getLastUpdateDate(ticker: string): Promise<Date | null> {
-    const asset = await db.query.assets.findFirst({
-      where: eq(assets.ticker, ticker),
-    });
-
-    if (!asset) return null;
-
+  private async getLastPriceForAsset(assetId: string): Promise<LastPricePoint | null> {
     const lastPrice = await db
-      .select({ priceDate: historicalPrices.priceDate })
+      .select({ priceDate: historicalPrices.priceDate, price: historicalPrices.price })
       .from(historicalPrices)
-      .where(eq(historicalPrices.assetId, asset.id))
+      .where(eq(historicalPrices.assetId, assetId))
       .orderBy(sql`${historicalPrices.priceDate} DESC`)
       .limit(1);
 
-    return lastPrice.length > 0 ? lastPrice[0].priceDate : null;
+    return lastPrice.length > 0 ? lastPrice[0] : null;
+  }
+
+  private async getLastPriceDateForAsset(assetId: string): Promise<Date | null> {
+    const lastPrice = await this.getLastPriceForAsset(assetId);
+    return lastPrice?.priceDate ?? null;
   }
 
   /**
@@ -112,11 +131,12 @@ export class FinancialDataFetcher {
    * Fetch CDI data from BCB API
    * Series 12 = CDI daily rate
    */
-  async fetchCDIData(startDate?: Date): Promise<PriceDataPoint[]> {
+  async fetchCDIData(startDate?: Date, initialValue?: number): Promise<PriceDataPoint[]> {
     return this.fetchAccumulatedSeriesFromBCB({
       label: "CDI",
       seriesCode: 12,
       startDate,
+      initialValue,
     });
   }
 
@@ -124,11 +144,12 @@ export class FinancialDataFetcher {
    * Fetch CDI monthly data from BCB API
    * Series 4391 = CDI monthly rate
    */
-  async fetchCDIMensalData(startDate?: Date): Promise<PriceDataPoint[]> {
+  async fetchCDIMensalData(startDate?: Date, initialValue?: number): Promise<PriceDataPoint[]> {
     return this.fetchAccumulatedSeriesFromBCB({
       label: "CDI_MENSAL",
       seriesCode: 4391,
       startDate,
+      initialValue,
     });
   }
 
@@ -136,22 +157,24 @@ export class FinancialDataFetcher {
    * Fetch IPCA data from BCB API
    * Series 433 = IPCA monthly accumulated
    */
-  async fetchIPCAData(startDate?: Date): Promise<PriceDataPoint[]> {
+  async fetchIPCAData(startDate?: Date, initialValue?: number): Promise<PriceDataPoint[]> {
     return this.fetchAccumulatedSeriesFromBCB({
       label: "IPCA",
       seriesCode: 433,
       startDate,
+      initialValue,
     });
   }
 
   /**
    * IPCA expectation fallback (keeps ticker updated when expectation source is unavailable)
    */
-  async fetchIPCAExpectationData(startDate?: Date): Promise<PriceDataPoint[]> {
+  async fetchIPCAExpectationData(startDate?: Date, initialValue?: number): Promise<PriceDataPoint[]> {
     return this.fetchAccumulatedSeriesFromBCB({
       label: "IPCA_EXP",
       seriesCode: 433,
       startDate,
+      initialValue,
     });
   }
 
@@ -159,6 +182,7 @@ export class FinancialDataFetcher {
     seriesCode: number;
     label: string;
     startDate?: Date;
+    initialValue?: number;
   }): Promise<PriceDataPoint[]> {
     try {
       const start = args.startDate
@@ -166,11 +190,22 @@ export class FinancialDataFetcher {
         : new Date(new Date().getTime() - 5 * 365 * 24 * 60 * 60 * 1000); // 5 years
 
       const startStr = this.formatDateForBCB(start);
-      const endStr = this.formatDateForBCB(new Date());
+      const end = new Date();
+
+      if (start > end) {
+        return [];
+      }
+
+      const endStr = this.formatDateForBCB(end);
 
       const url = `${BCB_API}.${args.seriesCode}/dados?formato=json&dataInicial=${startStr}&dataFinal=${endStr}`;
 
       const response = await fetch(url);
+
+      if (response.status === 404) {
+        console.log(`BCB API returned no data for ${args.label} between ${startStr} and ${endStr}`);
+        return [];
+      }
 
       if (!response.ok) {
         console.error(`BCB API error for ${args.label}:`, response.statusText);
@@ -180,16 +215,21 @@ export class FinancialDataFetcher {
       const data = (await response.json()) as { valor: string; data: string }[];
 
       const prices: PriceDataPoint[] = [];
-      let accumulatedValue = 100; // Start from 100
+      let accumulatedValue = args.initialValue ?? 100;
 
       for (const entry of data) {
-        const rate = parseFloat(entry.valor) / 100;
-        accumulatedValue = accumulatedValue * (1 + rate);
         const date = this.parseBCBDate(entry.data);
 
         if (Number.isNaN(date.getTime())) {
           continue;
         }
+
+        if (args.startDate && date < args.startDate) {
+          continue;
+        }
+
+        const rate = parseFloat(entry.valor) / 100;
+        accumulatedValue = accumulatedValue * (1 + rate);
 
         prices.push({
           date,
@@ -208,74 +248,191 @@ export class FinancialDataFetcher {
    * Upsert asset prices into database
    * Batches inserts in chunks of 100
    */
-  private async upsertAsset(assetId: string, prices: PriceDataPoint[]): Promise<number> {
-    if (prices.length === 0) return 0;
+  private async upsertAsset(
+    assetId: string,
+    prices: PriceDataPoint[],
+  ): Promise<{ inserted: number; updated: number; skipped: number }> {
+    if (prices.length === 0) {
+      return { inserted: 0, updated: 0, skipped: 0 };
+    }
+
+    const pricesByDay = new Map<string, PriceDataPoint>();
+    for (const price of prices) {
+      pricesByDay.set(this.toUtcDayKey(price.date), price);
+    }
+    const dedupedPrices = Array.from(pricesByDay.values());
 
     const batchSize = 100;
     let inserted = 0;
+    let updated = 0;
+    let skipped = 0;
 
-    for (let i = 0; i < prices.length; i += batchSize) {
-      const batch = prices.slice(i, i + batchSize);
+    for (let i = 0; i < dedupedPrices.length; i += batchSize) {
+      const batch = dedupedPrices.slice(i, i + batchSize);
 
       try {
-        await db
-          .insert(historicalPrices)
-          .values(
-            batch.map((p) => ({
-              assetId,
-              priceDate: p.date,
-              price: p.price,
-            }))
-          )
-          .onConflictDoNothing();
+        const firstDay = this.toUtcDayStart(
+          new Date(Math.min(...batch.map((price) => price.date.getTime()))),
+        );
+        const lastDayExclusive = this.addUtcDays(
+          this.toUtcDayStart(
+            new Date(Math.max(...batch.map((price) => price.date.getTime()))),
+          ),
+          1,
+        );
+        const existingRows = await db
+          .select({ priceDate: historicalPrices.priceDate })
+          .from(historicalPrices)
+          .where(
+            and(
+              eq(historicalPrices.assetId, assetId),
+              gte(historicalPrices.priceDate, firstDay),
+              lt(historicalPrices.priceDate, lastDayExclusive),
+            ),
+          );
+        const existingDateByDay = new Map(
+          existingRows.map((row) => [this.toUtcDayKey(row.priceDate), row.priceDate]),
+        );
+        const values = batch.map((p) => ({
+          assetId,
+          priceDate: existingDateByDay.get(this.toUtcDayKey(p.date)) ?? p.date,
+          price: p.price,
+        }));
 
-        inserted += batch.length;
+        const upsertedRows = await db
+          .insert(historicalPrices)
+          .values(values)
+          .onConflictDoUpdate({
+            target: [historicalPrices.assetId, historicalPrices.priceDate],
+            set: {
+              price: sql`excluded.price`,
+            },
+          })
+          .returning({ id: historicalPrices.id, priceDate: historicalPrices.priceDate });
+
+        const upserted = upsertedRows.length;
+        const existingInBatch = values.filter((price) =>
+          existingDateByDay.has(this.toUtcDayKey(price.priceDate)),
+        ).length;
+
+        inserted += Math.max(upserted - existingInBatch, 0);
+        updated += Math.min(existingInBatch, upserted);
+        skipped += Math.max(batch.length - upserted, 0);
       } catch (error) {
         console.error(`Error upserting prices for asset ${assetId}:`, error);
+        throw error;
       }
     }
 
-    return inserted;
+    return { inserted, updated, skipped };
+  }
+
+  private toUtcDayStart(date: Date): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  }
+
+  private addUtcDays(date: Date, days: number): Date {
+    const next = new Date(date);
+    next.setUTCDate(next.getUTCDate() + days);
+    return next;
+  }
+
+  private toUtcDayKey(date: Date): string {
+    return this.toUtcDayStart(date).toISOString().slice(0, 10);
+  }
+
+  private getPriceSource(ticker: string, calculationType: string): PriceSource | null {
+    if (calculationType === "PERCENTUAL") {
+      return ["CDI", "CDI_MENSAL", "IPCA", "IPCA_EXP"].includes(ticker) ? "BCB" : null;
+    }
+
+    return "YAHOO_FINANCE";
+  }
+
+  private async fetchPricesForAsset(
+    asset: typeof assets.$inferSelect,
+    startDate?: Date,
+    initialValue?: number,
+  ): Promise<PriceDataPoint[]> {
+    if (asset.calculationType === "PERCENTUAL") {
+      const fetchStartDate = startDate ? this.addUtcDays(this.toUtcDayStart(startDate), 1) : undefined;
+
+      if (asset.ticker === "CDI") {
+        return this.fetchCDIData(fetchStartDate, initialValue);
+      }
+      if (asset.ticker === "CDI_MENSAL") {
+        return this.fetchCDIMensalData(fetchStartDate, initialValue);
+      }
+      if (asset.ticker === "IPCA") {
+        return this.fetchIPCAData(fetchStartDate, initialValue);
+      }
+      if (asset.ticker === "IPCA_EXP") {
+        return this.fetchIPCAExpectationData(fetchStartDate, initialValue);
+      }
+
+      return [];
+    }
+
+    return this.fetchYahooFinanceData(asset.ticker, startDate);
   }
 
   /**
    * Update a specific asset's historical prices
    */
-  async updateSpecificAsset(ticker: string): Promise<{ success: boolean; message: string }> {
+  async updateSpecificAsset(ticker: string, incremental = false): Promise<AssetPriceUpdateResult> {
     try {
       const asset = await db.query.assets.findFirst({
         where: eq(assets.ticker, ticker),
       });
 
       if (!asset) {
-        return { success: false, message: `Asset ${ticker} not found` };
+        return {
+          ticker,
+          source: null,
+          fetched: 0,
+          inserted: 0,
+          updated: 0,
+          skipped: 0,
+          lastDateBefore: null,
+          lastDateAfter: null,
+          success: false,
+          message: `Asset ${ticker} not found`,
+        };
       }
 
-      let prices: PriceDataPoint[] = [];
-
-      if (asset.calculationType === "PERCENTUAL") {
-        if (ticker === "CDI") {
-          prices = await this.fetchCDIData();
-        } else if (ticker === "CDI_MENSAL") {
-          prices = await this.fetchCDIMensalData();
-        } else if (ticker === "IPCA") {
-          prices = await this.fetchIPCAData();
-        } else if (ticker === "IPCA_EXP") {
-          prices = await this.fetchIPCAExpectationData();
-        }
-      } else {
-        // PRECO type
-        prices = await this.fetchYahooFinanceData(ticker);
-      }
-
-      const count = await this.upsertAsset(asset.id, prices);
+      const lastPriceBefore = await this.getLastPriceForAsset(asset.id);
+      const lastDateBefore = lastPriceBefore?.priceDate ?? null;
+      const source = this.getPriceSource(asset.ticker, asset.calculationType);
+      const prices = await this.fetchPricesForAsset(
+        asset,
+        incremental ? lastDateBefore ?? undefined : undefined,
+        incremental && lastPriceBefore ? Number(lastPriceBefore.price) : undefined,
+      );
+      const result = await this.upsertAsset(asset.id, prices);
+      const lastDateAfter = await this.getLastPriceDateForAsset(asset.id);
 
       return {
+        ticker: asset.ticker,
+        source,
+        fetched: prices.length,
+        inserted: result.inserted,
+        updated: result.updated,
+        skipped: result.skipped,
+        lastDateBefore,
+        lastDateAfter,
         success: true,
-        message: `Updated ${ticker}: inserted ${count} price points`,
+        message: `Updated ${ticker}: inserted ${result.inserted}, updated ${result.updated}, skipped ${result.skipped} price points`,
       };
     } catch (error) {
       return {
+        ticker,
+        source: null,
+        fetched: 0,
+        inserted: 0,
+        updated: 0,
+        skipped: 0,
+        lastDateBefore: null,
+        lastDateAfter: null,
         success: false,
         message: `Error updating ${ticker}: ${error instanceof Error ? error.message : "Unknown error"}`,
       };
@@ -285,50 +442,65 @@ export class FinancialDataFetcher {
   /**
    * Update all active assets (incremental by default)
    */
-  async updateAllAssets(incremental = true): Promise<{ success: boolean; message: string; results: Array<{ ticker: string; inserted: number }> }> {
+  async updateAllAssets(incremental = true): Promise<{ success: boolean; message: string; results: AssetPriceUpdateResult[] }> {
     const activeAssets = await db.query.assets.findMany({
       where: eq(assets.isActive, true),
     });
 
-    const results = [];
+    const results: AssetPriceUpdateResult[] = [];
 
     for (const asset of activeAssets) {
       try {
-        let prices: PriceDataPoint[] = [];
-        let startDate: Date | null = null;
+        const lastPriceBefore = await this.getLastPriceForAsset(asset.id);
+        const lastDateBefore = lastPriceBefore?.priceDate ?? null;
+        const source = this.getPriceSource(asset.ticker, asset.calculationType);
+        const prices = await this.fetchPricesForAsset(
+          asset,
+          incremental ? lastDateBefore ?? undefined : undefined,
+          incremental && lastPriceBefore ? Number(lastPriceBefore.price) : undefined,
+        );
+        const result = await this.upsertAsset(asset.id, prices);
+        const lastDateAfter = await this.getLastPriceDateForAsset(asset.id);
 
-        if (incremental) {
-          startDate = await this.getLastUpdateDate(asset.ticker);
-        }
+        results.push({
+          ticker: asset.ticker,
+          source,
+          fetched: prices.length,
+          inserted: result.inserted,
+          updated: result.updated,
+          skipped: result.skipped,
+          lastDateBefore,
+          lastDateAfter,
+          success: true,
+        });
 
-        if (asset.calculationType === "PERCENTUAL") {
-          if (asset.ticker === "CDI") {
-            prices = await this.fetchCDIData(startDate || undefined);
-          } else if (asset.ticker === "CDI_MENSAL") {
-            prices = await this.fetchCDIMensalData(startDate || undefined);
-          } else if (asset.ticker === "IPCA") {
-            prices = await this.fetchIPCAData(startDate || undefined);
-          } else if (asset.ticker === "IPCA_EXP") {
-            prices = await this.fetchIPCAExpectationData(startDate || undefined);
-          }
-        } else {
-          // PRECO type
-          prices = await this.fetchYahooFinanceData(asset.ticker, startDate || undefined);
-        }
-
-        const inserted = await this.upsertAsset(asset.id, prices);
-        results.push({ ticker: asset.ticker, inserted });
-
-        console.log(`✓ ${asset.ticker}: ${inserted} prices updated`);
+        console.log(
+          `✓ ${asset.ticker}: fetched=${prices.length}, inserted=${result.inserted}, updated=${result.updated}, skipped=${result.skipped}`,
+        );
       } catch (error) {
         console.error(`✗ ${asset.ticker}: ${error}`);
-        results.push({ ticker: asset.ticker, inserted: 0 });
+        results.push({
+          ticker: asset.ticker,
+          source: this.getPriceSource(asset.ticker, asset.calculationType),
+          fetched: 0,
+          inserted: 0,
+          updated: 0,
+          skipped: 0,
+          lastDateBefore: null,
+          lastDateAfter: null,
+          success: false,
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
       }
     }
 
+    const insertedTotal = results.reduce((sum, row) => sum + row.inserted, 0);
+    const updatedTotal = results.reduce((sum, row) => sum + row.updated, 0);
+    const skippedTotal = results.reduce((sum, row) => sum + row.skipped, 0);
+
     return {
-      success: true,
-      message: `Updated ${activeAssets.length} assets`,
+      success: results.every((row) => row.success),
+      message: `Updated ${activeAssets.length} assets: inserted ${insertedTotal}, updated ${updatedTotal}, skipped ${skippedTotal}`,
       results,
     };
   }
@@ -371,9 +543,9 @@ export class FinancialDataFetcher {
    * Format date for BCB API (DD/MM/YYYY)
    */
   private formatDateForBCB(date: Date): string {
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const year = date.getUTCFullYear();
     return `${day}/${month}/${year}`;
   }
 

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { CreateTransactionInput } from "@paridade-risco/shared";
 
+import { InlineAlert } from "../components/InlineAlert";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
 import { SegmentedControl } from "../components/SegmentedControl";
@@ -23,14 +24,18 @@ export function NewTransactionScreen() {
   const [selectedType, setSelectedType] = useState<(typeof transactionTypeOptions)[number]>("COMPRA");
   const [tickerSearch, setTickerSearch] = useState("");
   const [ticker, setTicker] = useState("");
+  const [showAllAssets, setShowAllAssets] = useState(false);
   const [quantity, setQuantity] = useState("12");
   const [price, setPrice] = useState("179.20");
   const [date, setDate] = useState("2026-04-08 09:12");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const quantityNumber = Number(quantity.replace(",", "."));
   const priceNumber = Number(price.replace(",", "."));
   const total = quantityNumber * priceNumber;
+  const parsedDate = new Date(date.replace(" ", "T"));
+  const isDateValid = date.trim().length > 0 && !Number.isNaN(parsedDate.getTime());
   const selectedAsset = assets?.find((item) => item.ticker === ticker);
   const tickerSearchTerm = tickerSearch.trim().toUpperCase();
   const filteredAssets = (assets ?? []).filter((item) => {
@@ -41,16 +46,17 @@ export function NewTransactionScreen() {
     return item.ticker.includes(tickerSearchTerm) || item.name.toUpperCase().includes(tickerSearchTerm);
   });
   const visibleAssets = tickerSearchTerm ? filteredAssets : assets ?? [];
+  const visibleAssetOptions = showAllAssets ? visibleAssets.slice(0, 8) : visibleAssets.slice(0, 4);
   const errors = {
     ticker:
       ticker.trim().length === 0
-        ? "Selecione um ticker cadastrado."
+        ? "Escolha um ativo da lista."
         : selectedAsset
           ? undefined
-          : "Ticker invalido. Escolha um ticker da lista cadastrada.",
-    quantity: quantityNumber > 0 ? undefined : "Quantidade deve ser maior que zero.",
-    price: priceNumber > 0 ? undefined : "Preco deve ser maior que zero.",
-    date: date.trim().length === 0 ? "Informe a data da operacao." : undefined,
+          : "Ativo nao encontrado. Selecione uma opcao da lista.",
+    quantity: quantityNumber > 0 ? undefined : "Informe uma quantidade maior que zero.",
+    price: priceNumber > 0 ? undefined : "Informe um preco maior que zero.",
+    date: isDateValid ? undefined : "Use data e hora neste formato: 2026-04-08 09:12.",
   };
   const isValid = !errors.ticker && !errors.quantity && !errors.price && !errors.date;
 
@@ -64,16 +70,16 @@ export function NewTransactionScreen() {
       type: selectedType,
       shares: quantityNumber,
       pricePerShare: priceNumber,
-      tradedAt: new Date(date.replace(" ", "T")).toISOString(),
+      tradedAt: parsedDate.toISOString(),
     };
 
     try {
       setIsSubmitting(true);
+      setSubmitError(null);
       await apiClient.createTransaction(payload);
-      Alert.alert("Transacao registrada", `${selectedType === "COMPRA" ? "Compra" : "Venda"} enviada com sucesso.`);
       navigation.goBack();
     } catch {
-      Alert.alert("Falha ao salvar", "Nao foi possivel registrar a transacao na API.");
+      setSubmitError("A transacao nao foi salva. Confira ativo, quantidade, preco e data.");
     } finally {
       setIsSubmitting(false);
     }
@@ -82,7 +88,7 @@ export function NewTransactionScreen() {
   return (
     <Screen
       title="Nova transacao"
-      subtitle="Fluxo enxuto para registrar compra ou venda sem sair da rotina mobile."
+      subtitle="Registre uma compra ou venda para atualizar sua carteira."
       action={<PrimaryButton label="Voltar" onPress={() => navigation.goBack()} tone="neutral" />}
     >
       <View style={styles.section}>
@@ -105,16 +111,19 @@ export function NewTransactionScreen() {
           label="Buscar ticker"
           onChangeText={(value) => {
             setTickerSearch(value);
+            setShowAllAssets(false);
           }}
           value={tickerSearch}
         />
         <View style={styles.assetPickerWrap}>
-          {visibleAssets.slice(0, 8).map((item) => {
+          {visibleAssetOptions.map((item) => {
             const isSelected = ticker === item.ticker;
 
             return (
               <Pressable
                 key={item.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
                 onPress={() => {
                   setTicker(item.ticker);
                   setTickerSearch(item.ticker);
@@ -126,30 +135,42 @@ export function NewTransactionScreen() {
               </Pressable>
             );
           })}
+          {visibleAssets.length > visibleAssetOptions.length ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setShowAllAssets(true)}
+              style={styles.showMoreButton}
+            >
+              <Text style={styles.showMoreText}>{`Ver mais ${visibleAssets.length - visibleAssetOptions.length} ativo(s)`}</Text>
+            </Pressable>
+          ) : null}
         </View>
         {tickerSearchTerm && visibleAssets.length === 0 ? (
-          <Text style={styles.helperText}>Nenhum ativo encontrado para essa busca.</Text>
+          <Text style={styles.helperText}>Nenhum ativo encontrado. Tente outro codigo ou nome.</Text>
         ) : null}
         {ticker ? <Text style={styles.helperText}>{`Selecionado: ${ticker}`}</Text> : null}
         {selectedAsset ? <Text style={styles.helperText}>{selectedAsset.name}</Text> : null}
         {errors.ticker ? <Text style={styles.errorText}>{errors.ticker}</Text> : null}
-        <Field label="Quantidade" keyboardType="numeric" onChangeText={setQuantity} value={quantity} />
+        <Field label="Quantidade de cotas" keyboardType="numeric" onChangeText={setQuantity} value={quantity} />
         {errors.quantity ? <Text style={styles.errorText}>{errors.quantity}</Text> : null}
-        <Field label="Preco por cota" keyboardType="numeric" onChangeText={setPrice} value={price} />
+        <Field label="Preco pago por cota" keyboardType="numeric" onChangeText={setPrice} value={price} />
         {errors.price ? <Text style={styles.errorText}>{errors.price}</Text> : null}
-        <Field label="Data" onChangeText={setDate} value={date} />
+        <Field label="Data e hora da operacao" onChangeText={setDate} value={date} />
         {errors.date ? <Text style={styles.errorText}>{errors.date}</Text> : null}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>// PREVIA</Text>
+        {submitError ? (
+          <InlineAlert title="Transacao nao salva" message={submitError} tone="danger" />
+        ) : null}
         <Text style={styles.previewValue}>{isValid ? formatCurrency(total) : "--"}</Text>
         <Text style={styles.previewText}>
           {isValid
             ? `${selectedType === "COMPRA" ? "Compra" : "Venda"} pronta para confirmacao em ${ticker}.`
-            : "Preencha os campos obrigatorios para gerar o preview da operacao."}
+            : "Preencha os campos para revisar o valor antes de salvar."}
         </Text>
-        <PrimaryButton disabled={!isValid || isSubmitting} label={isSubmitting ? "Enviando" : "Confirmar transacao"} onPress={handleSubmit} />
+        <PrimaryButton disabled={!isValid || isSubmitting} label={isSubmitting ? "Salvando" : "Salvar transacao"} onPress={handleSubmit} />
       </View>
     </Screen>
   );
@@ -230,6 +251,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+  showMoreButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 4,
+    borderWidth: 1,
+    minHeight: layout.touch.minimum,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  showMoreText: {
+    color: colors.textMuted,
+    fontFamily: typography.mono,
+    fontSize: typographyScale.xs.fontSize,
+    fontWeight: "600",
+  },
   assetOptionTicker: {
     color: colors.text,
     fontFamily: typography.mono,
@@ -237,7 +275,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   assetOptionTickerSelected: {
-    color: "#0F1115",
+    color: colors.commandInk,
   },
   assetOptionName: {
     color: colors.textMuted,
@@ -245,7 +283,7 @@ const styles = StyleSheet.create({
     fontWeight: typographyScale.xs.fontWeight,
   },
   assetOptionNameSelected: {
-    color: "#0F1115",
+    color: colors.commandInk,
     opacity: 0.85,
   },
   errorText: {

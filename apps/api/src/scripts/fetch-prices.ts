@@ -33,7 +33,9 @@ async function main() {
       console.log("");
       console.log("Results:");
       for (const r of result.results) {
-        console.log(`  ${r.ticker}: ${r.inserted} prices`);
+        console.log(
+          `  ${r.ticker}: fetched=${r.fetched}, inserted=${r.inserted}, updated=${r.updated}, skipped=${r.skipped}`,
+        );
       }
     } else if (action === "update-one") {
       if (!ticker) {
@@ -41,7 +43,7 @@ async function main() {
         process.exit(1);
       }
       console.log(`🔄 Updating ${ticker}...`);
-      const result = await fetcher.updateSpecificAsset(ticker);
+      const result = await fetcher.updateSpecificAsset(ticker, incremental);
       console.log(result.success ? `✓ ${result.message}` : `❌ ${result.message}`);
     } else if (action === "status") {
       console.log("📍 Checking update status...");

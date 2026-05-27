@@ -22,8 +22,8 @@ export function PositionCard({ ticker, name, shares, currentPrice, currentValue,
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.identity}>
-          <Text style={styles.ticker}>{ticker}</Text>
-          <Text style={styles.name}>{name}</Text>
+          <Text ellipsizeMode="tail" numberOfLines={1} style={styles.ticker}>{ticker}</Text>
+          <Text ellipsizeMode="tail" numberOfLines={2} style={styles.name}>{name}</Text>
         </View>
         <View style={styles.amountBlock}>
           <Text style={styles.currentValue}>{formatCurrency(currentValue)}</Text>
@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
   identity: {
     flex: 1,
     gap: 2,
+    minWidth: 0,
   },
   ticker: {
     color: colors.text,
@@ -74,6 +75,7 @@ const styles = StyleSheet.create({
   amountBlock: {
     alignItems: "flex-end",
     gap: 3,
+    flexShrink: 0,
   },
   currentValue: {
     color: colors.text,

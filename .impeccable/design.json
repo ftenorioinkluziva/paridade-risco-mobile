@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-27T00:00:00-03:00",
+  "title": "Design System: Paridade Risco",
+  "extensions": {
+    "colorMeta": {
+      "operational-graphite": {
+        "role": "neutral",
+        "displayName": "Grafite Operacional",
+        "canonical": "#16171B",
+        "tonalRamp": ["oklch(15% 0.01 260)", "oklch(24% 0.01 260)", "oklch(34% 0.01 260)", "oklch(44% 0.01 260)", "oklch(56% 0.01 260)", "oklch(68% 0.01 260)", "oklch(82% 0.01 260)", "oklch(95% 0.01 260)"]
+      },
+      "panel-slate": {
+        "role": "neutral",
+        "displayName": "Slate de Painel",
+        "canonical": "#1E2026",
+        "tonalRamp": ["oklch(15% 0.012 260)", "oklch(24% 0.012 260)", "oklch(34% 0.012 260)", "oklch(44% 0.012 260)", "oklch(56% 0.012 260)", "oklch(68% 0.012 260)", "oklch(82% 0.012 260)", "oklch(95% 0.012 260)"]
+      },
+      "action-green": {
+        "role": "primary",
+        "displayName": "Verde de Acao",
+        "canonical": "#22C55E",
+        "tonalRamp": ["oklch(15% 0.12 150)", "oklch(24% 0.14 150)", "oklch(34% 0.16 150)", "oklch(44% 0.17 150)", "oklch(56% 0.18 150)", "oklch(68% 0.17 150)", "oklch(82% 0.12 150)", "oklch(95% 0.05 150)"]
+      },
+      "warning-amber": {
+        "role": "secondary",
+        "displayName": "Amber de Atencao",
+        "canonical": "#F59E0B",
+        "tonalRamp": ["oklch(15% 0.09 70)", "oklch(24% 0.11 70)", "oklch(34% 0.13 70)", "oklch(44% 0.15 70)", "oklch(56% 0.16 70)", "oklch(68% 0.14 70)", "oklch(82% 0.09 70)", "oklch(95% 0.04 70)"]
+      },
+      "danger-red": {
+        "role": "secondary",
+        "displayName": "Vermelho de Risco",
+        "canonical": "#EF4444",
+        "tonalRamp": ["oklch(15% 0.1 25)", "oklch(24% 0.13 25)", "oklch(34% 0.15 25)", "oklch(44% 0.17 25)", "oklch(56% 0.18 25)", "oklch(68% 0.14 25)", "oklch(82% 0.09 25)", "oklch(95% 0.04 25)"]
+      },
+      "buy-blue": {
+        "role": "secondary",
+        "displayName": "Azul de Compra",
+        "canonical": "#60A5FA",
+        "tonalRamp": ["oklch(15% 0.1 250)", "oklch(24% 0.12 250)", "oklch(34% 0.14 250)", "oklch(44% 0.15 250)", "oklch(56% 0.14 250)", "oklch(68% 0.12 250)", "oklch(82% 0.08 250)", "oklch(95% 0.03 250)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Titulo principal de tela, usado uma vez por tela."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Subtitulos, explicacoes curtas e texto de apoio."
+      },
+      "label": {
+        "displayName": "Label Mono",
+        "purpose": "Labels compactos, campos, abas e botoes."
+      },
+      "data": {
+        "displayName": "Data Mono",
+        "purpose": "Tickers, valores monetarios e numeros escaneaveis."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "pressed-feedback",
+        "value": "opacity 0.85 + scale(0.99)",
+        "purpose": "Feedback rapido de toque sem animacao ornamental."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "content-max-width",
+        "value": "760px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acao primaria para rebalancear, entrar ou confirmar uma transacao.",
+      "html": "<button class=\"ds-btn-primary\">Rebalancear</button>",
+      "css": ".ds-btn-primary { background: #22C55E; color: #0F1115; border: 1px solid #16A34A; border-radius: 8px; min-height: 40px; padding: 4px 8px; font-family: monospace; font-size: 12px; font-weight: 600; line-height: 16px; letter-spacing: 0; transition: opacity 160ms ease-out, transform 160ms ease-out; } .ds-btn-primary:hover { opacity: 0.94; } .ds-btn-primary:focus-visible { outline: 2px solid #22D3EE; outline-offset: 2px; } .ds-btn-primary:active { opacity: 0.85; transform: scale(0.99); }"
+    },
+    {
+      "name": "Neutral Button",
+      "kind": "button",
+      "refersTo": "button-neutral",
+      "description": "Acao secundaria para voltar, cancelar ou navegar sem competir com a decisao principal.",
+      "html": "<button class=\"ds-btn-neutral\">Voltar</button>",
+      "css": ".ds-btn-neutral { background: #242730; color: #FFFFFF; border: 1px solid #2A2B30; border-radius: 8px; min-height: 40px; padding: 4px 8px; font-family: monospace; font-size: 12px; font-weight: 600; line-height: 16px; letter-spacing: 0; transition: opacity 160ms ease-out, transform 160ms ease-out; } .ds-btn-neutral:hover { opacity: 0.94; } .ds-btn-neutral:focus-visible { outline: 2px solid #22C55E; outline-offset: 2px; } .ds-btn-neutral:active { opacity: 0.85; transform: scale(0.99); }"
+    },
+    {
+      "name": "Summary Card",
+      "kind": "card",
+      "refersTo": "card-summary",
+      "description": "Card de decisao com label operacional, valor e uma frase de contexto.",
+      "html": "<section class=\"ds-summary\"><p class=\"ds-summary-label\">// TOTAL_VALUE</p><strong class=\"ds-summary-value\">R$ 128.420,00</strong><p class=\"ds-summary-detail\">Carteira + fundos + caixa.</p></section>",
+      "css": ".ds-summary { background: #1E2026; color: #FFFFFF; border: 1px solid #2A2B30; border-radius: 8px; padding: 16px; display: grid; gap: 6px; max-width: 320px; } .ds-summary-label { margin: 0; color: #71717A; font-family: monospace; font-size: 10px; font-weight: 600; letter-spacing: 0; } .ds-summary-value { color: #FFFFFF; font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; font-size: 20px; font-weight: 600; line-height: 26px; } .ds-summary-detail { margin: 0; color: #A1A1AA; font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; font-size: 12px; line-height: 18px; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "field-input",
+      "description": "Campo compacto para login, busca de ticker e lancamento operacional.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Buscar ticker</span><input class=\"ds-field-input\" value=\"BOVA11\" /></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: #FFFFFF; font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; } .ds-field-label { color: #71717A; font-family: monospace; font-size: 12px; font-weight: 600; } .ds-field-input { background: #181A1F; color: #FFFFFF; border: 1px solid #2A2B30; border-radius: 4px; min-height: 48px; padding: 0 14px; font-size: 14px; outline: none; } .ds-field-input:focus { border-color: #22C55E; } .ds-field-input:disabled { color: #71717A; opacity: 0.7; }"
+    },
+    {
+      "name": "Type Badge",
+      "kind": "chip",
+      "refersTo": "type-badge",
+      "description": "Badge textual que diferencia compra e venda sem depender apenas de cor.",
+      "html": "<span class=\"ds-badge-buy\">COMPRAR</span> <span class=\"ds-badge-sell\">VENDER</span>",
+      "css": ".ds-badge-buy, .ds-badge-sell { display: inline-flex; align-items: center; border-radius: 4px; padding: 2px 6px; font-family: monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; } .ds-badge-buy { color: #60A5FA; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); } .ds-badge-sell { color: #F59E0B; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); }"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": "tab-bar",
+      "description": "Navegacao inferior compacta com icones e estado ativo verde.",
+      "html": "<nav class=\"ds-tabbar\"><span class=\"ds-tab-active\">Resumo</span><span>Fundos</span><span>Transacoes</span><span>Cestas</span><span>Perfil</span></nav>",
+      "css": ".ds-tabbar { background: #1E2026; color: #A1A1AA; border-top: 1px solid #2A2B30; min-height: 60px; padding: 8px; display: flex; gap: 8px; align-items: center; justify-content: space-around; font-family: monospace; font-size: 11px; } .ds-tabbar span { border-radius: 6px; padding: 6px 8px; } .ds-tabbar span:hover { color: #FFFFFF; } .ds-tabbar span:focus-visible { outline: 2px solid #22C55E; outline-offset: 2px; } .ds-tab-active { color: #22C55E; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Painel de Decisao",
+    "overview": "Paridade Risco e uma ferramenta de decisao financeira em tela pequena. A interface deve se comportar como um painel operacional silencioso: poucas escolhas, numeros confiaveis, acao evidente. O usuario nao esta explorando um produto; esta decidindo se precisa rebalancear a carteira e quais compras ou vendas executar.\n\nO sistema visual usa fundo grafite, superficies discretas e tipografia direta para manter foco nas metricas. Verde e reservado para acao primaria, estados positivos e sinais de rebalanceamento. A linguagem mono aparece em labels, tickers e valores para reforcar precisao sem transformar a experiencia em terminal pesado.\n\nO design rejeita app de corretora cheio de marketing, dashboard Bloomberg ou terminal financeiro pesado, fintech colorida demais, planilha crua e aplicativo gamificado.",
+    "keyCharacteristics": [
+      "Decisao de rebalanceamento acima de exploracao.",
+      "Densidade controlada, com apenas as metricas necessarias para agir.",
+      "Superficies planas, separadas por bordas e contraste tonal.",
+      "Verde usado com parcimonia para decisao, selecao e resultado positivo.",
+      "Linguagem visual consistente entre resumo, transacoes, fundos, cestas e perfil."
+    ],
+    "rules": [
+      {
+        "name": "The Green Means Decision Rule",
+        "body": "Verde e proibido como decoracao; ele marca acao primaria, selecao, progresso de rebalanceamento ou resultado positivo.",
+        "section": "colors"
+      },
+      {
+        "name": "The State Color Rule",
+        "body": "Ganho, perda, compra e venda nunca dependem apenas de cor. Use texto, label ou estrutura junto da cor.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono Is Evidence Rule",
+        "body": "Use mono quando o texto representa dado operacional, identificador ou comando. Nao use mono para paragrafos longos.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Screen Title Rule",
+        "body": "Cada tela tem um titulo claro, um subtitulo curto e depois entra no fluxo de decisao. Nao adicione texto introdutorio redundante.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Ledger Rule",
+        "body": "Cards e secoes ficam planos por padrao. Se uma superficie precisa de destaque, use hierarquia, borda, contraste tonal ou posicao, nao sombra pesada.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Border Is Structure Rule",
+        "body": "Bordas existem para organizar leitura e toque. Bordas coloridas so aparecem quando carregam estado real.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do manter o rebalanceamento como eixo visual: primeiro diga se precisa agir, depois mostre o que comprar ou vender.",
+      "Do usar Verde de Acao apenas para decisao, selecao, progresso ou resultado positivo.",
+      "Do mostrar compra/venda com label textual alem da cor.",
+      "Do usar cards planos com borda de 1px e fundo tonal para organizar metricas.",
+      "Do preservar altura minima de toque de 40px e preferir 48px em inputs.",
+      "Do manter subtitulos curtos; cada palavra deve ajudar o usuario a decidir."
+    ],
+    "donts": [
+      "Don't criar app de corretora cheio de marketing, banners, campanhas e ofertas.",
+      "Don't criar dashboard Bloomberg ou terminal financeiro pesado, saturado de dados e paineis.",
+      "Don't criar fintech colorida demais, com excesso de ilustracoes, celebracoes ou linguagem emocional.",
+      "Don't criar planilha crua, tecnica demais ou dependente de interpretacao manual.",
+      "Don't criar aplicativo gamificado, com estimulos visuais que desviem da decisao financeira.",
+      "Don't usar verde em elementos decorativos ou informativos sem relacao com decisao.",
+      "Don't usar side-stripe border, gradient text, glassmorphism decorativo ou grids repetidos de cards identicos.",
+      "Don't adicionar opcoes concorrentes quando a tela pode responder diretamente se ha rebalanceamento necessario."
+    ]
+  }
+}

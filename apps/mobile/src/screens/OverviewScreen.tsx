@@ -2,8 +2,10 @@ import { StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { InlineAlert } from "../components/InlineAlert";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { PositionCard } from "../components/PositionCard";
+import { RebalanceDecisionCard } from "../components/RebalanceDecisionCard";
 import { Screen } from "../components/Screen";
 import { SummaryCard } from "../components/SummaryCard";
 import { TypeBadge } from "../components/TypeBadge";
@@ -17,8 +19,13 @@ import { typography, typographyScale } from "../theme/typography";
 
 export function OverviewScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { data, isLoading, refetch } = usePortfolioSummary();
-  const { data: rebalanceData } = useRebalancePreview();
+  const { data, error, isLoading, refetch } = usePortfolioSummary();
+  const {
+    data: rebalanceData,
+    error: rebalanceError,
+    isLoading: isRebalanceLoading,
+    refetch: refetchRebalance,
+  } = useRebalancePreview();
   useStaleFocusRefetch(refetch);
 
   const allocation = data?.allocation ?? [];
@@ -35,16 +42,42 @@ export function OverviewScreen() {
   return (
     <Screen
       title="Resumo"
-      subtitle="Visao compacta da carteira para decisoes rapidas no celular."
+      subtitle="Estado da carteira e proxima decisao em uma leitura."
       action={<PrimaryButton label="Rebalancear" onPress={() => navigation.navigate("Rebalanceamento")} />}
     >
+      <RebalanceDecisionCard
+        data={rebalanceData}
+        error={rebalanceError}
+        isLoading={isRebalanceLoading}
+        compact
+        action={<PrimaryButton label="Ver plano" onPress={() => navigation.navigate("Rebalanceamento")} />}
+      />
+
+      {error ? (
+        <InlineAlert
+          actionLabel="Tentar novamente"
+          message="O resumo nao carregou por completo. Atualize antes de decidir."
+          onAction={refetch}
+          title="Resumo nao disponivel"
+        />
+      ) : null}
+
+      {rebalanceError ? (
+        <InlineAlert
+          actionLabel="Atualizar plano"
+          message="As ordens sugeridas nao carregaram. Atualize o plano antes de operar."
+          onAction={refetchRebalance}
+          title="Plano nao disponivel"
+        />
+      ) : null}
+
       <SummaryCard
         eyebrow="// TOTAL_VALUE"
         title={totalValue}
         detail={
           isLoading
-            ? "Carregando consolidacao da carteira."
-            : "Carteira + fundos + caixa."
+            ? "Somando carteira, fundos e caixa."
+            : "Carteira, fundos e caixa disponivel."
         }
       />
 
@@ -53,7 +86,7 @@ export function OverviewScreen() {
           <SummaryCard
             eyebrow="// POSICOES"
             title={positionsValue}
-            detail={`${positionCount} ativos com posicao aberta.`}
+            detail={`${positionCount} ativo${positionCount === 1 ? "" : "s"} em carteira.`}
           />
         </View>
         <View style={styles.column}>
@@ -69,12 +102,12 @@ export function OverviewScreen() {
       <SummaryCard
         eyebrow="// CAIXA"
         title={cashBalance}
-        detail={`Desvio atual da cesta: ${drift}`}
+        detail={`Distancia do alvo: ${drift}`}
       />
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>// ALOCACAO_ATUAL</Text>
-        <Text style={styles.sectionTitle}>Distribuicao atual</Text>
+        <Text style={styles.sectionTitle}>Como a carteira esta hoje</Text>
         {allocation.map((item) => {
           const rebalanceAction = actionsByTicker.get(item.ticker);
           const actionLabel = rebalanceAction?.action === "APORTAR" ? "COMPRAR" : "VENDER";
@@ -111,7 +144,7 @@ export function OverviewScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>// POSICOES_DETALHADAS</Text>
-        <Text style={styles.sectionTitle}>Posicoes detalhadas</Text>
+        <Text style={styles.sectionTitle}>Ativos e fundos</Text>
         {positions.map((position) => (
           <PositionCard
             key={position.id}

@@ -20,6 +20,20 @@ type AsyncState<T> = {
   refetch: () => Promise<void>;
 };
 
+function getReadableErrorMessage(nextError: unknown) {
+  const message = nextError instanceof Error ? nextError.message : "";
+
+  if (message.includes("EXPO_PUBLIC_API_URL")) {
+    return "A conexao com a API nao esta configurada.";
+  }
+
+  if (message.includes("Request failed")) {
+    return "A API nao respondeu como esperado.";
+  }
+
+  return "Nao foi possivel carregar os dados agora.";
+}
+
 function useAsyncData<T>(loader: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +52,7 @@ function useAsyncData<T>(loader: () => Promise<T>) {
       const nextData = await loaderRef.current();
       setData(nextData);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unexpected error");
+      setError(getReadableErrorMessage(nextError));
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +94,7 @@ export function useTransactions(filters?: {
       const nextData = await apiClient.listTransactions(filters);
       setData(nextData);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unexpected error");
+      setError(getReadableErrorMessage(nextError));
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +137,7 @@ export function useBasketDetail(basketId: string) {
       const nextData = await apiClient.getBasketDetail(basketId);
       setData(nextData);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unexpected error");
+      setError(getReadableErrorMessage(nextError));
     } finally {
       setIsLoading(false);
     }
@@ -158,7 +172,7 @@ export function useRebalancePreview() {
       const nextData = await apiClient.getRebalancePreview();
       setData(nextData);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unexpected error");
+      setError(getReadableErrorMessage(nextError));
     } finally {
       setIsLoading(false);
     }

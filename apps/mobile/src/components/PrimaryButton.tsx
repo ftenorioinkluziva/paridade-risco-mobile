@@ -19,6 +19,8 @@ export function PrimaryButton({ label, icon, onPress, disabled = false, tone = "
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.button, toneStyle, pressed ? styles.buttonPressed : undefined, disabled ? styles.buttonDisabled : undefined]}
@@ -66,7 +68,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
-    color: "#0F1115",
+    color: colors.commandInk,
     fontFamily: typography.mono,
     fontSize: typographyScale.sm.fontSize,
     fontWeight: typographyScale.sm.fontWeight,
@@ -80,7 +82,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   labelDisabled: {
-    color: "#0F1115",
+    color: colors.commandInk,
     opacity: 0.7,
   },
 });

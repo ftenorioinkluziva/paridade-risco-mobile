@@ -1,8 +1,9 @@
 import type { LoginInput } from "@paridade-risco/shared";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Alert, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { InlineAlert } from "../components/InlineAlert";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
 import { useAuth } from "../context/AuthContext";
@@ -14,6 +15,7 @@ export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const input: LoginInput = { email: email.trim(), password };
   const isValid = input.email.length > 0 && input.password.length > 0;
@@ -25,9 +27,10 @@ export function LoginScreen() {
 
     try {
       setIsSubmitting(true);
+      setSubmitError(null);
       await signIn(input);
     } catch {
-      Alert.alert("Falha no login", "Verifique email e senha.");
+      setSubmitError("Confira email e senha. Se estiverem corretos, tente novamente em alguns segundos.");
     } finally {
       setIsSubmitting(false);
     }
@@ -41,6 +44,9 @@ export function LoginScreen() {
   const loginFields = (
     <>
       <Text style={styles.sectionLabel}>// ACESSO</Text>
+      {submitError ? (
+        <InlineAlert title="Nao foi possivel entrar" message={submitError} tone="danger" />
+      ) : null}
       <Field label="Email" onChangeText={setEmail} value={email} />
       <Field label="Senha" onChangeText={setPassword} secureTextEntry value={password} />
       <PrimaryButton label={isSubmitting ? "Entrando" : "Entrar"} onPress={handleLogin} />
@@ -48,7 +54,7 @@ export function LoginScreen() {
   );
 
   return (
-    <Screen title="Acesso" subtitle="Acesse sua carteira com sessao real e segura.">
+    <Screen title="Acesso" subtitle="Entre para ver somente a sua carteira.">
       {Platform.OS === "web" ? (
         <form onSubmit={handleWebSubmit} style={styles.webForm}>
           <View style={styles.section}>{loginFields}</View>

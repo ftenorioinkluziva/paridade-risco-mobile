@@ -78,8 +78,8 @@ function TabsNavigator() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: styles.tabBar,
         tabBarItemStyle: styles.tabItem,
+        tabBarLabelStyle: styles.tabLabel,
         tabBarIcon: ({ color, size }) => getTabIcon(route.name, color, size),
-        tabBarLabel: () => null,
       })}
     >
       <Tab.Screen name="Resumo" component={OverviewScreen} />
@@ -125,13 +125,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    height: 60,
-    paddingBottom: 8,
+    height: 68,
+    paddingBottom: 6,
     paddingTop: 8,
   },
   tabItem: {
     borderRadius: 6,
     marginHorizontal: 2,
-    paddingVertical: 4,
+    paddingVertical: 2,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    lineHeight: 12,
   },
 });
