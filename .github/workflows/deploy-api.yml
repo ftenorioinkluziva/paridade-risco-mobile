@@ -80,6 +80,12 @@ jobs:
             docker compose exec -T app npx drizzle-kit migrate --config=apps/api/drizzle.config.ts 2>&1 || echo 'Migration note'
           "
 
+      - name: Seed test user
+        run: |
+          ssh root@${{ secrets.SSH_HOST }} "
+            docker compose exec -T -w /app/apps/api app npx tsx src/db/seed.ts 2>&1 || echo 'Seed note'
+          "
+
       - name: Health check
         run: |
           sleep 5
