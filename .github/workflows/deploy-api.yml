@@ -53,7 +53,7 @@ jobs:
 
       - name: Install deps & build
         run: |
-          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm ci && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm run build --workspace=@paridade-risco/api"
+          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && rm -rf node_modules && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm ci && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm run build --workspace=@paridade-risco/api"
 
       - name: Fix & Build Docker image
         run: |
@@ -77,13 +77,13 @@ jobs:
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             sleep 5
-            docker compose exec -T -w /app/apps/api app npx --yes drizzle-kit migrate 2>&1 || echo 'Migration note'
+            docker compose exec -T -w /app/apps/api app drizzle-kit migrate 2>&1 || echo 'Migration note'
           "
 
       - name: Seed test user
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
-            docker compose exec -T -w /app/apps/api app npx --yes tsx src/db/seed.ts 2>&1 || echo 'Seed failed'
+            docker compose exec -T -w /app/apps/api app tsx src/db/seed.ts 2>&1 || echo 'Seed failed'
           "
 
       - name: Health check
