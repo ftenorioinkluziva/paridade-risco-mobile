@@ -77,7 +77,7 @@ jobs:
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             sleep 5
-            docker compose exec -T app npx drizzle-kit migrate 2>&1 || echo 'Migration note'
+            docker compose exec -T app npx drizzle-kit migrate --config=apps/api/drizzle.config.ts 2>&1 || echo 'Migration note'
           "
 
       - name: Health check
