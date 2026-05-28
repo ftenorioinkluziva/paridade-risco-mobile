@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+    image: paridade-risco-api:latest
+    container_name: paridade-risco-api
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - paridade-risco-network
+      - npm_default
+
+networks:
+  paridade-risco-network:
+    driver: bridge
+  npm_default:
+    external: true
