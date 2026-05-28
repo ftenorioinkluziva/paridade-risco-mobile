@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 type PriceRow = {
   ticker: string;
   name: string;
+  calculation_type: string;
   price: string | null;
   price_date: string | null;
 };
@@ -16,6 +17,7 @@ export async function GET() {
       SELECT
         a.ticker,
         a.name,
+        a.calculation_type,
         hp.price,
         hp.price_date
       FROM assets a
@@ -34,6 +36,7 @@ export async function GET() {
   return NextResponse.json(rows.map((r) => ({
     ticker: r.ticker,
     name: r.name,
+    calculationType: r.calculation_type,
     price: r.price ? parseFloat(r.price) : null,
     priceDate: r.price_date ?? null,
   })));
