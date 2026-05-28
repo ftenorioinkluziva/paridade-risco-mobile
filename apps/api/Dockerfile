@@ -33,6 +33,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/api/drizzle.config.ts ./apps
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/drizzle ./apps/api/drizzle
 
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+RUN npm install -g drizzle-kit tsx
 
 USER nextjs
 EXPOSE 3000
