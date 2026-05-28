@@ -29,6 +29,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/.next/static ./apps/api/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/public ./apps/api/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/drizzle.config.ts ./apps/api/drizzle.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/drizzle ./apps/api/drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/src/db ./apps/api/src/db
