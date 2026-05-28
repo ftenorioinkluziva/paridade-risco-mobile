@@ -92,24 +92,9 @@ jobs:
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             set -e
-            cd /root/paridade-risco-v2
-            docker compose exec -T app node -e '
-              const {sql} = require("postgres");
-              const pg = sql(process.env.DATABASE_URL);
-              (async () => {
-                try {
-                  const [users, baskets] = await Promise.all([
-                    pg`select id, name, email, role, \"selectedBasketId\" from \"User\"`,
-                    pg`select id, name, \"userId\" from \"Cesta\"`,
-                  ]);
-                  console.log(\"=== USERS (\", users.length, \") ===\");
-                  users.forEach(u => console.log(JSON.stringify({id:u.id,name:u.name,email:u.email,role:u.role,selectedBasketId:u.selectedBasketId})));
-                  console.log(\"=== CESTAS (\", baskets.length, \") ===\");
-                  baskets.forEach(b => console.log(JSON.stringify({id:b.id,name:b.name,userId:b.userId})));
-                } catch(e) { console.error(\"Error:\", e.message); }
-                finally { await pg.end(); }
-              })();
-            '
+            docker compose -f $REMOTE_DIR/docker-compose.yml cp $CODE_DIR/apps/api/src/scripts/query-legacy.cjs app:/tmp/query.cjs
+            docker compose -f $REMOTE_DIR/docker-compose.yml exec -T app node /tmp/query.cjs
+            docker compose -f $REMOTE_DIR/docker-compose.yml exec -T app rm /tmp/query.cjs
           "
 
       - name: Health check
