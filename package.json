@@ -27,7 +27,9 @@
     "db:migrate": "npm run db:migrate --workspace @paridade-risco/api",
     "db:studio": "npm run db:studio --workspace @paridade-risco/api"
   },
-  "devDependencies": {
-    "next": "^16.2.3"
-  }
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {}
 }
