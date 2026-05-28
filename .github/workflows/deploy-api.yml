@@ -76,6 +76,7 @@ jobs:
       - name: Debug container
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
+            cd $REMOTE_DIR
             docker compose exec -T app node -e 'console.log(\"node ok\")' 2>&1
             docker compose exec -T app ls /app/apps/api/drizzle.config.ts 2>&1
             docker compose exec -T app stat /app/node_modules/.bin/drizzle-kit 2>&1
@@ -86,6 +87,7 @@ jobs:
       - name: Run migrations
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
+            cd $REMOTE_DIR
             sleep 5
             docker compose exec -T -w /app/apps/api app drizzle-kit migrate 2>&1 || echo 'Migration note'
           "
@@ -93,6 +95,7 @@ jobs:
       - name: Seed test user
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
+            cd $REMOTE_DIR
             docker compose exec -T -w /app/apps/api app tsx src/db/seed.ts 2>&1 || echo 'Seed failed'
           "
 
