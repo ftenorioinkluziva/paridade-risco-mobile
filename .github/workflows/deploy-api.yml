@@ -77,13 +77,13 @@ jobs:
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             sleep 5
-            docker compose exec -T -w /app/apps/api app node /app/node_modules/drizzle-kit/bin.cjs migrate 2>&1 || echo 'Migration note'
+            docker compose exec -T -w /app/apps/api app npx --yes drizzle-kit migrate 2>&1 || echo 'Migration note'
           "
 
       - name: Seed test user
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
-            docker compose exec -T -w /app/apps/api app node /app/node_modules/tsx/dist/cli.mjs src/db/seed.ts 2>&1 || echo 'Seed failed'
+            docker compose exec -T -w /app/apps/api app npx --yes tsx src/db/seed.ts 2>&1 || echo 'Seed failed'
           "
 
       - name: Health check
