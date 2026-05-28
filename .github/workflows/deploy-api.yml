@@ -35,11 +35,18 @@ jobs:
       - name: Sync code to server
         run: |
           rsync -az --no-t --delete \
+            --include='*/' \
             --include='package.json' \
             --include='package-lock.json' \
-            --include='apps/api/' \
-            --include='apps/api/**' \
-            --include='packages/shared/' \
+            --include='apps/api/Dockerfile' \
+            --include='apps/api/docker-compose.hetzner.yml' \
+            --include='apps/api/.env.production' \
+            --include='apps/api/drizzle.config.ts' \
+            --include='apps/api/next.config.ts' \
+            --include='apps/api/tsconfig.json' \
+            --include='apps/api/src/**' \
+            --include='apps/api/drizzle/**' \
+            --include='apps/api/public/**' \
             --include='packages/shared/**' \
             --exclude='*' \
             ./ root@${{ secrets.SSH_HOST }}:$CODE_DIR/
