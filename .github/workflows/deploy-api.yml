@@ -93,7 +93,7 @@ jobs:
           ssh root@${{ secrets.SSH_HOST }} "
             set -e
             docker compose -f $REMOTE_DIR/docker-compose.yml cp $CODE_DIR/apps/api/src/scripts/query-legacy.cjs app:/tmp/query.cjs
-            docker compose -f $REMOTE_DIR/docker-compose.yml exec -T app node /tmp/query.cjs
+            docker compose -f $REMOTE_DIR/docker-compose.yml exec -T -e NODE_PATH=/app/node_modules app node /tmp/query.cjs
             docker compose -f $REMOTE_DIR/docker-compose.yml exec -T app rm /tmp/query.cjs
           "
 
