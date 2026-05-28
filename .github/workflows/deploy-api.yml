@@ -73,30 +73,19 @@ jobs:
             docker compose up -d
           "
 
-      - name: Debug container
-        run: |
-          ssh root@${{ secrets.SSH_HOST }} "
-            cd $REMOTE_DIR
-            docker compose exec -T app node -e 'console.log(\"node ok\")' 2>&1
-            docker compose exec -T app ls /app/apps/api/drizzle.config.ts 2>&1
-            docker compose exec -T app stat /app/node_modules/.bin/drizzle-kit 2>&1
-            docker compose exec -T app which drizzle-kit 2>&1 || echo 'drizzle-kit not in PATH'
-            docker compose exec -T app which tsx 2>&1 || echo 'tsx not in PATH'
-          "
-
       - name: Run migrations
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             cd $REMOTE_DIR
             sleep 5
-            docker compose exec -T -w /app/apps/api app drizzle-kit migrate 2>&1 || echo 'Migration note'
+            docker compose exec -T -w /app/apps/api app /app/node_modules/.bin/drizzle-kit migrate
           "
 
       - name: Seed test user
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             cd $REMOTE_DIR
-            docker compose exec -T -w /app/apps/api app tsx src/db/seed.ts 2>&1 || echo 'Seed failed'
+            docker compose exec -T -w /app/apps/api app /app/node_modules/.bin/tsx src/db/seed.ts
           "
 
       - name: Health check
