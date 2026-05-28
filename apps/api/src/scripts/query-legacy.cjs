@@ -1,4 +1,4 @@
-const { sql } = require("postgres");
+const sql = require("postgres");
 
 async function main() {
   const pg = sql(process.env.DATABASE_URL);
