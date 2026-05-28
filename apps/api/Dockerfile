@@ -32,12 +32,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/api/public ./apps/api/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/drizzle.config.ts ./apps/api/drizzle.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/drizzle ./apps/api/drizzle
 
-# Dependencies needed by drizzle-kit for runtime migrations
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@esbuild-kit ./node_modules/@esbuild-kit
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/esbuild ./node_modules/esbuild
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/get-tsconfig ./node_modules/get-tsconfig
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/resolve-pkg-maps ./node_modules/resolve-pkg-maps
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 USER nextjs
 EXPOSE 3000
