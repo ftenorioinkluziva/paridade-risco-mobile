@@ -59,8 +59,7 @@ jobs:
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             cd $CODE_DIR
-            # Remove shell operators that don't belong in Dockerfile (legacy artifact)
-            sed -i 's| 2>/dev/null || true||g' apps/api/Dockerfile
+            sed -i 's# 2>/dev/null || true##g' apps/api/Dockerfile
             docker build -f apps/api/Dockerfile -t paridade-risco-api:latest --build-arg DATABASE_URL='${{ secrets.DATABASE_URL }}' .
           "
 

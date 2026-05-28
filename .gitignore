@@ -32,8 +32,7 @@ yarn-error.*
 apps/api/.next/
 apps/api/out/
 
-# drizzle
-apps/api/drizzle/
+
 
 # env
 .env

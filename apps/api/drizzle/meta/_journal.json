@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775696972687,
+      "tag": "0000_flowery_dracula",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775699205759,
+      "tag": "0001_watery_drax",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775824200000,
+      "tag": "0002_kindly_clint_barton",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775835600000,
+      "tag": "0003_navy_asset_calculation_type",
+      "breakpoints": true
+    }
+  ]
+}
