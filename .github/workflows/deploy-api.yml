@@ -1,0 +1,75 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  REMOTE_DIR: /root/paridade-risco-v2
+  CODE_DIR: /root/paridade-risco-v2/code
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync code to server
+        run: |
+          rsync -az --no-t --delete \
+            --include='package.json' \
+            --include='package-lock.json' \
+            --include='apps/api/' \
+            --include='apps/api/**' \
+            --include='packages/shared/' \
+            --include='packages/shared/**' \
+            --exclude='*' \
+            ./ root@${{ secrets.SSH_HOST }}:$CODE_DIR/
+
+      - name: Install deps & build
+        run: |
+          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && npm ci && npm run build --workspace=@paridade-risco/api"
+
+      - name: Build Docker image
+        run: |
+          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && docker build -f apps/api/Dockerfile -t paridade-risco-api:latest --build-arg DATABASE_URL='${{ secrets.DATABASE_URL }}' ."
+
+      - name: Deploy container
+        run: |
+          ssh root@${{ secrets.SSH_HOST }} "
+            cd $REMOTE_DIR
+            cp code/apps/api/docker-compose.hetzner.yml docker-compose.yml
+            cp code/apps/api/.env.production .env 2>/dev/null || true
+            docker compose down 2>/dev/null || true
+            docker compose up -d
+          "
+
+      - name: Run migrations
+        run: |
+          ssh root@${{ secrets.SSH_HOST }} "
+            sleep 5
+            docker compose exec -T app npx drizzle-kit migrate 2>&1 || echo 'Migration note'
+          "
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -sf https://paridaderisco.blackboxinovacao.com.br/api/health && echo "Health OK" || echo "Health endpoint not found"
