@@ -46,7 +46,7 @@ jobs:
 
       - name: Install deps & build
         run: |
-          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && npm ci && npm run build --workspace=@paridade-risco/api"
+          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm ci && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm run build --workspace=@paridade-risco/api"
 
       - name: Build Docker image
         run: |
