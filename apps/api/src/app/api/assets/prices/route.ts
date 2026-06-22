@@ -25,20 +25,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "param 'to' com formato de data invalido" }, { status: 400 });
     }
 
-    const hasPeriod = from || to;
-
-    if (hasPeriod) {
+    if (from || to) {
       const rows = await db.execute<PriceRow>(
-        sql`
-          SELECT a.ticker, a.name, a.calculation_type, hp.price, hp.price_date
-          FROM assets a
-          JOIN historical_prices hp ON hp.asset_id = a.id
-          WHERE a.is_active = true
-          ${ticker ? sql`AND a.ticker = ${ticker}` : sql``}
-          ${from ? sql`AND hp.price_date >= ${new Date(from)}` : sql``}
-          ${to ? sql`AND hp.price_date <= ${new Date(to)}` : sql``}
-          ORDER BY a.ticker ASC, hp.price_date DESC
-        `,
+        sql`SELECT a.ticker, a.name, a.calculation_type, hp.price, hp.price_date
+FROM assets a
+JOIN historical_prices hp ON hp.asset_id = a.id
+WHERE a.is_active = true
+${ticker ? sql`AND a.ticker = ${ticker}` : sql``}
+${from ? sql`AND hp.price_date >= ${from}::date` : sql``}
+${to ? sql`AND hp.price_date <= ${to}::date` : sql``}
+ORDER BY a.ticker ASC, hp.price_date DESC`,
       );
       return NextResponse.json(rows.map((r) => ({
         ticker: r.ticker,
@@ -50,20 +46,18 @@ export async function GET(request: NextRequest) {
     }
 
     const rows = await db.execute<PriceRow>(
-      sql`
-        SELECT a.ticker, a.name, a.calculation_type, hp.price, hp.price_date
-        FROM assets a
-        LEFT JOIN LATERAL (
-          SELECT price, price_date
-          FROM historical_prices
-          WHERE asset_id = a.id
-          ORDER BY price_date DESC
-          LIMIT 1
-        ) hp ON true
-        WHERE a.is_active = true
-        ${ticker ? sql`AND a.ticker = ${ticker}` : sql``}
-        ORDER BY a.ticker ASC
-      `,
+      sql`SELECT a.ticker, a.name, a.calculation_type, hp.price, hp.price_date
+FROM assets a
+LEFT JOIN LATERAL (
+  SELECT price, price_date
+  FROM historical_prices
+  WHERE asset_id = a.id
+  ORDER BY price_date DESC
+  LIMIT 1
+) hp ON true
+WHERE a.is_active = true
+${ticker ? sql`AND a.ticker = ${ticker}` : sql``}
+ORDER BY a.ticker ASC`,
     );
     return NextResponse.json(rows.map((r) => ({
       ticker: r.ticker,
