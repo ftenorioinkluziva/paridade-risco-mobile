@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { LoginInput } from "@paridade-risco/shared";
 
@@ -128,18 +128,20 @@ export function useAsyncData<T>(loader: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const loaderRef = useRef(loader);
+  loaderRef.current = loader;
 
   const refetch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      setData(await loader());
+      setData(await loaderRef.current());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao carregar");
     } finally {
       setIsLoading(false);
     }
-  }, [loader]);
+  }, []);
 
   useEffect(() => { refetch(); }, [refetch]);
 
