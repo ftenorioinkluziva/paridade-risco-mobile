@@ -156,6 +156,7 @@ function toActiveBasket(
   basket: {
     id: string;
     name: string;
+    description: string | null;
     allocations: Array<{
       targetPercentage: string;
       asset: { ticker: string; name: string };
@@ -166,6 +167,7 @@ function toActiveBasket(
   return {
     id: basket.id,
     name: basket.name,
+    description: basket.description,
     allocations: basket.allocations.map((a) => ({
       targetPercentage: Number(a.targetPercentage),
       asset: a.asset,
