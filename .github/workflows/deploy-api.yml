@@ -114,11 +114,5 @@ jobs:
           ssh root@${{ secrets.SSH_HOST }} "
             cd $CODE_DIR
             docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml down --remove-orphans 2>/dev/null || true
-            sleep 2
-            echo '=== Debug: checking port 3001 ==='
-            docker ps -a --format '{{.Names}} {{.Ports}}' | grep 3001 || echo 'no docker container on 3001'
-            ss -tlnp 2>/dev/null | grep 3001 || echo 'no host process on 3001 (ss)'
-            netstat -tlnp 2>/dev/null | grep 3001 || echo 'no host process on 3001 (netstat)'
-            echo '=== End debug ==='
             docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml --env-file $REMOTE_DIR/.env up -d --build
           "
