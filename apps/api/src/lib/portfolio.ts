@@ -152,6 +152,27 @@ export async function getPortfolioSnapshot(userId: string) {
   };
 }
 
+function toActiveBasket(
+  basket: {
+    id: string;
+    name: string;
+    allocations: Array<{
+      targetPercentage: string;
+      asset: { ticker: string; name: string };
+    }>;
+  } | null | undefined,
+) {
+  if (!basket) return null;
+  return {
+    id: basket.id,
+    name: basket.name,
+    allocations: basket.allocations.map((a) => ({
+      targetPercentage: Number(a.targetPercentage),
+      asset: a.asset,
+    })),
+  };
+}
+
 export async function getActiveBasket(userId: string) {
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
@@ -161,7 +182,7 @@ export async function getActiveBasket(userId: string) {
   });
 
   if (user?.selectedBasketId) {
-    return db.query.baskets.findFirst({
+    const basket = await db.query.baskets.findFirst({
       where: eq(baskets.id, user.selectedBasketId),
       with: {
         allocations: {
@@ -177,9 +198,10 @@ export async function getActiveBasket(userId: string) {
         },
       },
     });
+    return toActiveBasket(basket);
   }
 
-  return db.query.baskets.findFirst({
+  const basket = await db.query.baskets.findFirst({
     where: eq(baskets.userId, userId),
     with: {
       allocations: {
@@ -196,6 +218,7 @@ export async function getActiveBasket(userId: string) {
     },
     orderBy: [desc(baskets.createdAt)],
   });
+  return toActiveBasket(basket);
 }
 
 // Re-export shared computation functions so route handlers
