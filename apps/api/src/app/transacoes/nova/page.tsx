@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { colors } from "@/theme/colors";
@@ -12,23 +12,12 @@ import { InputField } from "@/components/InputField";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { InlineAlert } from "@/components/InlineAlert";
 
-const TICKERS = [
-  "ITUB4",
-  "PETR4",
-  "VALE3",
-  "BBDC4",
-  "ABEV3",
-  "WEGE3",
-  "RENT3",
-  "LREN3",
-  "MGLU3",
-  "BBAS3",
-  "B3SA3",
-  "ELET3",
-  "JBSS3",
-  "SUZB3",
-  "EQTL3",
-];
+interface FundOption {
+  ticker: string;
+  name: string;
+}
+
+const tipoOptions: TipoOrdem[] = ["COMPRA", "VENDA"];
 
 type TipoOrdem = "COMPRA" | "VENDA";
 
@@ -52,6 +41,33 @@ function todayString(): string {
 
 export default function NovaTransacaoPage() {
   const router = useRouter();
+
+  const [funds, setFunds] = useState<FundOption[]>([]);
+  const [fundsLoading, setFundsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/funds")
+      .then((res) => res.json())
+      .then((data: any[]) => {
+        const options: FundOption[] = data.map((f) => ({
+          ticker: f.indexAssetTicker ?? f.name,
+          name: f.name,
+        }));
+        // Deduplicate by ticker
+        const seen = new Set<string>();
+        const unique = options.filter((o) => {
+          if (seen.has(o.ticker)) return false;
+          seen.add(o.ticker);
+          return true;
+        });
+        unique.sort((a, b) => a.ticker.localeCompare(b.ticker));
+        setFunds(unique);
+      })
+      .catch(() => {
+        // fallback empty — user will see only the placeholder option
+      })
+      .finally(() => setFundsLoading(false));
+  }, []);
 
   const [form, setForm] = useState<FormData>({
     ticker: "",
@@ -177,11 +193,14 @@ export default function NovaTransacaoPage() {
             style={styles.select}
             value={form.ticker}
             onChange={(e) => update("ticker", e.target.value)}
+            disabled={fundsLoading}
           >
-            <option value="">Selecione um ativo</option>
-            {TICKERS.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            <option value="">
+              {fundsLoading ? "Carregando ativos..." : "Selecione um ativo"}
+            </option>
+            {funds.map((f) => (
+              <option key={f.ticker} value={f.ticker}>
+                {f.name} ({f.ticker})
               </option>
             ))}
           </select>
