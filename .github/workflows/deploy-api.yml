@@ -116,6 +116,7 @@ jobs:
             cd $CODE_DIR
             docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml down --remove-orphans 2>/dev/null || true
             echo 'Using port 3050 for remote-mcp'
+            ufw allow 3050/tcp 2>/dev/null || true
             docker system prune -af 2>/dev/null || true
             MCP_PORT=3050 docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml --env-file $REMOTE_DIR/.env up -d --build
           "
