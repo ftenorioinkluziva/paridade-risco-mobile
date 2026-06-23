@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 import { Screen } from "@/components/Screen";
+import { AuthGuard } from "@/components/AuthGuard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useBaskets } from "@/context/AuthContext";
 
@@ -14,7 +15,8 @@ export default function CestasPage() {
   const { data: baskets, isLoading, error } = useBaskets();
 
   return (
-    <Screen
+    <AuthGuard>
+      <Screen
       title="Cestas"
       subtitle="Defina o alvo da carteira e compare com a posicao atual."
       action={
@@ -79,6 +81,7 @@ export default function CestasPage() {
         </div>
       ) : null}
     </Screen>
+    </AuthGuard>
   );
 }
 

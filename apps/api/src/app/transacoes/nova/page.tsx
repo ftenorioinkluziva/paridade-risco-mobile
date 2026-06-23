@@ -7,6 +7,7 @@ import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 import { Screen } from "@/components/Screen";
+import { AuthGuard } from "@/components/AuthGuard";
 import { InputField } from "@/components/InputField";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -154,7 +155,8 @@ export default function NovaTransacaoPage() {
       : "R$ 0,00";
 
   return (
-    <Screen
+    <AuthGuard>
+      <Screen
       title="Nova transação"
       subtitle="Registre uma movimentação de compra ou venda na carteira."
     >
@@ -300,6 +302,7 @@ export default function NovaTransacaoPage() {
         />
       </div>
     </Screen>
+    </AuthGuard>
   );
 }
 

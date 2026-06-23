@@ -11,13 +11,20 @@ import { SummaryCard } from "@/components/SummaryCard";
 import { PositionCard } from "@/components/PositionCard";
 import { RebalanceDecisionCard } from "@/components/RebalanceDecisionCard";
 import { InlineAlert } from "@/components/InlineAlert";
-import { usePortfolioSummary, useRebalancePreview } from "@/context/AuthContext";
+import { LandingPage } from "@/components/LandingPage";
+import { usePortfolioSummary, useRebalancePreview, useAuth } from "@/context/AuthContext";
 import { formatCurrency, formatPercentage, formatSignedCurrency } from "@/lib/formatters";
 
 export default function OverviewPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const portfolio = usePortfolioSummary();
   const rebalance = useRebalancePreview();
+
+  // Show landing page for unauthenticated users
+  if (!isLoading && !isAuthenticated) {
+    return <LandingPage />;
+  }
 
   const portfolioError = portfolio.error;
   const rebalanceError = rebalance.error;

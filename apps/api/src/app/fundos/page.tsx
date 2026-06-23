@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 import { Screen } from "@/components/Screen";
+import { AuthGuard } from "@/components/AuthGuard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useFunds } from "@/context/AuthContext";
 import { formatCurrency, formatPercentage, formatSignedCurrency, formatDate } from "@/lib/formatters";
@@ -15,7 +16,8 @@ export default function FundosPage() {
   const { data: funds, isLoading, error } = useFunds();
 
   return (
-    <Screen
+    <AuthGuard>
+      <Screen
       title="Fundos"
       subtitle="Acompanhe os fundos de investimento da carteira."
       action={
@@ -112,6 +114,7 @@ export default function FundosPage() {
         </div>
       ) : null}
     </Screen>
+    </AuthGuard>
   );
 }
 

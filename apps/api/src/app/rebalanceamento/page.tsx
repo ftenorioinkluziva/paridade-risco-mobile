@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 import { Screen } from "@/components/Screen";
+import { AuthGuard } from "@/components/AuthGuard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SummaryCard } from "@/components/SummaryCard";
 import { RebalanceDecisionCard } from "@/components/RebalanceDecisionCard";
@@ -34,7 +35,8 @@ export default function RebalanceamentoPage() {
   const cashAfterRebalance = cashAvailable - rebalanceCost;
 
   return (
-    <Screen
+    <AuthGuard>
+      <Screen
       title="Rebalanceamento"
       subtitle="Veja o plano detalhado, confira os custos e decida como agir na corretora."
       action={
@@ -126,6 +128,7 @@ export default function RebalanceamentoPage() {
         </div>
       ) : null}
     </Screen>
+    </AuthGuard>
   );
 }
 

@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 import { Screen } from "@/components/Screen";
+import { AuthGuard } from "@/components/AuthGuard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { TypeBadge } from "@/components/TypeBadge";
 import { useTransactions } from "@/context/AuthContext";
@@ -16,7 +17,8 @@ export default function TransacoesPage() {
   const { data: transactions, isLoading, error } = useTransactions();
 
   return (
-    <Screen
+    <AuthGuard>
+      <Screen
       title="Transações"
       subtitle="Histórico de movimentações da carteira."
       action={
@@ -97,6 +99,7 @@ export default function TransacoesPage() {
         </div>
       ) : null}
     </Screen>
+    </AuthGuard>
   );
 }
 

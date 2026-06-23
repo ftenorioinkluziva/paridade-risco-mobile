@@ -4,17 +4,20 @@ import type { ReactNode } from "react";
 import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
+import { NavBar } from "./NavBar";
 
 type ScreenProps = {
   title: string;
   subtitle: string;
   action?: ReactNode;
   children: ReactNode;
+  hideNav?: boolean;
 };
 
-export function Screen({ title, subtitle, action, children }: ScreenProps) {
+export function Screen({ title, subtitle, action, children, hideNav }: ScreenProps) {
   return (
     <div style={styles.outer}>
+      {!hideNav ? <NavBar /> : null}
       <div style={styles.inner}>
         <div style={styles.header}>
           <div style={styles.titleBlock}>

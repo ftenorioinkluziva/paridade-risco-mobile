@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 import { Screen } from "@/components/Screen";
+import { AuthGuard } from "@/components/AuthGuard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { TypeBadge } from "@/components/TypeBadge";
 import { useBasketDetail } from "@/context/AuthContext";
@@ -18,7 +19,8 @@ export default function BasketDetailPage() {
   const { data: basket, isLoading, error } = useBasketDetail(id);
 
   return (
-    <Screen
+    <AuthGuard>
+      <Screen
       title={basket?.name ?? "Detalhe da Cesta"}
       subtitle="Alocação alvo e composição da cesta."
       action={
@@ -125,6 +127,7 @@ export default function BasketDetailPage() {
         </>
       ) : null}
     </Screen>
+    </AuthGuard>
   );
 }
 
