@@ -27,12 +27,10 @@ export default function RebalanceamentoPage() {
   // Derived values
   const investedValue = rebalData?.calculationBaseValue ?? rebalData?.portfolioValue ?? 0;
   const cashAvailable = rebalData?.cashAvailable ?? summary?.cash ?? 0;
-  const totalActionsCost = (rebalData?.actions ?? []).reduce(
-    (acc: number, a: any) => acc + (a.amount ?? 0),
-    0,
-  );
-  const rebalanceCost = rebalData?.rebalanceCost ?? totalActionsCost;
-  const cashAfterRebalance = cashAvailable - rebalanceCost;
+  const rebalanceCost = rebalData?.rebalanceCost ?? 0;
+  const rawCashAfterRebalance = rebalData?.postRebalanceCash ?? (cashAvailable - rebalanceCost);
+  const cashAfterRebalance = Math.max(0, rawCashAfterRebalance);
+  const cashWasClipped = rawCashAfterRebalance < 0;
 
   return (
     <AuthGuard>
@@ -112,6 +110,13 @@ export default function RebalanceamentoPage() {
                 detail="Caixa estimado após as ordens"
                 tone={cashAfterRebalance >= 0 ? "success" : "warning"}
               />
+              {cashWasClipped ? (
+                <InlineAlert
+                  title="Caixa insuficiente"
+                  message="O plano de rebalanceamento consumiria mais caixa do que o disponível. Considere reduzir o valor das ordens de compra ou aguardar novas receitas."
+                  tone="warning"
+                />
+              ) : null}
             </div>
           </div>
         </div>

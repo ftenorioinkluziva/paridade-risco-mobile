@@ -58,7 +58,8 @@ export default function TransacoesPage() {
         <div style={styles.list}>
           <div style={styles.sectionLabel}>// HISTÓRICO_DE_TRANSAÇÕES</div>
           {transactions!.map((tx: any, index: number) => {
-            const ticker = tx.ticker ?? tx.symbol ?? "-";
+            const ticker = tx.assetTicker ?? tx.ticker ?? tx.symbol ?? "-";
+            const name = tx.assetName ?? "";
             const type = tx.type ?? "";
             const shares = tx.shares ?? tx.quantity ?? 0;
             const value = tx.value ?? tx.amount ?? 0;
@@ -66,6 +67,12 @@ export default function TransacoesPage() {
 
             return (
               <div key={tx.id ?? index} style={styles.card}>
+                {/* Name row */}
+                {name ? (
+                  <div style={styles.row}>
+                    <span style={styles.name}>{name}</span>
+                  </div>
+                ) : null}
                 {/* Top row: ticker + type badge */}
                 <div style={styles.row}>
                   <span style={styles.ticker}>{ticker}</span>
@@ -140,6 +147,12 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 16,
     fontWeight: 600,
     lineHeight: "24px",
+  },
+  name: {
+    color: colors.textMuted,
+    fontFamily: typography.mono,
+    fontSize: 13,
+    fontWeight: 400,
   },
   label: {
     color: colors.textSoft,
