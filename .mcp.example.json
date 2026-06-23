@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "@paridade-risco/mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["packages/local-mcp/src/index.mjs"],
+      "env": {
+        "PARIDADE_API_URL": "https://paridaderisco.blackboxinovacao.com.br",
+        "PARIDADE_USER_ID": "seu-user-id-aqui"
+      }
+    }
+  }
+}

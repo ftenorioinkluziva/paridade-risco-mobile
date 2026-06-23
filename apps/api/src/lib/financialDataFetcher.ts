@@ -2,6 +2,14 @@ import { db } from "@/db/client";
 import { assets, historicalPrices } from "@/db/schema";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 
+import {
+  toUtcDayStart,
+  addUtcDays,
+  toUtcDayKey,
+  formatDateForBCB,
+  parseBCBDate,
+} from "@paridade-risco/shared";
+
 interface PriceDataPoint {
   date: Date;
   price: string;
@@ -328,17 +336,15 @@ export class FinancialDataFetcher {
   }
 
   private toUtcDayStart(date: Date): Date {
-    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    return toUtcDayStart(date);
   }
 
   private addUtcDays(date: Date, days: number): Date {
-    const next = new Date(date);
-    next.setUTCDate(next.getUTCDate() + days);
-    return next;
+    return addUtcDays(date, days);
   }
 
   private toUtcDayKey(date: Date): string {
-    return this.toUtcDayStart(date).toISOString().slice(0, 10);
+    return toUtcDayKey(date);
   }
 
   private getPriceSource(ticker: string, calculationType: string): PriceSource | null {
@@ -543,15 +549,11 @@ export class FinancialDataFetcher {
    * Format date for BCB API (DD/MM/YYYY)
    */
   private formatDateForBCB(date: Date): string {
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const year = date.getUTCFullYear();
-    return `${day}/${month}/${year}`;
+    return formatDateForBCB(date);
   }
 
   private parseBCBDate(value: string): Date {
-    const [day, month, year] = value.split("/");
-    return new Date(`${year}-${month}-${day}T12:00:00.000Z`);
+    return parseBCBDate(value);
   }
 }
 

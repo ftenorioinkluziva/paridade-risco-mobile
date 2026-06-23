@@ -75,3 +75,7 @@ Thumbs.db
 .aiox/install-log.txt
 
 .vercel
+
+# MCP configs (may contain tokens)
+.mcp.json
+.opencode.json

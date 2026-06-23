@@ -2,20 +2,24 @@ import { desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { basketAllocations, baskets, investmentFunds, portfolios, transactions, users } from "@/db/schema";
-import { toNumber } from "./number";
+import { toNumber } from "@/lib/number";
 
-type Position = {
-  assetId: string;
-  ticker: string;
-  name: string;
-  shares: number;
-  costBasis: number;
-  currentPrice: number;
-  currentValue: number;
-  dailyChangePercentage: number | null;
-  allocationPercentage: number;
-};
+import {
+  buildRebalancePreview,
+  getRebalanceEligibility,
+  calculateDrift,
+} from "@paridade-risco/shared";
 
+import type { RawPosition } from "@paridade-risco/shared";
+
+/**
+ * Get a full portfolio snapshot for a user.
+ *
+ * This function queries the database directly (Drizzle ORM) and
+ * returns structured data consumed by route handlers and MCP tools.
+ * Pure computation helpers (rebalance, drift) are imported from
+ * @paridade-risco/shared.
+ */
 export async function getPortfolioSnapshot(userId: string) {
   const userTransactions = await db.query.transactions.findMany({
     where: eq(transactions.userId, userId),
@@ -31,7 +35,7 @@ export async function getPortfolioSnapshot(userId: string) {
     orderBy: [desc(transactions.tradedAt)],
   });
 
-  const positionMap = new Map<string, Position>();
+  const positionMap = new Map<string, RawPosition>();
   const [portfolioRow, userFunds] = await Promise.all([
     db.query.portfolios.findFirst({
       where: eq(portfolios.userId, userId),
@@ -70,7 +74,7 @@ export async function getPortfolioSnapshot(userId: string) {
 
   const openPositions = Array.from(positionMap.values()).filter((position) => position.shares > 0);
 
-  // Get the two most recent prices per asset in one query.
+  // Get the two most recent prices per asset in one query
   const latestPriceMap = new Map<string, number>();
   const previousPriceMap = new Map<string, number>();
 
@@ -100,7 +104,6 @@ export async function getPortfolioSnapshot(userId: string) {
       if (priceRank === 1) {
         latestPriceMap.set(row.asset_id, price);
       }
-
       if (priceRank === 2) {
         previousPriceMap.set(row.asset_id, price);
       }
@@ -195,87 +198,6 @@ export async function getActiveBasket(userId: string) {
   });
 }
 
-export function buildRebalancePreview(args: {
-  basket:
-    | {
-        id: string;
-        name: string;
-        allocations: Array<{
-          targetPercentage: string;
-          asset: { ticker: string; name: string };
-        }>;
-      }
-    | null;
-  positions: Position[];
-  totalValue: number;
-  indexedFundValuesByTicker?: Record<string, number>;
-}) {
-  if (!args.basket) {
-    return {
-      portfolioValue: args.totalValue,
-      driftPercentage: 0,
-      targetBasketName: "Sem cesta ativa",
-      actions: [],
-    };
-  }
-
-  const positionByTicker = new Map(args.positions.map((position) => [position.ticker, position]));
-  const indexedFundValuesByTicker = args.indexedFundValuesByTicker ?? {};
-  const actions = args.basket.allocations
-    .map((allocation, index) => {
-      const targetPercentage = toNumber(allocation.targetPercentage);
-      const position = positionByTicker.get(allocation.asset.ticker);
-      const indexedFundValue = indexedFundValuesByTicker[allocation.asset.ticker] ?? 0;
-      const currentValue = (position?.currentValue ?? 0) + indexedFundValue;
-      const currentPercentage = args.totalValue > 0 ? (currentValue / args.totalValue) * 100 : 0;
-      const targetValue = (targetPercentage / 100) * args.totalValue;
-      const diffValue = targetValue - currentValue;
-
-      return {
-        id: `${args.basket?.id}-${index}`,
-        ticker: allocation.asset.ticker,
-        action: diffValue >= 0 ? "APORTAR" : "REDUZIR",
-        amount: Math.abs(diffValue),
-        currentPrice: position?.currentPrice ?? 0,
-        currentPercentage,
-        targetPercentage,
-      };
-    })
-    .filter((action) => action.amount > 0.01)
-    .sort((left, right) => right.amount - left.amount);
-
-  const driftPercentage =
-    actions.reduce((sum, action) => sum + Math.abs(action.targetPercentage - action.currentPercentage), 0) / 2;
-
-  return {
-    portfolioValue: args.totalValue,
-    driftPercentage,
-    targetBasketName: args.basket.name,
-    actions,
-  };
-}
-
-export function getRebalanceEligibility(args: {
-  birthDate: Date | null;
-  phone: string | null;
-  role: "ADMIN" | "USER";
-}) {
-  const missingProfileFields: string[] = [];
-
-  if (!args.phone) {
-    missingProfileFields.push("phone");
-  }
-
-  if (!args.birthDate) {
-    missingProfileFields.push("birthDate");
-  }
-
-  if (!args.role) {
-    missingProfileFields.push("role");
-  }
-
-  return {
-    eligibleForRebalance: missingProfileFields.length === 0,
-    missingProfileFields,
-  };
-}
+// Re-export shared computation functions so route handlers
+// can import everything from @/lib/portfolio
+export { buildRebalancePreview, getRebalanceEligibility, calculateDrift };

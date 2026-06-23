@@ -1,37 +1,57 @@
-import { z } from "zod";
+// Schemas — Zod validation schemas
+export {
+  transactionTypeSchema,
+  basketStatusSchema,
+  assetTypeSchema,
+  createTransactionSchema,
+  loginSchema,
+  basketAllocationSchema,
+  updateBasketSchema,
+} from "./schemas";
 
-export const transactionTypeSchema = z.enum(["COMPRA", "VENDA"]);
+export type {
+  TransactionType,
+  BasketStatus,
+  AssetType,
+  CreateTransactionInput,
+  LoginInput,
+  UpdateBasketInput,
+} from "./schemas";
 
-export const basketStatusSchema = z.enum(["ATIVA", "RASCUNHO"]);
+// Operations — pure business logic (no DB dependency)
+export {
+  buildRebalancePreview,
+  getRebalanceEligibility,
+  calculateDrift,
+} from "./operations/rebalance";
 
-export const assetTypeSchema = z.enum(["ETF", "RENDA_FIXA", "CRYPTO", "COMMODITY", "CAIXA", "OUTRO"]);
+export {
+  toNumber,
+  formatDateForBCB,
+  parseBCBDate,
+  toUtcDayStart,
+  addUtcDays,
+  toUtcDayKey,
+} from "./operations/helpers";
 
-export const createTransactionSchema = z.object({
-  assetTicker: z.string().min(1).max(16),
-  type: transactionTypeSchema,
-  shares: z.number().positive(),
-  pricePerShare: z.number().positive(),
-  tradedAt: z.string().min(1),
-});
-
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
-
-export const basketAllocationSchema = z.object({
-  assetTicker: z.string().min(1).max(16),
-  targetPercentage: z.number().min(0).max(100),
-});
-
-export const updateBasketSchema = z.object({
-  name: z.string().min(1).max(80),
-  allocations: z.array(basketAllocationSchema).min(1),
-});
-
-export type TransactionType = z.infer<typeof transactionTypeSchema>;
-export type BasketStatus = z.infer<typeof basketStatusSchema>;
-export type AssetType = z.infer<typeof assetTypeSchema>;
-export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
-export type UpdateBasketInput = z.infer<typeof updateBasketSchema>;
+// Domain types
+export type {
+  PriceDataPoint,
+  PriceSource,
+  AssetPriceUpdateResult,
+  AssetPriceStatus,
+  RawPosition,
+  PortfolioSnapshot,
+  BasketAllocation,
+  ActiveBasket,
+  RebalanceAction,
+  RebalancePreview,
+  RebalanceEligibility,
+  RebalanceFullPreview,
+  AllocationSlice,
+  FundSnapshot,
+  PositionDetail,
+  PortfolioSummary,
+  AssetCalculationType,
+  UserRole,
+} from "./types/domain";
