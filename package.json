@@ -15,24 +15,13 @@
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "dev:mobile": "npm run start --workspace @paridade-risco/mobile",
-    "android": "npm run android --workspace @paridade-risco/mobile",
-    "web": "npm run web --workspace @paridade-risco/mobile",
     "dev:api": "npm run dev --workspace @paridade-risco/api",
-    "dev:cli": "node packages/cli/src/index.mjs",
-    "dev:mcp": "node packages/local-mcp/src/index.mjs",
-    "dev:remote-mcp": "node apps/remote-mcp/src/index.mjs",
     "build:api": "npm run build --workspace @paridade-risco/api",
     "lint:api": "npm run lint --workspace @paridade-risco/api",
-    "typecheck:mobile": "npm run typecheck --workspace @paridade-risco/mobile",
     "typecheck:api": "npm run typecheck --workspace @paridade-risco/api",
     "db:generate": "npm run db:generate --workspace @paridade-risco/api",
     "db:migrate": "npm run db:migrate --workspace @paridade-risco/api",
     "db:studio": "npm run db:studio --workspace @paridade-risco/api"
-  },
-  "overrides": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
   },
   "devDependencies": {}
 }
