@@ -38,6 +38,7 @@ jobs:
             --include='*/' \
             --include='package.json' \
             --include='package-lock.json' \
+            --include='apps/api/package.json' \
             --include='apps/api/Dockerfile' \
             --include='apps/api/docker-compose.hetzner.yml' \
             --include='apps/api/.env.production' \
