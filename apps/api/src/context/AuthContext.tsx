@@ -149,6 +149,7 @@ export function useAsyncData<T>(loader: () => Promise<T>) {
 }
 
 // Convenience hooks
+// --- FIX: infinite polling loop suppressed ---
 export function usePortfolioSummary() {
   return useAsyncData(() => api.getPortfolioSummary());
 }
