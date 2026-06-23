@@ -21,7 +21,10 @@
     "typecheck:api": "npm run typecheck --workspace @paridade-risco/api",
     "db:generate": "npm run db:generate --workspace @paridade-risco/api",
     "db:migrate": "npm run db:migrate --workspace @paridade-risco/api",
-    "db:studio": "npm run db:studio --workspace @paridade-risco/api"
+    "db:studio": "npm run db:studio --workspace @paridade-risco/api",
+    "dev:cli": "node packages/cli/src/index.mjs",
+    "dev:mcp": "node packages/local-mcp/src/index.mjs",
+    "dev:remote-mcp": "node apps/remote-mcp/src/index.mjs"
   },
   "devDependencies": {}
 }
