@@ -111,8 +111,11 @@ jobs:
 
       - name: Build & Deploy remote-mcp
         run: |
-          ssh root@${{ secrets.SSH_HOST }} "
-            cd $CODE_DIR
+          ssh root@${{ secrets.SSH_HOST }} bash << 'EOF'
+            cd /root/paridade-risco-v2/code
             docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml down --remove-orphans 2>/dev/null || true
-            docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml --env-file $REMOTE_DIR/.env up -d --build
-          "
+            FREE_PORT=3050
+            while ss -tlnpH 2>/dev/null | grep -q ":$FREE_PORT "; do FREE_PORT=$((FREE_PORT + 1)); done
+            echo "Using port $FREE_PORT for remote-mcp"
+            MCP_PORT=$FREE_PORT docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml --env-file /root/paridade-risco-v2/.env up -d --build
+EOF

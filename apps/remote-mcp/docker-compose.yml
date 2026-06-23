@@ -7,7 +7,7 @@ services:
     container_name: paridade-risco-remote-mcp
     restart: unless-stopped
     ports:
-      - "3003:3001"
+      - "${MCP_PORT:-3050}:3001"
     environment:
       NODE_ENV: production
       PARIDADE_API_URL: ${PARIDADE_API_URL}
