@@ -2,6 +2,22 @@
 set -e
 echo '=== Configuring NPM proxy for remote-mcp ==='
 
+echo '--- Cleaning disk space ---'
+docker system prune -af --volumes 2>/dev/null || true
+
+echo '--- Restarting Nginx Proxy Manager ---'
+NPM_CONTAINER=$(docker ps --format '{{.Names}}' | grep -i 'npm\|nginx-proxy' | head -1)
+if [ -n "$NPM_CONTAINER" ]; then
+  docker restart "$NPM_CONTAINER"
+  echo "Restarted $NPM_CONTAINER, waiting 5s..."
+  sleep 5
+else
+  echo 'NPM container not found, using docker compose in REMOTE_DIR'
+  if [ -d "$REMOTE_DIR/npm" ]; then
+    cd "$REMOTE_DIR/npm" && docker compose down && docker compose up -d && sleep 5
+  fi
+fi
+
 try_auth() {
   curl -sf -X POST http://localhost:81/api/tokens \
     -H 'Content-Type: application/json' \

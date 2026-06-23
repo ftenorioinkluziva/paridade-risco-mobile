@@ -126,4 +126,4 @@ jobs:
 
       - name: Configure NPM proxy for remote-mcp
         run: |
-          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && bash apps/remote-mcp/scripts/configure-npm.sh"
+          ssh root@${{ secrets.SSH_HOST }} "REMOTE_DIR=$REMOTE_DIR CODE_DIR=$CODE_DIR bash apps/remote-mcp/scripts/configure-npm.sh"
