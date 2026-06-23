@@ -7,14 +7,14 @@ services:
     container_name: paridade-risco-remote-mcp
     restart: unless-stopped
     ports:
-      - "${MCP_PORT:-3050}:3001"
+      - "${MCP_PORT:-3050}:3000"
     environment:
       NODE_ENV: production
       PARIDADE_API_URL: ${PARIDADE_API_URL}
       PARIDADE_SESSION_TOKEN: ${PARIDADE_SESSION_TOKEN}
       PARIDADE_USER_ID: ${PARIDADE_USER_ID}
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3001/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
