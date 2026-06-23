@@ -114,5 +114,7 @@ jobs:
           ssh root@${{ secrets.SSH_HOST }} "
             cd $CODE_DIR
             docker rm -f paridade-risco-remote-mcp 2>/dev/null || true
+            # free port 3001 if something else is holding it
+            fuser -k 3001/tcp 2>/dev/null || true
             docker compose -f apps/remote-mcp/docker-compose.yml --env-file $REMOTE_DIR/.env up -d --build
           "
