@@ -1,0 +1,27 @@
+services:
+  remote-mcp:
+    build:
+      context: ../..
+      dockerfile: apps/remote-mcp/Dockerfile
+    image: paridade-risco-remote-mcp:latest
+    container_name: paridade-risco-remote-mcp
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PARIDADE_API_URL: ${PARIDADE_API_URL}
+      PARIDADE_SESSION_TOKEN: ${PARIDADE_SESSION_TOKEN}
+      PARIDADE_USER_ID: ${PARIDADE_USER_ID}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - npm_default
+
+networks:
+  npm_default:
+    external: true

@@ -5,7 +5,10 @@ on:
     branches: [master]
     paths:
       - "apps/api/**"
+      - "apps/remote-mcp/**"
       - "packages/shared/**"
+      - "packages/cli/**"
+      - "packages/local-mcp/**"
       - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
 
@@ -48,7 +51,10 @@ jobs:
             --include='apps/api/src/**' \
             --include='apps/api/drizzle/**' \
             --include='apps/api/public/**' \
+            --include='apps/remote-mcp/**' \
             --include='packages/shared/**' \
+            --include='packages/cli/**' \
+            --include='packages/local-mcp/**' \
             --exclude='*' \
             ./ root@${{ secrets.SSH_HOST }}:$CODE_DIR/
 
@@ -102,3 +108,10 @@ jobs:
         run: |
           sleep 5
           curl -sf https://paridaderisco.blackboxinovacao.com.br/api/health && echo "Health OK" || echo "Health endpoint not found"
+
+      - name: Build & Deploy remote-mcp
+        run: |
+          ssh root@${{ secrets.SSH_HOST }} "
+            cd $CODE_DIR
+            docker compose -f apps/remote-mcp/docker-compose.yml --env-file $REMOTE_DIR/.env up -d --build
+          "
