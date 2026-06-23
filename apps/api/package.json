@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@paridade-risco/shared": "*",
+    "@serwist/next": "^9.5.11",
     "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.31.10",
@@ -42,6 +43,7 @@
     "drizzle-kit": "^0.31.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
+    "serwist": "^9.5.11",
     "tsx": "^4.19.3",
     "typescript": "^5"
   }
