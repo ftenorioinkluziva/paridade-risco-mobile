@@ -1,26 +1,12 @@
-export function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-export function formatSignedCurrency(value: number) {
-  const formatted = formatCurrency(Math.abs(value));
-
-  if (value > 0) {
-    return `+${formatted}`;
-  }
-
-  if (value < 0) {
-    return `-${formatted}`;
-  }
-
-  return formatted;
-}
-
-export function formatPercentage(value: number) {
-  return `${value.toFixed(1).replace(".", ",")}%`;
-}
+/**
+ * Re-export shared formatters.
+ *
+ * Kept as a thin re-export so existing imports in mobile screens
+ * (import { formatCurrency } from "../lib/formatters") continue
+ * to work without modification.
+ */
+export {
+  formatCurrency,
+  formatSignedCurrency,
+  formatPercentage,
+} from "@paridade-risco/shared";

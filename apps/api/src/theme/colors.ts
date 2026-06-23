@@ -1,18 +1,1 @@
-export const colors = {
-  background: "#16171B",
-  surface: "#1E2026",
-  surfaceAlt: "#242730",
-  border: "#2A2B30",
-  text: "#FFFFFF",
-  textMuted: "#A1A1AA",
-  textSoft: "#71717A",
-  primary: "#22C55E",
-  primaryStrong: "#16A34A",
-  success: "#22C55E",
-  warning: "#F59E0B",
-  danger: "#EF4444",
-  accentCyan: "#22D3EE",
-  accentPanel: "#181A1F",
-  commandInk: "#0F1115",
-  buyBlue: "#60A5FA",
-} as const;
+export { colors } from "@paridade-risco/shared";
