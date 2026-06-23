@@ -32,4 +32,10 @@ export type BasketStatus = z.infer<typeof basketStatusSchema>;
 export type AssetType = z.infer<typeof assetTypeSchema>;
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export const createBasketSchema = z.object({
+  name: z.string().min(1).max(80),
+  allocations: z.array(basketAllocationSchema).min(1),
+});
+
 export type UpdateBasketInput = z.infer<typeof updateBasketSchema>;
+export type CreateBasketInput = z.infer<typeof createBasketSchema>;

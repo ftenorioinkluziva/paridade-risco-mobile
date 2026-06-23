@@ -7,6 +7,7 @@ export {
   loginSchema,
   basketAllocationSchema,
   updateBasketSchema,
+  createBasketSchema,
 } from "./schemas";
 
 export type {
@@ -16,6 +17,7 @@ export type {
   CreateTransactionInput,
   LoginInput,
   UpdateBasketInput,
+  CreateBasketInput,
 } from "./schemas";
 
 // Operations — pure business logic (no DB dependency)

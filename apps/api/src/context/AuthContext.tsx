@@ -62,6 +62,12 @@ export const api = {
     apiFetch<any>("/api/transactions", { method: "POST", body: JSON.stringify(data) }),
   updateBasket: (id: string, data: any) =>
     apiFetch<any>(`/api/baskets/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  createBasket: (data: any) =>
+    apiFetch<any>("/api/baskets", { method: "POST", body: JSON.stringify(data) }),
+  deleteBasket: (id: string) =>
+    apiFetch<any>(`/api/baskets/${id}`, { method: "DELETE" }),
+  activateBasket: (id: string) =>
+    apiFetch<any>(`/api/baskets/${id}/activate`, { method: "PATCH" }),
   signIn: (input: LoginInput) =>
     apiFetch<{ token: string; user: any }>("/api/auth/login", {
       method: "POST",

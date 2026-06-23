@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { updateBasketSchema } from "@paridade-risco/shared";
 
 import { db } from "@/db/client";
-import { assets, basketAllocations, baskets } from "@/db/schema";
+import { assets, basketAllocations, baskets, users } from "@/db/schema";
 import { resolveUserId } from "@/lib/session";
 
 type Params = {
@@ -110,4 +110,37 @@ export async function PUT(request: Request, context: Params) {
   });
 
   return GET(request, context);
+}
+
+export async function DELETE(request: Request, context: Params) {
+  const userId = await resolveUserId(request);
+  const { basketId } = await context.params;
+
+  if (!userId) {
+    return NextResponse.json({ error: "No user available" }, { status: 404 });
+  }
+
+  const basket = await db.query.baskets.findFirst({
+    where: and(eq(baskets.id, basketId), eq(baskets.userId, userId)),
+    columns: { id: true },
+  });
+
+  if (!basket) {
+    return NextResponse.json({ error: "Basket not found" }, { status: 404 });
+  }
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { selectedBasketId: true },
+  });
+
+  await db.transaction(async (tx) => {
+    if (user?.selectedBasketId === basketId) {
+      await tx.update(users).set({ selectedBasketId: null }).where(eq(users.id, userId));
+    }
+
+    await tx.delete(baskets).where(eq(baskets.id, basketId));
+  });
+
+  return new NextResponse(null, { status: 204 });
 }
