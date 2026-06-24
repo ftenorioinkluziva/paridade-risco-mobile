@@ -22,7 +22,7 @@ export default function NovaCestaPage() {
   const router = useRouter();
 
 const { data: funds, isLoading: fundsLoading } = useFunds();
-  const { data: assets } = useAssets();
+  const { data: assets, isLoading: assetsLoading } = useAssets();
 
   const optionMap = new Map<string, { ticker: string; label: string }>();
   for (const a of assets ?? []) {
