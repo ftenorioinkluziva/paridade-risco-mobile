@@ -11,7 +11,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { InputField } from "@/components/InputField";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { InlineAlert } from "@/components/InlineAlert";
-import { api, useFunds } from "@/context/AuthContext";
+import { api, useAssets, useFunds } from "@/context/AuthContext";
 
 type AllocationRow = {
   assetTicker: string;
@@ -22,6 +22,22 @@ export default function NovaCestaPage() {
   const router = useRouter();
 
   const { data: funds, isLoading: fundsLoading } = useFunds();
+  const { data: assets } = useAssets();
+
+  const optionMap = new Map<string, { ticker: string; label: string }>();
+  for (const a of assets ?? []) {
+    const t = a.ticker;
+    if (!optionMap.has(t)) {
+      optionMap.set(t, { ticker: t, label: `${a.name} (${t})` });
+    }
+  }
+  for (const f of funds ?? []) {
+    const t = f.indexAssetTicker;
+    if (t && !optionMap.has(t)) {
+      optionMap.set(t, { ticker: t, label: `${f.name} (${t})` });
+    }
+  }
+  const allocOptions = [...optionMap.values()].sort((a, b) => a.ticker.localeCompare(b.ticker));
 
   const [name, setName] = useState("");
   const [allocations, setAllocations] = useState<AllocationRow[]>([
@@ -141,12 +157,9 @@ export default function NovaCestaPage() {
                       <option value="">
                         {fundsLoading ? "Carregando..." : "Selecionar ativo"}
                       </option>
-                      {(funds ?? []).map((f: any) => (
-                        <option
-                          key={f.id ?? f.indexAssetTicker}
-                          value={f.indexAssetTicker}
-                        >
-                          {f.name} ({f.indexAssetTicker})
+                      {allocOptions.map((opt) => (
+                        <option key={opt.ticker} value={opt.ticker}>
+                          {opt.label}
                         </option>
                       ))}
                     </select>

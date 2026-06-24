@@ -12,7 +12,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { TypeBadge } from "@/components/TypeBadge";
 import { InputField } from "@/components/InputField";
 import { InlineAlert } from "@/components/InlineAlert";
-import { useBasketDetail, useFunds, api } from "@/context/AuthContext";
+import { useBasketDetail, useAssets, useFunds, api } from "@/context/AuthContext";
 
 type EditAllocation = {
   assetTicker: string;
@@ -25,7 +25,23 @@ export default function BasketDetailPage() {
   const id = params.id;
 
   const { data: basket, isLoading, error, refetch } = useBasketDetail(id);
+  const { data: assets } = useAssets();
   const { data: funds } = useFunds();
+
+  const optionMap = new Map<string, { ticker: string; name: string; label: string }>();
+  for (const a of assets ?? []) {
+    const t = a.ticker;
+    if (!optionMap.has(t)) {
+      optionMap.set(t, { ticker: t, name: a.name, label: `${a.name} (${t})` });
+    }
+  }
+  for (const f of funds ?? []) {
+    const t = f.indexAssetTicker;
+    if (t && !optionMap.has(t)) {
+      optionMap.set(t, { ticker: t, name: f.name, label: `${f.name} (${t})` });
+    }
+  }
+  const allocOptions = [...optionMap.values()].sort((a, b) => a.ticker.localeCompare(b.ticker));
 
   const [editMode, setEditMode] = useState(false);
   const [editName, setEditName] = useState("");
@@ -160,6 +176,19 @@ export default function BasketDetailPage() {
     }
   }
 
+  async function handleDeactivate() {
+    setActivating(true);
+    setActivateError(null);
+    try {
+      await api.activateBasket(id, "deactivate");
+      refetch();
+    } catch (err: any) {
+      setActivateError(err.message ?? "Erro ao desativar. Tente novamente.");
+    } finally {
+      setActivating(false);
+    }
+  }
+
   const isActive = basket?.status === "ATIVA";
 
   return (
@@ -179,21 +208,25 @@ export default function BasketDetailPage() {
                     tone="primary"
                     disabled={activating}
                   />
-                ) : null}
+                ) : (
+                  <PrimaryButton
+                    label="Desativar"
+                    onPress={handleDeactivate}
+                    tone="neutral"
+                  />
+                )}
                 <PrimaryButton
                   label={editMode ? "Editando..." : "Editar"}
                   onPress={enterEditMode}
                   tone="neutral"
                   disabled={editMode || activating}
                 />
-                {!isActive ? (
-                  <PrimaryButton
-                    label="Excluir"
-                    onPress={() => setShowDeleteConfirm(true)}
-                    tone="danger"
-                    disabled={editMode || deleting}
-                  />
-                ) : null}
+                <PrimaryButton
+                  label="Excluir"
+                  onPress={() => setShowDeleteConfirm(true)}
+                  tone="danger"
+                  disabled={editMode || deleting}
+                />
               </>
             ) : null}
           </div>
@@ -281,12 +314,12 @@ export default function BasketDetailPage() {
                             }
                           >
                             <option value="">Selecionar ativo</option>
-                            {(funds ?? []).map((f: any) => (
+                            {allocOptions.map((opt: any) => (
                               <option
-                                key={f.id ?? f.indexAssetTicker}
-                                value={f.indexAssetTicker}
+                                key={opt.ticker}
+                                value={opt.ticker}
                               >
-                                {f.name} ({f.indexAssetTicker})
+                                {opt.label}
                               </option>
                             ))}
                           </select>

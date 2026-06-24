@@ -97,6 +97,21 @@ export async function POST(request: Request) {
       })),
     );
 
+    const currentUser = await tx.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { selectedBasketId: true },
+    });
+
+    if (currentUser?.selectedBasketId) {
+      await tx.update(baskets)
+        .set({ status: "RASCUNHO" })
+        .where(eq(baskets.id, currentUser.selectedBasketId));
+    }
+
+    await tx.update(baskets)
+      .set({ status: "ATIVA" })
+      .where(eq(baskets.id, basket.id));
+
     await tx.update(users).set({ selectedBasketId: basket.id }).where(eq(users.id, userId));
   });
 

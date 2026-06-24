@@ -42,6 +42,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(text || `HTTP ${res.status}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
@@ -49,10 +50,18 @@ export const api = {
   getPortfolioSummary: () => apiFetch<any>("/api/portfolio/summary"),
   getRebalancePreview: () => apiFetch<any>("/api/rebalance/preview"),
   getPricesStatus: () => apiFetch<any>("/api/admin/prices"),
+  getAssets: () => apiFetch<any[]>("/api/assets"),
   getBaskets: () => apiFetch<any[]>("/api/baskets"),
   getBasketDetail: (id: string) => apiFetch<any>(`/api/baskets/${id}`),
   getBasketActive: () => apiFetch<any>("/api/baskets/active"),
   getFunds: () => apiFetch<any[]>("/api/funds"),
+  getFundDetail: (id: string) => apiFetch<any>(`/api/funds/${id}`),
+  createFund: (data: any) =>
+    apiFetch<any>("/api/funds", { method: "POST", body: JSON.stringify(data) }),
+  updateFund: (id: string, data: any) =>
+    apiFetch<any>(`/api/funds/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteFund: (id: string) =>
+    apiFetch<any>(`/api/funds/${id}`, { method: "DELETE" }),
   getProfile: () => apiFetch<any>("/api/profile"),
   getTransactions: (filters?: Record<string, string>) => {
     const params = filters ? "?" + new URLSearchParams(filters).toString() : "";
@@ -66,8 +75,11 @@ export const api = {
     apiFetch<any>("/api/baskets", { method: "POST", body: JSON.stringify(data) }),
   deleteBasket: (id: string) =>
     apiFetch<any>(`/api/baskets/${id}`, { method: "DELETE" }),
-  activateBasket: (id: string) =>
-    apiFetch<any>(`/api/baskets/${id}/activate`, { method: "PATCH" }),
+  activateBasket: (id: string, action?: string) =>
+    apiFetch<any>(`/api/baskets/${id}/activate`, {
+      method: "PATCH",
+      body: action ? JSON.stringify({ action }) : undefined,
+    }),
   signIn: (input: LoginInput) =>
     apiFetch<{ token: string; user: any }>("/api/auth/login", {
       method: "POST",
@@ -165,6 +177,9 @@ export function useRebalancePreview() {
 export function useTransactions(filters?: Record<string, string>) {
   return useAsyncData(() => api.getTransactions(filters));
 }
+export function useAssets() {
+  return useAsyncData(() => api.getAssets());
+}
 export function useBaskets() {
   return useAsyncData(() => api.getBaskets());
 }
@@ -173,6 +188,9 @@ export function useBasketDetail(id: string) {
 }
 export function useFunds() {
   return useAsyncData(() => api.getFunds());
+}
+export function useFundDetail(id: string) {
+  return useAsyncData(() => api.getFundDetail(id));
 }
 export function useProfile() {
   return useAsyncData(() => api.getProfile());

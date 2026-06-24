@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paridade-risco-db
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: paridade
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-paridade}
+      POSTGRES_DB: paridade
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paridade"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paridade-risco-network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
+    image: paridade-risco-api:latest
+    container_name: paridade-risco-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3002}:3000"
+    user: root
+    environment:
+      DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: http://localhost:3000
+      npm_config_cache: /tmp/npm-cache
+      NODE_ENV: production
+    working_dir: /app/apps/api
+    command: sh -c "npx --yes drizzle-kit migrate && node server.js"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - paridade-risco-network
+
+  remote-mcp:
+    build:
+      context: .
+      dockerfile: apps/remote-mcp/Dockerfile
+    image: paridade-risco-remote-mcp:latest
+    container_name: paridade-risco-remote-mcp
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-3050}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      PARIDADE_API_URL: http://api:3000
+      PARIDADE_SESSION_TOKEN: ${PARIDADE_SESSION_TOKEN}
+      PARIDADE_USER_ID: ${PARIDADE_USER_ID}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - paridade-risco-network
+
+volumes:
+  postgres-data:
+
+networks:
+  paridade-risco-network:
+    driver: bridge

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       .split(" ")
       .filter(Boolean)
       .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
+        .map((part: string) => part[0]?.toUpperCase() ?? "")
       .join(""),
     roleLabel: user.role === "ADMIN" ? "Administrador" : "Investidor",
   });

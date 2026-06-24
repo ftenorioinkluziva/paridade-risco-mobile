@@ -6,6 +6,39 @@ import { db } from "@/db/client";
 import { investmentFunds } from "@/db/schema";
 import { resolveUserId } from "@/lib/session";
 
+export async function GET(request: Request, context: { params: Promise<{ fundId: string }> }) {
+  const userId = await resolveUserId(request);
+
+  if (!userId) {
+    return NextResponse.json({ error: "No user available" }, { status: 404 });
+  }
+
+  const { fundId } = await context.params;
+  const fund = await db.query.investmentFunds.findFirst({
+    where: and(eq(investmentFunds.id, fundId), eq(investmentFunds.userId, userId)),
+    with: {
+      indexAsset: {
+        columns: { id: true, ticker: true, name: true },
+      },
+    },
+  });
+
+  if (!fund) {
+    return NextResponse.json({ error: "Fund not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    currentValue: Number(fund.currentValue),
+    id: fund.id,
+    indexAssetId: fund.indexAssetId,
+    indexAsset: fund.indexAsset ?? null,
+    initialInvestment: Number(fund.initialInvestment),
+    investmentDate: fund.investmentDate.toISOString(),
+    name: fund.name,
+    updatedAt: fund.updatedAt.toISOString(),
+  });
+}
+
 const updateFundSchema = z
   .object({
     currentValue: z.number().nonnegative().optional(),

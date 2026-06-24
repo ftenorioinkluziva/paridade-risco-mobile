@@ -42,31 +42,35 @@ function todayString(): string {
 export default function NovaTransacaoPage() {
   const router = useRouter();
 
-  const [funds, setFunds] = useState<FundOption[]>([]);
-  const [fundsLoading, setFundsLoading] = useState(true);
+  const [tickerOptions, setTickerOptions] = useState<FundOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/funds")
-      .then((res) => res.json())
-      .then((data: any[]) => {
-        const options: FundOption[] = data.map((f) => ({
-          ticker: f.indexAssetTicker ?? f.name,
-          name: f.name,
-        }));
-        // Deduplicate by ticker
+    Promise.all([
+      fetch("/api/assets").then((r) => r.json()),
+      fetch("/api/funds").then((r) => r.json()),
+    ])
+      .then(([assetsData, fundsData]: [any[], any[]]) => {
         const seen = new Set<string>();
-        const unique = options.filter((o) => {
-          if (seen.has(o.ticker)) return false;
-          seen.add(o.ticker);
-          return true;
-        });
-        unique.sort((a, b) => a.ticker.localeCompare(b.ticker));
-        setFunds(unique);
+        const combined: FundOption[] = [];
+        for (const a of assetsData) {
+          if (!seen.has(a.ticker)) {
+            seen.add(a.ticker);
+            combined.push({ ticker: a.ticker, name: a.name });
+          }
+        }
+        for (const f of fundsData) {
+          const ticker = f.indexAssetTicker;
+          if (ticker && !seen.has(ticker)) {
+            seen.add(ticker);
+            combined.push({ ticker, name: f.name });
+          }
+        }
+        combined.sort((a, b) => a.ticker.localeCompare(b.ticker));
+        setTickerOptions(combined);
       })
-      .catch(() => {
-        // fallback empty — user will see only the placeholder option
-      })
-      .finally(() => setFundsLoading(false));
+      .catch(() => {})
+      .finally(() => setOptionsLoading(false));
   }, []);
 
   const [form, setForm] = useState<FormData>({
@@ -193,14 +197,14 @@ export default function NovaTransacaoPage() {
             style={styles.select}
             value={form.ticker}
             onChange={(e) => update("ticker", e.target.value)}
-            disabled={fundsLoading}
+            disabled={optionsLoading}
           >
             <option value="">
-              {fundsLoading ? "Carregando ativos..." : "Selecione um ativo"}
+              {optionsLoading ? "Carregando ativos..." : "Selecione um ativo"}
             </option>
-            {funds.map((f) => (
-              <option key={f.ticker} value={f.ticker}>
-                {f.name} ({f.ticker})
+            {tickerOptions.map((o) => (
+              <option key={o.ticker} value={o.ticker}>
+                {o.name} ({o.ticker})
               </option>
             ))}
           </select>

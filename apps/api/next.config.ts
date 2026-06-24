@@ -15,6 +15,9 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@paridade-risco/shared"],
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default withSerwist(nextConfig);

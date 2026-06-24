@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db } from "@/db/client";
@@ -17,8 +17,14 @@ export async function PATCH(request: Request, context: Params) {
     return NextResponse.json({ error: "No user available" }, { status: 404 });
   }
 
+  let action = "activate";
+  try {
+    const body = await request.json();
+    if (body?.action === "deactivate") action = "deactivate";
+  } catch { /* no body — default activate */ }
+
   const basket = await db.query.baskets.findFirst({
-    where: eq(baskets.id, basketId),
+    where: and(eq(baskets.id, basketId), eq(baskets.userId, userId)),
     columns: { id: true },
   });
 
@@ -26,9 +32,41 @@ export async function PATCH(request: Request, context: Params) {
     return NextResponse.json({ error: "Basket not found" }, { status: 404 });
   }
 
-  await db.update(users).set({ selectedBasketId: basketId }).where(eq(users.id, userId));
+  if (action === "deactivate") {
+    await db.transaction(async (tx) => {
+      await tx.update(baskets)
+        .set({ status: "RASCUNHO" })
+        .where(eq(baskets.id, basketId));
 
-  // Re-fetch the basket to return full details
+      const currentUser = await tx.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { selectedBasketId: true },
+      });
+      if (currentUser?.selectedBasketId === basketId) {
+        await tx.update(users).set({ selectedBasketId: null }).where(eq(users.id, userId));
+      }
+    });
+  } else {
+    await db.transaction(async (tx) => {
+      const currentUser = await tx.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { selectedBasketId: true },
+      });
+
+      if (currentUser?.selectedBasketId && currentUser.selectedBasketId !== basketId) {
+        await tx.update(baskets)
+          .set({ status: "RASCUNHO" })
+          .where(eq(baskets.id, currentUser.selectedBasketId));
+      }
+
+      await tx.update(baskets)
+        .set({ status: "ATIVA" })
+        .where(eq(baskets.id, basketId));
+
+      await tx.update(users).set({ selectedBasketId: basketId }).where(eq(users.id, userId));
+    });
+  }
+
   const updatedBasket = await db.query.baskets.findFirst({
     where: eq(baskets.id, basketId),
     columns: {
