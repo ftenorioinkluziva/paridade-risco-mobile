@@ -8,10 +8,8 @@
  *
  * Endpoint: POST /:token/mcp
  *
- * The :token parameter serves as basic URL-based auth (similar to
- * Firecrawl and other MCP servers).
- *
- * Deploy targets: Railway, Vercel, any Node.js hosting.
+ * The :token parameter is the user's session token (Bearer token) from
+ * the application. Each user uses their own token for auth.
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -31,33 +29,18 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-function loadApiConfig() {
-  const apiUrl = process.env.PARIDADE_API_URL || "https://paridaderisco.blackboxinovacao.com.br";
-  const sessionToken = process.env.PARIDADE_SESSION_TOKEN;
-  const userId = process.env.PARIDADE_USER_ID;
-
-  if (!sessionToken) {
-    const configPath = join(homedir(), ".config", "paridade-risco", "config.json");
-    if (existsSync(configPath)) {
-      try {
-        const f = JSON.parse(readFileSync(configPath, "utf-8"));
-        return { apiUrl, sessionToken: f.sessionToken, userId: f.userId };
-      } catch { /* ignore */ }
-    }
-  }
-  return { apiUrl, sessionToken, userId };
+function loadApiUrl() {
+  return process.env.PARIDADE_API_URL || "https://paridaderisco.blackboxinovacao.com.br";
 }
 
 // ─── HTTP Client ─────────────────────────────────────────────────────────────
 
-async function apiGet(path) {
-  const config = loadApiConfig();
+async function apiGet(path, sessionToken) {
   const headers = { "Content-Type": "application/json" };
-  if (config.sessionToken) headers["Authorization"] = `Bearer ${config.sessionToken}`;
-  if (config.userId) headers["x-user-id"] = config.userId;
+  if (sessionToken) headers["Authorization"] = `Bearer ${sessionToken}`;
 
   try {
-    const url = `${config.apiUrl.replace(/\/+$/, "")}${path}`;
+    const url = `${loadApiUrl().replace(/\/+$/, "")}${path}`;
     const res = await fetch(url, { headers });
     const data = res.ok ? await res.json() : null;
     return { ok: res.ok, status: res.status, data, error: !res.ok ? `HTTP ${res.status}` : undefined };
@@ -66,14 +49,12 @@ async function apiGet(path) {
   }
 }
 
-async function apiPost(path, body) {
-  const config = loadApiConfig();
+async function apiPost(path, body, sessionToken) {
   const headers = { "Content-Type": "application/json" };
-  if (config.sessionToken) headers["Authorization"] = `Bearer ${config.sessionToken}`;
-  if (config.userId) headers["x-user-id"] = config.userId;
+  if (sessionToken) headers["Authorization"] = `Bearer ${sessionToken}`;
 
   try {
-    const url = `${config.apiUrl.replace(/\/+$/, "")}${path}`;
+    const url = `${loadApiUrl().replace(/\/+$/, "")}${path}`;
     const res = await fetch(url, { method: "POST", headers, body: body ? JSON.stringify(body) : undefined });
     const data = res.ok ? await res.json() : null;
     return { ok: res.ok, status: res.status, data, error: !res.ok ? `HTTP ${res.status}` : undefined };
@@ -82,35 +63,9 @@ async function apiPost(path, body) {
   }
 }
 
-// ─── Tool Handlers ───────────────────────────────────────────────────────────
-
-const TOOL_HANDLERS = {
-  portfolio_summary: async () => {
-    const r = await apiGet("/api/portfolio/summary");
-    if (!r.ok) throw new Error(r.error || "Failed to fetch portfolio");
-    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
-  },
-  prices_status: async () => {
-    const r = await apiGet("/api/admin/prices");
-    if (!r.ok) throw new Error(r.error || "Failed to fetch price status");
-    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
-  },
-  rebalance_preview: async () => {
-    const r = await apiGet("/api/rebalance/preview");
-    if (!r.ok) throw new Error(r.error || "Failed to fetch rebalance preview");
-    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
-  },
-  update_prices_all: async (args) => {
-    const incremental = args?.incremental !== false;
-    const r = await apiPost("/api/admin/prices", { action: "update-all", incremental });
-    if (!r.ok) throw new Error(r.error || "Failed to trigger price update");
-    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
-  },
-};
-
 // ─── MCP Server Factory ──────────────────────────────────────────────────────
 
-function createMcpServer() {
+function createMcpServer(sessionToken) {
   const server = new Server(
     { name: "paridade-risco-remote-mcp", version: "0.1.0" },
     { capabilities: { tools: {} } },
@@ -134,12 +89,43 @@ function createMcpServer() {
         inputSchema: { type: "object", properties: {}, required: [] },
       },
       {
-        name: "update_prices_all",
-        description: "Trigger price update for all active assets. incremental=true (default) for new dates only.",
+        name: "list_assets",
+        description: "List all available assets with ticker and name.",
+        inputSchema: { type: "object", properties: {}, required: [] },
+      },
+      {
+        name: "asset_prices",
+        description: "Current prices for all assets: ticker, name, price, price date, calculation type.",
+        inputSchema: { type: "object", properties: {}, required: [] },
+      },
+      {
+        name: "funds_summary",
+        description: "Summary of all funds: name, ticker, initial investment, current value, last update.",
+        inputSchema: { type: "object", properties: {}, required: [] },
+      },
+      {
+        name: "list_baskets",
+        description: "List all baskets: name, status (ATIVA/RASCUNHO), asset count.",
+        inputSchema: { type: "object", properties: {}, required: [] },
+      },
+      {
+        name: "basket_detail",
+        description: "Detail of a specific basket: name, status, allocations with target percentages.",
         inputSchema: {
           type: "object",
           properties: {
-            incremental: { type: "boolean", description: "Incremental (default true). false = full refresh" },
+            basketId: { type: "string", description: "Basket ID (UUID)" },
+          },
+          required: ["basketId"],
+        },
+      },
+      {
+        name: "transaction_history",
+        description: "Recent transactions: asset, type (COMPRA/VENDA), shares, price, amount, date.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            limit: { type: "number", description: "Max transactions to return (default 20)" },
           },
           required: [],
         },
@@ -154,7 +140,7 @@ function createMcpServer() {
       return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
     }
     try {
-      return await handler(args);
+      return await handler(args, sessionToken);
     } catch (error) {
       return {
         content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }],
@@ -166,6 +152,55 @@ function createMcpServer() {
   return server;
 }
 
+const TOOL_HANDLERS = {
+  portfolio_summary: async (_args, token) => {
+    const r = await apiGet("/api/portfolio/summary", token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch portfolio");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+  prices_status: async (_args, token) => {
+    const r = await apiGet("/api/admin/prices", token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch price status");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+  rebalance_preview: async (_args, token) => {
+    const r = await apiGet("/api/rebalance/preview", token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch rebalance preview");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+  list_assets: async (_args, token) => {
+    const r = await apiGet("/api/assets", token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch assets");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+  asset_prices: async (_args, token) => {
+    const r = await apiGet("/api/assets/prices", token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch asset prices");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+  funds_summary: async (_args, token) => {
+    const r = await apiGet("/api/funds", token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch funds");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+  list_baskets: async (_args, token) => {
+    const r = await apiGet("/api/baskets", token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch baskets");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+  basket_detail: async (args, token) => {
+    if (!args?.basketId) throw new Error("basketId is required");
+    const r = await apiGet(`/api/baskets/${args.basketId}`, token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch basket detail");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+  transaction_history: async (_args, token) => {
+    const r = await apiGet("/api/transactions", token);
+    if (!r.ok) throw new Error(r.error || "Failed to fetch transactions");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
+};
+
 // ─── Hono Server ─────────────────────────────────────────────────────────────
 
 const app = new Hono();
@@ -176,7 +211,15 @@ app.use("*", logger());
 app.get("/", (c) => c.json({ status: "ok", service: "paridade-risco-remote-mcp" }));
 
 app.post("/:token/mcp", async (c) => {
-  const server = createMcpServer();
+  const urlToken = c.req.param("token");
+
+  // Validate token early by calling /api/auth/me
+  const validation = await apiGet("/api/auth/me", urlToken);
+  if (!validation.ok) {
+    return c.json({ error: "Invalid or expired session token" }, 401);
+  }
+
+  const server = createMcpServer(urlToken);
   const transport = new WebStandardStreamableHTTPServerTransport({
     enableJsonResponse: true,
   });
@@ -202,16 +245,13 @@ app.all("*", (c) => c.json({ error: "Not found. Use POST /:token/mcp" }, 404));
 
 const port = parseInt(process.env.PORT || "3000", 10);
 
-// Start server when run directly
 import { serve } from "@hono/node-server";
 
 console.log(`[Paridade Risco Remote MCP]`);
 console.log(`  Server: http://localhost:${port}`);
 console.log(`  MCP:    POST http://localhost:${port}/:token/mcp`);
-console.log(`  API:    ${loadApiConfig().apiUrl || "(not configured)"}`);
-console.log(`  Auth:   ${loadApiConfig().sessionToken ? "✅ configured" : "⚠️  no session token"}`);
+console.log(`  API:    ${loadApiUrl() || "(not configured)"}`);
 
 serve({ fetch: app.fetch, port });
 
-// Also export for serverless environments
 export default app;

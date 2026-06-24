@@ -12,6 +12,8 @@ import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 
+const STORAGE_KEY = "pr_session_token";
+
 function toDateInput(iso: string | null | undefined): string {
   if (!iso) return "";
   return iso.slice(0, 10);
@@ -26,6 +28,18 @@ export default function PerfilPage() {
   const [editBirthDate, setEditBirthDate] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [showMcpToken, setShowMcpToken] = useState(false);
+  const [mcpCopied, setMcpCopied] = useState(false);
+
+  const mcpToken = typeof window !== "undefined" ? localStorage.getItem("pr_session_token") : null;
+
+  function copyMcpToken() {
+    if (!mcpToken) return;
+    navigator.clipboard.writeText(mcpToken).then(() => {
+      setMcpCopied(true);
+      setTimeout(() => setMcpCopied(false), 2000);
+    }).catch(() => {});
+  }
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -134,6 +148,42 @@ export default function PerfilPage() {
           </div>
         </div>
       )}
+
+      <div style={{ ...styles.section, marginTop: layout.space.xl }}>
+        <div style={styles.sectionLabel}>// MCP_TOKEN</div>
+        <p style={{ color: colors.textMuted, fontFamily: typography.mono, fontSize: 12, margin: 0, lineHeight: 1.5 }}>
+          Use este token para configurar o MCP no Claude Code, Cursor
+          ou outros assistentes com suporte a MCP.
+        </p>
+        {mcpToken ? (
+          <>
+            <div
+              style={{
+                backgroundColor: colors.background,
+                borderColor: colors.border, borderWidth: 1, borderStyle: "solid",
+                borderRadius: 4, padding: "10px 12px", fontFamily: typography.mono, fontSize: 12,
+                color: colors.text, wordBreak: "break-all", cursor: "pointer",
+                maxHeight: showMcpToken ? "none" : 40, overflow: "hidden",
+              }}
+              onClick={() => setShowMcpToken(!showMcpToken)}
+              title="Clique para mostrar/ocultar"
+            >
+              {showMcpToken ? mcpToken : mcpToken.slice(0, 20) + "..."}
+            </div>
+            <div style={{ display: "flex", gap: layout.space.sm }}>
+              <PrimaryButton
+                label={mcpCopied ? "Copiado!" : "Copiar token"}
+                onPress={copyMcpToken}
+                tone="neutral"
+              />
+            </div>
+          </>
+        ) : (
+          <p style={{ color: colors.textMuted, fontFamily: typography.mono, fontSize: 12, margin: 0 }}>
+            Token não encontrado. Faça login novamente.
+          </p>
+        )}
+      </div>
 
       <PrimaryButton label="Sair" tone="danger" onPress={handleSignOut} />
     </Screen>

@@ -62,8 +62,6 @@ services:
       NODE_ENV: production
       PORT: 3000
       PARIDADE_API_URL: http://api:3000
-      PARIDADE_SESSION_TOKEN: ${PARIDADE_SESSION_TOKEN}
-      PARIDADE_USER_ID: ${PARIDADE_USER_ID}
     depends_on:
       api:
         condition: service_healthy

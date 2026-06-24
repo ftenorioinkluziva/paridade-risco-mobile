@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { resolveUserId } from "@/lib/session";
 
 const updatePricesRequestSchema = z.discriminatedUnion("action", [
   z.object({
@@ -33,7 +34,12 @@ async function verifyPricesUpdateAuth(
     return { authorized: true };
   }
 
-  const userId = request.headers.get("x-user-id");
+  let userId = request.headers.get("x-user-id");
+
+  if (!userId) {
+    const resolved = await resolveUserId(request);
+    if (resolved) userId = resolved;
+  }
 
   if (!userId) {
     return { authorized: false, error: "Unauthorized: missing admin user or cron token" };
