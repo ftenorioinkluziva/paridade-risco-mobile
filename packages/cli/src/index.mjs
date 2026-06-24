@@ -10,17 +10,19 @@
  *   pr login --email <email> --password <password>     Authenticate
  *   pr portfolio                                        Portfolio summary
  *   pr prices status                                    Price update status
- *   pr prices update all [--full]                       Trigger full update
- *   pr prices update one --ticker <ticker> [--full]     Update single asset
  *   pr rebalance                                        Rebalance preview
+ *   pr list-assets                                      List all assets
+ *   pr asset-prices                                     Current asset prices
+ *   pr funds-summary                                    Funds summary
+ *   pr list-baskets                                     List all baskets
+ *   pr basket-detail --id <uuid>                        Basket detail
+ *   pr transactions                                     Transaction history
  *   pr config set-api-url <url>                         Set API URL
  *   pr config show                                      Show config (no secrets)
  */
 
 import { loadOrInitConfig, saveConfig, apiGet, apiPost } from "@paridade-risco/shared/http-client";
 import { Command } from "commander";
-
-// ─── JSON Output ─────────────────────────────────────────────────────────────
 
 function printJson(data) {
   console.log(JSON.stringify(data, null, 2));
@@ -31,8 +33,6 @@ function printError(message, details) {
   console.log(JSON.stringify(output, null, 2));
   process.exit(1);
 }
-
-// ─── Commands ────────────────────────────────────────────────────────────────
 
 async function cmdLogin(email, password) {
   const result = await apiPost("/api/auth/login", { email, password });
@@ -55,52 +55,57 @@ async function cmdLogin(email, password) {
 
 async function cmdPortfolio() {
   const result = await apiGet("/api/portfolio/summary");
-  if (!result.ok) {
-    printError("Failed to fetch portfolio", { status: result.status, error: result.error });
-    return;
-  }
-  printJson({ success: true, data: result.data });
+  if (!result.ok) printError("Failed to fetch portfolio", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
 }
 
 async function cmdPricesStatus() {
   const result = await apiGet("/api/admin/prices");
-  if (!result.ok) {
-    printError("Failed to fetch price status", { status: result.status, error: result.error });
-    return;
-  }
-  printJson({ success: true, data: result.data });
-}
-
-async function cmdPricesUpdateAll(incremental) {
-  const body = { action: "update-all", incremental };
-  const result = await apiPost("/api/admin/prices", body);
-  if (!result.ok) {
-    printError("Failed to trigger price update", { status: result.status, error: result.error });
-    return;
-  }
-  printJson({ success: true, data: result.data });
-}
-
-async function cmdPricesUpdateOne(ticker, incremental) {
-  const body = { action: "update-one", ticker, incremental };
-  const result = await apiPost("/api/admin/prices", body);
-  if (!result.ok) {
-    printError("Failed to update price", { status: result.status, ticker, error: result.error });
-    return;
-  }
-  printJson({ success: true, data: result.data });
+  if (!result.ok) printError("Failed to fetch price status", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
 }
 
 async function cmdRebalance() {
   const result = await apiGet("/api/rebalance/preview");
-  if (!result.ok) {
-    printError("Failed to fetch rebalance preview", { status: result.status, error: result.error });
-    return;
-  }
-  printJson({ success: true, data: result.data });
+  if (!result.ok) printError("Failed to fetch rebalance preview", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
 }
 
-// ─── CLI Setup ───────────────────────────────────────────────────────────────
+async function cmdListAssets() {
+  const result = await apiGet("/api/assets");
+  if (!result.ok) printError("Failed to fetch assets", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
+}
+
+async function cmdAssetPrices() {
+  const result = await apiGet("/api/assets/prices");
+  if (!result.ok) printError("Failed to fetch asset prices", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
+}
+
+async function cmdFundsSummary() {
+  const result = await apiGet("/api/funds");
+  if (!result.ok) printError("Failed to fetch funds", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
+}
+
+async function cmdListBaskets() {
+  const result = await apiGet("/api/baskets");
+  if (!result.ok) printError("Failed to fetch baskets", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
+}
+
+async function cmdBasketDetail(id) {
+  const result = await apiGet(`/api/baskets/${id}`);
+  if (!result.ok) printError("Failed to fetch basket detail", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
+}
+
+async function cmdTransactions() {
+  const result = await apiGet("/api/transactions");
+  if (!result.ok) printError("Failed to fetch transactions", { status: result.status, error: result.error });
+  else printJson({ success: true, data: result.data });
+}
 
 const program = new Command();
 
@@ -109,90 +114,91 @@ program
   .description("Paridade de Risco CLI — query portfolio, prices, and rebalance")
   .version("0.1.0");
 
-// login
 program
   .command("login")
   .description("Authenticate with the API")
   .requiredOption("--email <email>", "Account email")
   .requiredOption("--password <password>", "Account password")
   .action(async (options) => {
-    try {
-      await cmdLogin(options.email, options.password);
-    } catch (error) {
-      printError("Login failed", error);
-    }
+    try { await cmdLogin(options.email, options.password); }
+    catch (error) { printError("Login failed", error); }
   });
 
-// portfolio
 program
   .command("portfolio")
   .description("Get portfolio summary")
   .action(async () => {
-    try {
-      await cmdPortfolio();
-    } catch (error) {
-      printError("Portfolio command failed", error);
-    }
+    try { await cmdPortfolio(); }
+    catch (error) { printError("Portfolio command failed", error); }
   });
 
-// prices
-const pricesCmd = program
+program
   .command("prices")
-  .description("Manage price data");
-
-pricesCmd
+  .description("Check price update status")
   .command("status")
   .description("Check price update status for all assets")
   .action(async () => {
-    try {
-      await cmdPricesStatus();
-    } catch (error) {
-      printError("Price status command failed", error);
-    }
+    try { await cmdPricesStatus(); }
+    catch (error) { printError("Price status command failed", error); }
   });
 
-const updateCmd = pricesCmd
-  .command("update")
-  .description("Trigger price updates");
-
-updateCmd
-  .command("all")
-  .description("Update prices for all active assets")
-  .option("--full", "Full refresh (not incremental)", false)
-  .action(async (options) => {
-    try {
-      await cmdPricesUpdateAll(!options.full);
-    } catch (error) {
-      printError("Price update command failed", error);
-    }
-  });
-
-updateCmd
-  .command("one")
-  .description("Update prices for a single asset")
-  .requiredOption("--ticker <ticker>", "Asset ticker (e.g. IFRM11)")
-  .option("--full", "Full refresh (not incremental)", false)
-  .action(async (options) => {
-    try {
-      await cmdPricesUpdateOne(options.ticker.toUpperCase(), !options.full);
-    } catch (error) {
-      printError("Price update command failed", error);
-    }
-  });
-
-// rebalance
 program
   .command("rebalance")
   .description("Get rebalance preview")
   .action(async () => {
-    try {
-      await cmdRebalance();
-    } catch (error) {
-      printError("Rebalance command failed", error);
-    }
+    try { await cmdRebalance(); }
+    catch (error) { printError("Rebalance command failed", error); }
   });
 
-// config
+program
+  .command("list-assets")
+  .description("List all available assets")
+  .action(async () => {
+    try { await cmdListAssets(); }
+    catch (error) { printError("Command failed", error); }
+  });
+
+program
+  .command("asset-prices")
+  .description("Get current prices for all assets")
+  .action(async () => {
+    try { await cmdAssetPrices(); }
+    catch (error) { printError("Command failed", error); }
+  });
+
+program
+  .command("funds-summary")
+  .description("Get summary of all funds")
+  .action(async () => {
+    try { await cmdFundsSummary(); }
+    catch (error) { printError("Command failed", error); }
+  });
+
+program
+  .command("list-baskets")
+  .description("List all baskets")
+  .action(async () => {
+    try { await cmdListBaskets(); }
+    catch (error) { printError("Command failed", error); }
+  });
+
+program
+  .command("basket-detail")
+  .description("Get detail of a specific basket")
+  .requiredOption("--id <uuid>", "Basket ID")
+  .action(async (options) => {
+    try { await cmdBasketDetail(options.id); }
+    catch (error) { printError("Command failed", error); }
+  });
+
+program
+  .command("transactions")
+  .description("Get recent transaction history")
+  .action(async () => {
+    try { await cmdTransactions(); }
+    catch (error) { printError("Command failed", error); }
+  });
+
 const configCmd = program
   .command("config")
   .description("Manage CLI configuration");
@@ -228,12 +234,9 @@ configCmd
     });
   });
 
-// ─── Main ────────────────────────────────────────────────────────────────────
-
 async function main() {
-  try {
-    await program.parseAsync(process.argv);
-  } catch (error) {
+  try { await program.parseAsync(process.argv); }
+  catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     printError(message, error);
   }
