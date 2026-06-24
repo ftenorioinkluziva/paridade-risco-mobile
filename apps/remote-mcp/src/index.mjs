@@ -108,12 +108,6 @@ const TOOL_HANDLERS = {
     if (!r.ok) throw new Error(r.error || "Failed to fetch transactions");
     return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
   },
-  update_prices_all: async (args, token) => {
-    const incremental = args?.incremental !== false;
-    const r = await apiPost("/api/admin/prices", { action: "update-all", incremental }, token);
-    if (!r.ok) throw new Error(r.error || "Failed to trigger price update");
-    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
-  },
 };
 
 const TOOL_DEFS = [
@@ -126,7 +120,6 @@ const TOOL_DEFS = [
   { name: "list_baskets", description: "List all baskets: name, status (ATIVA/RASCUNHO), asset count.", inputSchema: { type: "object", properties: {}, required: [] } },
   { name: "basket_detail", description: "Detail of a specific basket: name, status, allocations with target percentages.", inputSchema: { type: "object", properties: { basketId: { type: "string", description: "Basket ID (UUID)" } }, required: ["basketId"] } },
   { name: "transaction_history", description: "Recent transactions: asset, type (COMPRA/VENDA), shares, price, amount, date.", inputSchema: { type: "object", properties: { limit: { type: "number", description: "Max transactions to return (default 20)" } }, required: [] } },
-  { name: "update_prices_all", description: "Trigger price update for all active assets. incremental=true (default) for new dates only.", inputSchema: { type: "object", properties: { incremental: { type: "boolean", description: "Incremental (default true). false = full refresh" } }, required: [] } },
 ];
 
 // ─── MCP Server Factory ──────────────────────────────────────────────────────

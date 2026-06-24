@@ -5,15 +5,9 @@
  *
  * MCP server for coding agents (Claude Code, Cursor, OpenCode).
  * Provides tools for querying the Paridade de Risco API via stdio transport.
- *
- * Tools:
- *   portfolio_summary    — Get portfolio snapshot
- *   prices_status        — Check price update status
- *   rebalance_preview    — Preview rebalance
- *   update_prices_all    — Trigger price update for all assets
  */
 
-import { loadConfig, apiGet, apiPost } from "@paridade-risco/shared/http-client";
+import { apiGet } from "@paridade-risco/shared/http-client";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -22,82 +16,105 @@ import {
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-// ─── Tool Implementations ────────────────────────────────────────────────────
-
 const TOOLS = [
   {
     name: "portfolio_summary",
-    description:
-      "Get the current portfolio snapshot: total value, positions, allocation, drift, funds, and cash balance.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
+    description: "Current portfolio snapshot: total value, positions, allocation, drift, funds, cash.",
+    inputSchema: { type: "object", properties: {}, required: [] },
     handler: async () => {
-      const result = await apiGet("/api/portfolio/summary");
-      if (!result.ok) throw new Error(result.error || "Failed to fetch portfolio");
-      return { content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }] };
+      const r = await apiGet("/api/portfolio/summary");
+      if (!r.ok) throw new Error(r.error || "Failed to fetch portfolio");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
     },
   },
   {
     name: "prices_status",
-    description:
-      "Check price update status for all active assets. Returns last update date and stale days per ticker.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
+    description: "Price update status for all assets: last update date, stale days per ticker.",
+    inputSchema: { type: "object", properties: {}, required: [] },
     handler: async () => {
-      const result = await apiGet("/api/admin/prices");
-      if (!result.ok) throw new Error(result.error || "Failed to fetch price status");
-      return { content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }] };
+      const r = await apiGet("/api/admin/prices");
+      if (!r.ok) throw new Error(r.error || "Failed to fetch price status");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
     },
   },
   {
     name: "rebalance_preview",
-    description:
-      "Get rebalance preview: portfolio drift, target basket, buy/sell actions with amounts and target percentages.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
+    description: "Rebalance preview: drift, target basket, buy/sell actions with amounts.",
+    inputSchema: { type: "object", properties: {}, required: [] },
     handler: async () => {
-      const result = await apiGet("/api/rebalance/preview");
-      if (!result.ok) throw new Error(result.error || "Failed to fetch rebalance preview");
-      return { content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }] };
+      const r = await apiGet("/api/rebalance/preview");
+      if (!r.ok) throw new Error(r.error || "Failed to fetch rebalance preview");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
     },
   },
   {
-    name: "update_prices_all",
-    description:
-      "Trigger a price update for all active assets. By default runs incremental (only new dates). Use full=true for a complete refresh.",
+    name: "list_assets",
+    description: "List all available assets with ticker and name.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+    handler: async () => {
+      const r = await apiGet("/api/assets");
+      if (!r.ok) throw new Error(r.error || "Failed to fetch assets");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+    },
+  },
+  {
+    name: "asset_prices",
+    description: "Current prices for all assets: ticker, name, price, price date, calculation type.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+    handler: async () => {
+      const r = await apiGet("/api/assets/prices");
+      if (!r.ok) throw new Error(r.error || "Failed to fetch asset prices");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+    },
+  },
+  {
+    name: "funds_summary",
+    description: "Summary of all funds: name, ticker, initial investment, current value, last update.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+    handler: async () => {
+      const r = await apiGet("/api/funds");
+      if (!r.ok) throw new Error(r.error || "Failed to fetch funds");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+    },
+  },
+  {
+    name: "list_baskets",
+    description: "List all baskets: name, status (ATIVA/RASCUNHO), asset count.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+    handler: async () => {
+      const r = await apiGet("/api/baskets");
+      if (!r.ok) throw new Error(r.error || "Failed to fetch baskets");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+    },
+  },
+  {
+    name: "basket_detail",
+    description: "Detail of a specific basket: name, status, allocations with target percentages.",
     inputSchema: {
       type: "object",
       properties: {
-        incremental: {
-          type: "boolean",
-          description: "Incremental update (default: true). Set to false for full refresh",
-          default: true,
-        },
+        basketId: { type: "string", description: "Basket ID (UUID)" },
       },
-      required: [],
+      required: ["basketId"],
     },
     handler: async (args) => {
-      const incremental = args?.incremental !== false;
-      const result = await apiPost("/api/admin/prices", {
-        action: "update-all",
-        incremental,
-      });
-      if (!result.ok) throw new Error(result.error || "Failed to trigger price update");
-      return { content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }] };
+      if (!args?.basketId) throw new Error("basketId is required");
+      const r = await apiGet(`/api/baskets/${args.basketId}`);
+      if (!r.ok) throw new Error(r.error || "Failed to fetch basket detail");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+    },
+  },
+  {
+    name: "transaction_history",
+    description: "Recent transactions: asset, type (COMPRA/VENDA), shares, price, amount, date.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+    handler: async () => {
+      const r = await apiGet("/api/transactions");
+      if (!r.ok) throw new Error(r.error || "Failed to fetch transactions");
+      return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
     },
   },
 ];
-
-// ─── MCP Server ──────────────────────────────────────────────────────────────
 
 const server = new Server(
   { name: "paridade-risco-mcp", version: "0.1.0" },
@@ -138,12 +155,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// ─── Main ────────────────────────────────────────────────────────────────────
-
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  // Server will hang here waiting for stdio messages — this is correct!
 }
 
 main().catch((error) => {
