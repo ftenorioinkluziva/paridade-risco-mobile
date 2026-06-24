@@ -89,13 +89,6 @@ jobs:
             docker compose exec -T -w /app/apps/api app /app/node_modules/.bin/drizzle-kit migrate
           "
 
-      - name: Seed test user
-        run: |
-          ssh root@${{ secrets.SSH_HOST }} "
-            cd $REMOTE_DIR
-            docker compose exec -T -w /app/apps/api app /app/node_modules/.bin/tsx src/db/seed.ts
-          "
-
       - name: Query legacy tables
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
