@@ -21,7 +21,7 @@ type AllocationRow = {
 export default function NovaCestaPage() {
   const router = useRouter();
 
-  const { data: funds, isLoading: fundsLoading } = useFunds();
+const { data: funds, isLoading: fundsLoading } = useFunds();
   const { data: assets } = useAssets();
 
   const optionMap = new Map<string, { ticker: string; label: string }>();
@@ -152,12 +152,12 @@ export default function NovaCestaPage() {
                       onChange={(e) =>
                         updateAllocation(idx, "assetTicker", e.target.value)
                       }
-                      disabled={fundsLoading}
+                      disabled={assetsLoading}
                     >
                       <option value="">
-                        {fundsLoading ? "Carregando..." : "Selecionar ativo"}
+                        {assetsLoading ? "Carregando..." : "Selecionar ativo"}
                       </option>
-                      {allocOptions.map((opt) => (
+{allocOptions.map((opt) => (
                         <option key={opt.ticker} value={opt.ticker}>
                           {opt.label}
                         </option>

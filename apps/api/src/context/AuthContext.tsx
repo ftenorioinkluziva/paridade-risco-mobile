@@ -42,8 +42,10 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(text || `HTTP ${res.status}`);
   }
-  if (res.status === 204) return undefined as T;
-  return res.json();
+  // Some endpoints (e.g. DELETE) return 200/204 with no body
+  const body = await res.text();
+  if (!body) return undefined as unknown as T;
+  return JSON.parse(body);
 }
 
 export const api = {
@@ -55,7 +57,7 @@ export const api = {
   getBasketDetail: (id: string) => apiFetch<any>(`/api/baskets/${id}`),
   getBasketActive: () => apiFetch<any>("/api/baskets/active"),
   getFunds: () => apiFetch<any[]>("/api/funds"),
-  getFundDetail: (id: string) => apiFetch<any>(`/api/funds/${id}`),
+getFundDetail: (id: string) => apiFetch<any>(`/api/funds/${id}`),
   createFund: (data: any) =>
     apiFetch<any>("/api/funds", { method: "POST", body: JSON.stringify(data) }),
   updateFund: (id: string, data: any) =>

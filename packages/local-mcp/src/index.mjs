@@ -13,9 +13,7 @@
  *   update_prices_all    — Trigger price update for all assets
  */
 
-import { readFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { loadConfig, apiGet, apiPost } from "@paridade-risco/shared/http-client";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -23,100 +21,6 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-
-// ─── Config ──────────────────────────────────────────────────────────────────
-
-const CONFIG_DIR = join(homedir(), ".config", "paridade-risco");
-const CONFIG_PATH = join(CONFIG_DIR, "config.json");
-const DEFAULT_API_URL = "https://paridaderisco.blackboxinovacao.com.br";
-
-function loadConfig() {
-  const apiUrl = process.env.PARIDADE_API_URL || DEFAULT_API_URL;
-  const sessionToken = process.env.PARIDADE_SESSION_TOKEN;
-  const userId = process.env.PARIDADE_USER_ID;
-
-  // Try file config as fallback
-  if (!sessionToken && existsSync(CONFIG_PATH)) {
-    try {
-      const fileConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
-      return {
-        apiUrl: apiUrl,
-        sessionToken: fileConfig.sessionToken,
-        userId: fileConfig.userId,
-      };
-    } catch {
-      // ignore
-    }
-  }
-
-  return { apiUrl, sessionToken, userId };
-}
-
-// ─── HTTP Client ─────────────────────────────────────────────────────────────
-
-async function apiGet(path) {
-  const config = loadConfig();
-  const headers = { "Content-Type": "application/json" };
-
-  if (config.sessionToken) {
-    headers["Authorization"] = `Bearer ${config.sessionToken}`;
-  }
-  if (config.userId) {
-    headers["x-user-id"] = config.userId;
-  }
-
-  try {
-    const url = `${config.apiUrl.replace(/\/+$/, "")}${path}`;
-    const response = await fetch(url, { headers });
-    const data = response.ok ? await response.json() : null;
-    return {
-      ok: response.ok,
-      status: response.status,
-      data,
-      error: !response.ok ? `HTTP ${response.status}: ${response.statusText}` : undefined,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      status: 0,
-      error: error instanceof Error ? error.message : "Network error",
-    };
-  }
-}
-
-async function apiPost(path, body) {
-  const config = loadConfig();
-  const headers = { "Content-Type": "application/json" };
-
-  if (config.sessionToken) {
-    headers["Authorization"] = `Bearer ${config.sessionToken}`;
-  }
-  if (config.userId) {
-    headers["x-user-id"] = config.userId;
-  }
-
-  try {
-    const url = `${config.apiUrl.replace(/\/+$/, "")}${path}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = response.ok ? await response.json() : null;
-    return {
-      ok: response.ok,
-      status: response.status,
-      data,
-      error: !response.ok ? `HTTP ${response.status}: ${response.statusText}` : undefined,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      status: 0,
-      error: error instanceof Error ? error.message : "Network error",
-    };
-  }
-}
 
 // ─── Tool Implementations ────────────────────────────────────────────────────
 

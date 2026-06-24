@@ -17,111 +17,8 @@
  *   pr config show                                      Show config (no secrets)
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { loadOrInitConfig, saveConfig, apiGet, apiPost } from "@paridade-risco/shared/http-client";
 import { Command } from "commander";
-
-// ─── Config ──────────────────────────────────────────────────────────────────
-
-const CONFIG_DIR = join(homedir(), ".config", "paridade-risco");
-const CONFIG_PATH = join(CONFIG_DIR, "config.json");
-const DEFAULT_API_URL = "https://paridaderisco.blackboxinovacao.com.br";
-
-function ensureConfigDir() {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
-  }
-}
-
-function loadConfig() {
-  ensureConfigDir();
-  if (!existsSync(CONFIG_PATH)) {
-    const defaults = { apiUrl: DEFAULT_API_URL };
-    writeFileSync(CONFIG_PATH, JSON.stringify(defaults, null, 2), "utf-8");
-    chmodSync(CONFIG_PATH, 0o600);
-    return defaults;
-  }
-  try {
-    return JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
-  } catch {
-    const defaults = { apiUrl: DEFAULT_API_URL };
-    writeFileSync(CONFIG_PATH, JSON.stringify(defaults, null, 2), "utf-8");
-    return defaults;
-  }
-}
-
-function saveConfig(config) {
-  ensureConfigDir();
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8");
-  chmodSync(CONFIG_PATH, 0o600);
-}
-
-// ─── HTTP Client ─────────────────────────────────────────────────────────────
-
-async function apiGet(path) {
-  const config = loadConfig();
-  const headers = { "Content-Type": "application/json" };
-
-  if (config.sessionToken) {
-    headers["Authorization"] = `Bearer ${config.sessionToken}`;
-  }
-  if (config.userId) {
-    headers["x-user-id"] = config.userId;
-  }
-
-  try {
-    const url = `${config.apiUrl.replace(/\/+$/, "")}${path}`;
-    const response = await fetch(url, { headers });
-    const data = response.ok ? await response.json() : null;
-    return {
-      ok: response.ok,
-      status: response.status,
-      data: data ?? undefined,
-      error: !response.ok ? `HTTP ${response.status}: ${response.statusText}` : undefined,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      status: 0,
-      error: error instanceof Error ? error.message : "Network error",
-    };
-  }
-}
-
-async function apiPost(path, body) {
-  const config = loadConfig();
-  const headers = { "Content-Type": "application/json" };
-
-  if (config.sessionToken) {
-    headers["Authorization"] = `Bearer ${config.sessionToken}`;
-  }
-  if (config.userId) {
-    headers["x-user-id"] = config.userId;
-  }
-
-  try {
-    const url = `${config.apiUrl.replace(/\/+$/, "")}${path}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = response.ok ? await response.json() : null;
-    return {
-      ok: response.ok,
-      status: response.status,
-      data: data ?? undefined,
-      error: !response.ok ? `HTTP ${response.status}: ${response.statusText}` : undefined,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      status: 0,
-      error: error instanceof Error ? error.message : "Network error",
-    };
-  }
-}
 
 // ─── JSON Output ─────────────────────────────────────────────────────────────
 
@@ -144,7 +41,7 @@ async function cmdLogin(email, password) {
     return;
   }
 
-  const config = loadConfig();
+  const config = loadOrInitConfig();
   config.sessionToken = result.data.token;
   config.userId = result.data.user.id;
   saveConfig(config);
@@ -304,7 +201,7 @@ configCmd
   .command("get-api-url")
   .description("Show the configured API URL")
   .action(() => {
-    const config = loadConfig();
+    const config = loadOrInitConfig();
     printJson({ apiUrl: config.apiUrl });
   });
 
@@ -313,7 +210,7 @@ configCmd
   .description("Set the API URL")
   .argument("<url>", "API base URL")
   .action((url) => {
-    const config = loadConfig();
+    const config = loadOrInitConfig();
     config.apiUrl = url.replace(/\/+$/, "");
     saveConfig(config);
     printJson({ success: true, apiUrl: config.apiUrl });
@@ -323,7 +220,7 @@ configCmd
   .command("show")
   .description("Show current configuration (without secrets)")
   .action(() => {
-    const config = loadConfig();
+    const config = loadOrInitConfig();
     printJson({
       apiUrl: config.apiUrl,
       hasSessionToken: !!config.sessionToken,

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NEXT_IGNORE_INCORRECT_LOCKFILE=true next dev",
+    "dev": "cross-env NEXT_IGNORE_INCORRECT_LOCKFILE=true next dev --webpack",
     "dev:turbopack": "next dev",
     "build": "next build --webpack",
     "start": "next start",

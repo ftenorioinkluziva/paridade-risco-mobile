@@ -12,10 +12,6 @@
  * the application. Each user uses their own token for auth.
  */
 
-import { readFileSync, existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -63,94 +59,7 @@ async function apiPost(path, body, sessionToken) {
   }
 }
 
-// ─── MCP Server Factory ──────────────────────────────────────────────────────
-
-function createMcpServer(sessionToken) {
-  const server = new Server(
-    { name: "paridade-risco-remote-mcp", version: "0.1.0" },
-    { capabilities: { tools: {} } },
-  );
-
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [
-      {
-        name: "portfolio_summary",
-        description: "Current portfolio snapshot: total value, positions, allocation, drift, funds, cash.",
-        inputSchema: { type: "object", properties: {}, required: [] },
-      },
-      {
-        name: "prices_status",
-        description: "Price update status for all assets: last update date, stale days per ticker.",
-        inputSchema: { type: "object", properties: {}, required: [] },
-      },
-      {
-        name: "rebalance_preview",
-        description: "Rebalance preview: drift, target basket, buy/sell actions with amounts.",
-        inputSchema: { type: "object", properties: {}, required: [] },
-      },
-      {
-        name: "list_assets",
-        description: "List all available assets with ticker and name.",
-        inputSchema: { type: "object", properties: {}, required: [] },
-      },
-      {
-        name: "asset_prices",
-        description: "Current prices for all assets: ticker, name, price, price date, calculation type.",
-        inputSchema: { type: "object", properties: {}, required: [] },
-      },
-      {
-        name: "funds_summary",
-        description: "Summary of all funds: name, ticker, initial investment, current value, last update.",
-        inputSchema: { type: "object", properties: {}, required: [] },
-      },
-      {
-        name: "list_baskets",
-        description: "List all baskets: name, status (ATIVA/RASCUNHO), asset count.",
-        inputSchema: { type: "object", properties: {}, required: [] },
-      },
-      {
-        name: "basket_detail",
-        description: "Detail of a specific basket: name, status, allocations with target percentages.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            basketId: { type: "string", description: "Basket ID (UUID)" },
-          },
-          required: ["basketId"],
-        },
-      },
-      {
-        name: "transaction_history",
-        description: "Recent transactions: asset, type (COMPRA/VENDA), shares, price, amount, date.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            limit: { type: "number", description: "Max transactions to return (default 20)" },
-          },
-          required: [],
-        },
-      },
-    ],
-  }));
-
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-    const handler = TOOL_HANDLERS[name];
-    if (!handler) {
-      return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
-    }
-    try {
-      return await handler(args, sessionToken);
-    } catch (error) {
-      return {
-        content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }],
-        isError: true,
-      };
-    }
-  });
-
-  return server;
-}
+// ─── Tool Implementations ────────────────────────────────────────────────────
 
 const TOOL_HANDLERS = {
   portfolio_summary: async (_args, token) => {
@@ -199,7 +108,55 @@ const TOOL_HANDLERS = {
     if (!r.ok) throw new Error(r.error || "Failed to fetch transactions");
     return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
   },
+  update_prices_all: async (args, token) => {
+    const incremental = args?.incremental !== false;
+    const r = await apiPost("/api/admin/prices", { action: "update-all", incremental }, token);
+    if (!r.ok) throw new Error(r.error || "Failed to trigger price update");
+    return { content: [{ type: "text", text: JSON.stringify(r.data, null, 2) }] };
+  },
 };
+
+const TOOL_DEFS = [
+  { name: "portfolio_summary", description: "Current portfolio snapshot: total value, positions, allocation, drift, funds, cash.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "prices_status", description: "Price update status for all assets: last update date, stale days per ticker.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "rebalance_preview", description: "Rebalance preview: drift, target basket, buy/sell actions with amounts.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "list_assets", description: "List all available assets with ticker and name.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "asset_prices", description: "Current prices for all assets: ticker, name, price, price date, calculation type.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "funds_summary", description: "Summary of all funds: name, ticker, initial investment, current value, last update.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "list_baskets", description: "List all baskets: name, status (ATIVA/RASCUNHO), asset count.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "basket_detail", description: "Detail of a specific basket: name, status, allocations with target percentages.", inputSchema: { type: "object", properties: { basketId: { type: "string", description: "Basket ID (UUID)" } }, required: ["basketId"] } },
+  { name: "transaction_history", description: "Recent transactions: asset, type (COMPRA/VENDA), shares, price, amount, date.", inputSchema: { type: "object", properties: { limit: { type: "number", description: "Max transactions to return (default 20)" } }, required: [] } },
+  { name: "update_prices_all", description: "Trigger price update for all active assets. incremental=true (default) for new dates only.", inputSchema: { type: "object", properties: { incremental: { type: "boolean", description: "Incremental (default true). false = full refresh" } }, required: [] } },
+];
+
+// ─── MCP Server Factory ──────────────────────────────────────────────────────
+
+function createMcpServer(sessionToken) {
+  const server = new Server(
+    { name: "paridade-risco-remote-mcp", version: "0.1.0" },
+    { capabilities: { tools: {} } },
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOL_DEFS }));
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+    const handler = TOOL_HANDLERS[name];
+    if (!handler) {
+      return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
+    }
+    try {
+      return await handler(args, sessionToken);
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }],
+        isError: true,
+      };
+    }
+  });
+
+  return server;
+}
 
 // ─── Hono Server ─────────────────────────────────────────────────────────────
 
