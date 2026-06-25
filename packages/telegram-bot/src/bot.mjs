@@ -273,9 +273,10 @@ async function handleCenario(chatId, user) {
   const dolar = dolarRes?.ok ? await dolarRes.json() : null;
 
   const selicAtual = selic?.[selic.length - 1]?.valor;
-  const selicAnterior = selic?.[selic.length - 2]?.valor;
-  const selicTendencia = selicAtual && selicAnterior
-    ? (parseFloat(selicAtual) < parseFloat(selicAnterior) ? "caindo 📉" : "subindo 📈")
+  const selicAntigo = selic?.[0]?.valor;
+  const selicTendencia = selicAtual && selicAntigo
+    ? (parseFloat(selicAtual) < parseFloat(selicAntigo) ? "caindo 📉" :
+       parseFloat(selicAtual) > parseFloat(selicAntigo) ? "subindo 📈" : "estável ➡️")
     : "—";
 
   const ipcaAtual = ipca?.[ipca.length - 1]?.valor;
@@ -341,6 +342,11 @@ async function handleAjuda(chatId, user) {
   lines.push("📊 *carteira* — resumo da sua carteira");
   lines.push("🔄 *rebalance* — preview de rebalanceamento");
   lines.push("🔮 *cenário* — classificação macro com dados do BCB");
+  lines.push("💰 *aportar* — onde investir seu dinheiro");
+  lines.push("💹 *preços* — preços atualizados dos ativos");
+  lines.push("📋 *transações* — últimas movimentações");
+  lines.push("📦 *fundos* — fundos de investimento");
+  lines.push("👤 *perfil* — seus dados de cadastro");
   lines.push("❓ *ajuda* — esta mensagem");
   lines.push("");
   lines.push("📌 *Primeiro uso?*");
@@ -349,6 +355,111 @@ async function handleAjuda(chatId, user) {
   lines.push("3. Vá em Perfil > Editar > Telegram Chat ID");
   lines.push(`4. Insira \`${chatId}\` e salve`);
   lines.push("5. Pronto! Já pode me perguntar.");
+  return lines.join("\n");
+}
+
+async function handleTransacoes(chatId, user) {
+  const { token, name } = user;
+  const { data } = await apiCall("/api/transactions", token);
+  if (!data || !data.length) {
+    return `${name}, nenhuma transação encontrada.`;
+  }
+  const lines = [`📋 *Últimas transações*`];
+  const recentes = data.slice(0, 8);
+  for (const tx of recentes) {
+    const tipo = tx.type === "COMPRA" ? "🟢 Compra" : "🔴 Venda";
+    const ticker = tx.assetTicker || tx.ticker || "—";
+    const qtd = tx.shares || 0;
+    const preco = tx.pricePerShare ? fmtCurrency(tx.pricePerShare) : "—";
+    const total = tx.totalAmount != null ? fmtCurrency(tx.totalAmount) : "—";
+    const dataStr = tx.tradedAt ? tx.tradedAt.slice(0, 10) : "—";
+    lines.push(`  ${tipo} *${ticker}* — ${qtd} x ${preco} = ${total} (${dataStr})`);
+  }
+  return lines.join("\n");
+}
+
+async function handleFundos(chatId, user) {
+  const { token, name } = user;
+  const { data } = await apiCall("/api/funds", token);
+  if (!data || !data.length) {
+    return `${name}, nenhum fundo de investimento cadastrado.`;
+  }
+  const lines = [`📦 *Fundos de Investimento*`];
+  for (const f of data) {
+    const val = f.currentValue != null ? fmtCurrency(f.currentValue) : "—";
+    const ini = f.initialInvestment != null ? fmtCurrency(f.initialInvestment) : "—";
+    const gain = f.gain != null ? fmtCurrency(f.gain) : "—";
+    const nome = f.name || f.ticker || "—";
+    lines.push(`  📦 *${nome}*: ${val} (investido ${ini}, ganho ${gain})`);
+  }
+  return lines.join("\n");
+}
+
+async function handlePrecos(chatId, user) {
+  const { token, name } = user;
+  const { data } = await apiCall("/api/assets/prices", token);
+  if (!data || !data.length) {
+    return `${name}, nenhum preço disponível.`;
+  }
+  const lines = [`💹 *Preços dos Ativos*`];
+  for (const a of data) {
+    const ticker = a.ticker || "—";
+    const preco = a.price != null ? fmtCurrency(a.price) : "—";
+    const dataStr = a.priceDate ? a.priceDate.slice(0, 10) : "—";
+    const tipo = a.calculationType || "";
+    lines.push(`  *${ticker}*: ${preco} (${dataStr})${tipo ? ` [${tipo}]` : ""}`);
+  }
+  return lines.join("\n");
+}
+
+async function handlePerfil(chatId, user) {
+  const { token, name } = user;
+  const lines = [`👤 *Perfil*`];
+  lines.push(`  Nome: *${user.name || "—"}*`);
+  lines.push(`  Email: *${user.email || "—"}*`);
+  // Try fetching profile for more details
+  const { data } = await apiCall("/api/profile", token);
+  if (data) {
+    lines.push(`  Telefone: ${data.phone || "—"}`);
+    if (data.birthDate) lines.push(`  Nascimento: ${data.birthDate.slice(0, 10)}`);
+    lines.push(`  Função: ${data.roleLabel || data.role || "—"}`);
+    lines.push(`  Cesta ativa: ${data.activeBasketName || "—"}`);
+    lines.push(`  Telegram ID: ${data.telegramChatId || "—"}`);
+  }
+  return lines.join("\n");
+}
+
+async function handleAportar(chatId, user) {
+  const { token, name } = user;
+  const [portfolio, rebalance] = await Promise.all([
+    apiCall("/api/portfolio/summary", token),
+    apiCall("/api/rebalance/preview", token),
+  ]);
+  if (portfolio.error) return `😕 ${name}, não consegui acessar sua carteira.`;
+  const p = portfolio.data;
+  const r = rebalance.data;
+  const lines = [`💰 *Onde investir — ${name || "investidor"}*`];
+  lines.push(`  Caixa disponível: ${fmtCurrency(p.cashBalance || 0)}`);
+  lines.push("");
+  if (r?.actions?.length > 0) {
+    const aportes = r.actions.filter(a => a.action === "APORTAR").sort((a, b) => b.amount - a.amount);
+    if (aportes.length > 0) {
+      lines.push("▸ *Prioridade de aporte*");
+      for (const a of aportes) {
+        lines.push(`  ${a.ticker === "IFRM11" ? "🥇" : "🥈"} *${a.ticker}*: precisa de ${fmtCurrency(a.amount)} (alvo ${fmtPct(a.targetPercentage)})`);
+      }
+      lines.push("");
+    }
+    const reducoes = r.actions.filter(a => a.action !== "APORTAR").sort((a, b) => b.amount - a.amount);
+    if (reducoes.length > 0) {
+      lines.push("▸ *Ativos com excesso*");
+      for (const a of reducoes) {
+        lines.push(`  🔴 *${a.ticker}*: ${fmtCurrency(a.amount)} acima do alvo`);
+      }
+    }
+  } else {
+    lines.push("✅ Carteira equilibrada! Nenhum ajuste necessário.");
+  }
   return lines.join("\n");
 }
 
@@ -362,6 +473,11 @@ function detectIntent(text) {
   if (/^\/rebalance$|rebalance|drift|ajustar|corrigir|comprar|vender|aportar/i.test(t)) return "rebalance";
   if (/^\/cenario$|^\/cenário$|cenário|cenario|macroecon|pib|ipca|selic|juros|inflação/i.test(t)) return "cenario";
   if (/^\/ajuda$|^\/start$|ajuda|help|comando|o que fazer|funciona/i.test(t)) return "ajuda";
+  if (/^\/transacoes$|transaç|transac|movimenta|extrato/i.test(t)) return "transacoes";
+  if (/^\/fundos$|fundos/i.test(t)) return "fundos";
+  if (/^\/precos$|^\/preços$|preços|precos|cotação|cotacao/i.test(t)) return "precos";
+  if (/^\/perfil$|perfil/i.test(t)) return "perfil";
+  if (/^\/aportar$|aportar|onde investir|aplicar|sobra/i.test(t)) return "aportar";
   return "carteira"; // default
 }
 
@@ -386,6 +502,16 @@ async function handleMessage(chatId, text) {
       return await handleCenario(chatId, user);
     case "ajuda":
       return await handleAjuda(chatId, null);
+    case "transacoes":
+      return await handleTransacoes(chatId, user);
+    case "fundos":
+      return await handleFundos(chatId, user);
+    case "precos":
+      return await handlePrecos(chatId, user);
+    case "perfil":
+      return await handlePerfil(chatId, user);
+    case "aportar":
+      return await handleAportar(chatId, user);
     default:
       return await handleCarteira(chatId, user);
   }
