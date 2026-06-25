@@ -179,6 +179,18 @@ async function handleCarteira(chatId, user) {
     lines.push("");
   }
 
+  // Funds
+  if (p.funds?.length > 0) {
+    lines.push("▸ *Fundos de investimento*");
+    for (const fund of p.funds) {
+      const val = fund.currentValue != null ? fmtCurrency(fund.currentValue) : "—";
+      const gain = fund.gain != null ? fmtCurrency(fund.gain) : "—";
+      const name = fund.name || fund.ticker || "—";
+      lines.push(`  📦 *${name}*: ${val} (${gain})`);
+    }
+    lines.push("");
+  }
+
   // Rebalance actions
   if (rebalance.data?.actions?.length > 0) {
     const actions = rebalance.data.actions;
