@@ -128,6 +128,39 @@ function driftEmoji(drift) {
   return "🔴";
 }
 
+/**
+ * Analyze trend from the last 3 data points.
+ * Compares consecutive pairs: newest vs middle, middle vs oldest.
+ * Returns a descriptive string with emoji.
+ */
+function analyzeTrend(values) {
+  if (!values || values.length < 3) return "—";
+  const n = values.length;
+  const v0 = parseFloat(values[n - 3]); // oldest
+  const v1 = parseFloat(values[n - 2]); // middle
+  const v2 = parseFloat(values[n - 1]); // newest
+  if (isNaN(v0) || isNaN(v1) || isNaN(v2)) return "—";
+
+  const d1 = v1 - v0; // middle - oldest
+  const d2 = v2 - v1; // newest - middle
+
+  const up = (x) => x > 0.01;
+  const down = (x) => x < -0.01;
+  const stable = (x) => !up(x) && !down(x);
+
+  const upCount   = (up(d1) ? 1 : 0) + (up(d2) ? 1 : 0);
+  const downCount = (down(d1) ? 1 : 0) + (down(d2) ? 1 : 0);
+  const sameCount = (stable(d1) ? 1 : 0) + (stable(d2) ? 1 : 0);
+
+  if (upCount === 2) return "alta consistente 📈";
+  if (downCount === 2) return "queda consistente 📉";
+  if (sameCount === 2) return "estável ➡️";
+  if (upCount === 1 && downCount === 1) return "oscilação 🔄";
+  if (upCount === 1 && sameCount === 1) return "leve alta 📈";
+  if (downCount === 1 && sameCount === 1) return "leve queda 📉";
+  return "misto 🔄";
+}
+
 // ─── Command Handlers ────────────────────────────────────────────────────────
 
 async function handleCarteira(chatId, user) {
@@ -273,23 +306,11 @@ async function handleCenario(chatId, user) {
   const dolar = dolarRes?.ok ? await dolarRes.json() : null;
 
   const selicAtual = selic?.[selic.length - 1]?.valor;
-  const selicAntigo = selic?.[0]?.valor;
-  const selicTendencia = selicAtual && selicAntigo
-    ? (parseFloat(selicAtual) < parseFloat(selicAntigo) ? "caindo 📉" :
-       parseFloat(selicAtual) > parseFloat(selicAntigo) ? "subindo 📈" : "estável ➡️")
-    : "—";
-
+  const selicTendencia = analyzeTrend(selic?.map(s => s.valor).slice(-5)) || "—";
   const ipcaAtual = ipca?.[ipca.length - 1]?.valor;
-  const ipcaAnterior = ipca?.[ipca.length - 2]?.valor;
-  const ipcaTendencia = ipcaAtual && ipcaAnterior
-    ? (parseFloat(ipcaAtual) > parseFloat(ipcaAnterior) ? "acelerando 🔴" : "desacelerando 🟢")
-    : "—";
-
+  const ipcaTendencia = analyzeTrend(ipca?.map(s => s.valor).slice(-5)) || "—";
   const ibcAtual = ibc?.[ibc.length - 1]?.valor;
-  const ibcAnterior = ibc?.[ibc.length - 2]?.valor;
-  const ibcTendencia = ibcAtual && ibcAnterior
-    ? (parseFloat(ibcAtual) >= parseFloat(ibcAnterior) ? "crescendo 🟢" : "caindo 🔴")
-    : "—";
+  const ibcTendencia = analyzeTrend(ibc?.map(s => s.valor).slice(-5)) || "—";
 
   const dolarAtual = dolar?.[dolar.length - 1]?.valor;
 
