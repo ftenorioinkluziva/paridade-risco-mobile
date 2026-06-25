@@ -95,7 +95,7 @@ async function resolveToken(chatId) {
 
 function fmtCurrency(v) {
   if (v == null || isNaN(v)) return "—";
-  return `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  return `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function fmtPct(v) {
@@ -154,15 +154,11 @@ async function handleCarteira(chatId, user) {
   if (p.positions?.length > 0) {
     lines.push("▸ *Posições*");
     for (const pos of p.positions) {
-      const drift = pos.allocationPercentage != null && pos.targetPercentage != null
-        ? pos.allocationPercentage - pos.targetPercentage
-        : null;
-      const emoji = driftEmoji(drift);
-      lines.push(
-        `${emoji} *${pos.ticker}*: ${fmtPct(pos.allocationPercentage)} ` +
-        `— ${fmtCurrency(pos.currentValue)} ` +
-        `(${fmtCurrency(pos.gain)})`
-      );
+      const ticker = pos.ticker || pos.symbol || "—";
+      const allocPct = pos.allocationPercentage != null ? fmtPct(pos.allocationPercentage) : "—";
+      const val = pos.currentValue != null ? fmtCurrency(pos.currentValue) : "—";
+      const gain = pos.gain != null ? fmtCurrency(pos.gain) : "—";
+      lines.push(`  *${ticker}*: ${allocPct} — ${val} (${gain})`);
     }
     lines.push("");
   }
