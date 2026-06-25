@@ -10,12 +10,28 @@
  *   TELEGRAM_BOT_TOKEN=xxx API_URL=https://... node src/bot.mjs
  */
 
+import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
-import { readFileSync, existsSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// ─── Load .env directly (avoids shell redaction) ────────────────────────────
+
+const ENV_PATH = join(__dirname, "..", ".env");
+if (existsSync(ENV_PATH)) {
+  const envContent = readFileSync(ENV_PATH, "utf-8");
+  for (const line of envContent.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim();
+    if (key && val) process.env[key] = val;
+  }
+}
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -229,7 +245,79 @@ async function handleRebalance(chatId, user) {
 }
 
 async function handleCenario(chatId, user) {
-  return `📡 *Cenário macro* — funcionalidade em breve!\n\nEsta análise usará dados do BCB (Selic, IPCA, PIB) para classificar o cenário (C1-C4).`;
+  const lines = [];
+
+  // Fetch BCB data in parallel
+  const [selicRes, ipcaRes, ibcRes, dolarRes] = await Promise.all([
+    fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/3?formato=json").catch(() => null),
+    fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados/ultimos/3?formato=json").catch(() => null),
+    fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.24363/dados/ultimos/3?formato=json").catch(() => null),
+    fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.3698/dados/ultimos/3?formato=json").catch(() => null),
+  ]);
+
+  const selic = selicRes?.ok ? await selicRes.json() : null;
+  const ipca = ipcaRes?.ok ? await ipcaRes.json() : null;
+  const ibc = ibcRes?.ok ? await ibcRes.json() : null;
+  const dolar = dolarRes?.ok ? await dolarRes.json() : null;
+
+  const selicAtual = selic?.[selic.length - 1]?.valor;
+  const selicAnterior = selic?.[selic.length - 2]?.valor;
+  const selicTendencia = selicAtual && selicAnterior
+    ? (parseFloat(selicAtual) < parseFloat(selicAnterior) ? "caindo 📉" : "subindo 📈")
+    : "—";
+
+  const ipcaAtual = ipca?.[ipca.length - 1]?.valor;
+  const ipcaAnterior = ipca?.[ipca.length - 2]?.valor;
+  const ipcaTendencia = ipcaAtual && ipcaAnterior
+    ? (parseFloat(ipcaAtual) > parseFloat(ipcaAnterior) ? "acelerando 🔴" : "desacelerando 🟢")
+    : "—";
+
+  const ibcAtual = ibc?.[ibc.length - 1]?.valor;
+  const ibcAnterior = ibc?.[ibc.length - 2]?.valor;
+  const ibcTendencia = ibcAtual && ibcAnterior
+    ? (parseFloat(ibcAtual) >= parseFloat(ibcAnterior) ? "crescendo 🟢" : "caindo 🔴")
+    : "—";
+
+  const dolarAtual = dolar?.[dolar.length - 1]?.valor;
+
+  // Classify scenario (C1-C4)
+  const pibSubindo = ibcTendencia.includes("crescendo");
+  const ipcaSubindo = ipcaTendencia.includes("acelerando");
+
+  let cenario, cenarioIcon;
+  if (pibSubindo && !ipcaSubindo) { cenario = "C1"; cenarioIcon = "🌱"; }
+  else if (pibSubindo && ipcaSubindo) { cenario = "C2"; cenarioIcon = "🟡"; }
+  else if (!pibSubindo && ipcaSubindo) { cenario = "C3"; cenarioIcon = "🔴"; }
+  else { cenario = "C4"; cenarioIcon = "🔵"; }
+
+  // Build response
+  lines.push(`🔮 *Cenário Macro* — ${new Date().toLocaleDateString("pt-BR")}`);
+  lines.push("");
+
+  lines.push(`📊 *Classificação:* ${cenarioIcon} **${cenario}**`);
+  lines.push("");
+
+  lines.push("▸ *Indicadores*");
+  lines.push(`  💰 Selic: **${parseFloat(selicAtual || 0).toFixed(2)}%** — ${selicTendencia}`);
+  lines.push(`  📈 IPCA 12m: **${parseFloat(ipcaAtual || 0).toFixed(2)}%** — ${ipcaTendencia}`);
+  lines.push(`  🏭 IBC-Br (PIB): **${ibcAtual || "—"}** — ${ibcTendencia}`);
+  lines.push(`  💵 Dólar: **R$ ${parseFloat(dolarAtual || 0).toFixed(2)}**`);
+  lines.push("");
+
+  // Scenario description
+  const descricoes = {
+    C1: "Crescimento econômico com inflação controlada. Favorece: BOVA11, XFIX11, IB5M11. Posição comprada em risco.",
+    C2: "Crescimento com inflação. Cenário misto. CDI e B5P211 como proteção. Cautela com renda variável.",
+    C3: "Estagflação — PIB caindo, inflação subindo. Dólar e B5P211 como hedge. Evitar renda variável.",
+    C4: "Recessão com desinflação. IFRM11 e pré-fixados se beneficiam. Cenário defensivo.",
+  };
+  lines.push(`📖 *${descricoes[cenario]}*`);
+  lines.push("");
+
+  lines.push("💡 *Dica:* pergunte 'carteira' para ver como seu portfólio se comporta neste cenário.");
+  lines.push("_Dados: BCB SGS — atualização diária._");
+
+  return lines.join("\n");
 }
 
 async function handleAjuda(chatId, user) {
@@ -240,7 +328,7 @@ async function handleAjuda(chatId, user) {
   lines.push("");
   lines.push("📊 *carteira* — resumo da sua carteira");
   lines.push("🔄 *rebalance* — preview de rebalanceamento");
-  lines.push("🔮 *cenário* — classificação macro (em breve)");
+  lines.push("🔮 *cenário* — classificação macro com dados do BCB");
   lines.push("❓ *ajuda* — esta mensagem");
   lines.push("");
   lines.push("📌 *Primeiro uso?*");
@@ -258,10 +346,10 @@ function detectIntent(text) {
   const t = (text || "").toLowerCase().trim();
 
   if (/^(oi|ola|olá|bom dia|boa tarde|boa noite|hello|hey)/i.test(t)) return "greeting";
-  if (/(carteira|portfolio|posição|resumo|como está|patrimônio|saldo)/i.test(t)) return "carteira";
-  if (/(rebalance|drift|ajustar|corrigir|comprar|vender|aportar)/i.test(t)) return "rebalance";
-  if (/(cenário|cenario|macroecon|pib|ipca|selic|juros|inflação|pib)/i.test(t)) return "cenario";
-  if (/(ajuda|help|comando|o que fazer|funciona)/i.test(t)) return "ajuda";
+  if (/^\/carteira$|carteira|portfolio|posição|resumo|como está|patrimônio|saldo/i.test(t)) return "carteira";
+  if (/^\/rebalance$|rebalance|drift|ajustar|corrigir|comprar|vender|aportar/i.test(t)) return "rebalance";
+  if (/^\/cenario$|^\/cenário$|cenário|cenario|macroecon|pib|ipca|selic|juros|inflação/i.test(t)) return "cenario";
+  if (/^\/ajuda$|^\/start$|ajuda|help|comando|o que fazer|funciona/i.test(t)) return "ajuda";
   return "carteira"; // default
 }
 
