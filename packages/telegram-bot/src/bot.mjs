@@ -1,0 +1,347 @@
+#!/usr/bin/env node
+
+/**
+ * Paridade de Risco Telegram Bot
+ *
+ * Bot determinístico — sem LLM, sem alucinação.
+ * Consulta a API REST real e formata respostas em markdown.
+ *
+ * Uso:
+ *   TELEGRAM_BOT_TOKEN=xxx API_URL=https://... node src/bot.mjs
+ */
+
+import { homedir } from "node:os";
+import { join, dirname } from "node:path";
+import { readFileSync, existsSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// ─── Config ──────────────────────────────────────────────────────────────────
+
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+if (!BOT_TOKEN) {
+  console.error("TELEGRAM_BOT_TOKEN is required");
+  process.exit(1);
+}
+
+const API_URL = (process.env.API_URL || "https://paridaderisco.blackboxinovacao.com.br").replace(/\/+$/, "");
+const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL || "2000", 10); // ms between polls
+const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+
+// ─── Telegram API helpers ────────────────────────────────────────────────────
+
+let lastUpdateId = 0;
+
+async function tgGetUpdates() {
+  const url = `${TG_API}/getUpdates?timeout=30&allowed_updates=["message"]`;
+  const offset = lastUpdateId > 0 ? `&offset=${lastUpdateId + 1}` : "";
+  try {
+    const res = await fetch(url + offset);
+    const data = await res.json();
+    if (!data.ok) return [];
+    for (const update of data.result || []) {
+      if (update.update_id > lastUpdateId) lastUpdateId = update.update_id;
+    }
+    return data.result || [];
+  } catch (e) {
+    console.error("getUpdates error:", e.message);
+    return [];
+  }
+}
+
+async function tgSendMessage(chatId, text, parseMode = "Markdown") {
+  try {
+    await fetch(`${TG_API}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: parseMode,
+        disable_web_page_preview: true,
+      }),
+    });
+  } catch (e) {
+    console.error("sendMessage error:", e.message);
+  }
+}
+
+// ─── API Client ──────────────────────────────────────────────────────────────
+
+async function apiCall(path, token) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  try {
+    const res = await fetch(`${API_URL}${path}`, { headers });
+    if (res.status === 401) return { error: "unauthorized" };
+    if (!res.ok) return { error: `HTTP ${res.status}` };
+    const data = await res.json();
+    return { data };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// ─── Token Resolution ────────────────────────────────────────────────────────
+
+async function resolveToken(chatId) {
+  const { data } = await apiCall(`/api/auth/token-by-telegram?chat_id=${chatId}`, null);
+  if (!data || !data.token) return null;
+  return data;
+}
+
+// ─── Formatting ──────────────────────────────────────────────────────────────
+
+function fmtCurrency(v) {
+  if (v == null || isNaN(v)) return "—";
+  return `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+}
+
+function fmtPct(v) {
+  if (v == null || isNaN(v)) return "—";
+  const s = v >= 0 ? "+" : "";
+  return `${s}${v.toFixed(2).replace(".", ",")}%`;
+}
+
+function driftEmoji(drift) {
+  if (drift == null) return "⬜";
+  const abs = Math.abs(drift);
+  if (abs < 1) return "✅";
+  if (abs < 3) return "🟡";
+  return "🔴";
+}
+
+// ─── Command Handlers ────────────────────────────────────────────────────────
+
+async function handleCarteira(chatId, user) {
+  const { token, name } = user;
+
+  // Fetch all data in parallel
+  const [portfolio, prices, rebalance, basket] = await Promise.all([
+    apiCall("/api/portfolio/summary", token),
+    apiCall("/api/assets/prices", token),
+    apiCall("/api/rebalance/preview", token),
+    apiCall("/api/baskets/active", token),
+  ]);
+
+  // Check errors
+  if (portfolio.error || !portfolio.data) {
+    return `😕 ${name}, não consegui acessar sua carteira. Tente fazer login novamente no app.`;
+  }
+
+  const p = portfolio.data;
+  const lines = [];
+
+  lines.push(`📊 *Olá, ${name || "investidor"}!*`);
+  lines.push("");
+
+  // Summary
+  lines.push(`💰 *Total:* ${fmtCurrency(p.totalValue)}`);
+  lines.push(`📈 *Ganho não realizado:* ${fmtCurrency(p.unrealizedGain)}`);
+  lines.push(`💵 *Caixa:* ${fmtCurrency(p.cashBalance)}`);
+  lines.push("");
+
+  // Drift
+  if (rebalance.data) {
+    const r = rebalance.data;
+    lines.push(`📋 *Cesta ativa:* ${r.targetBasketName || "—"}`);
+    lines.push(`🎯 *Drift:* ${fmtPct(r.driftPercentage)}`);
+    lines.push("");
+  }
+
+  // Positions
+  if (p.positions?.length > 0) {
+    lines.push("▸ *Posições*");
+    for (const pos of p.positions) {
+      const drift = pos.allocationPercentage != null && pos.targetPercentage != null
+        ? pos.allocationPercentage - pos.targetPercentage
+        : null;
+      const emoji = driftEmoji(drift);
+      lines.push(
+        `${emoji} *${pos.ticker}*: ${fmtPct(pos.allocationPercentage)} ` +
+        `— ${fmtCurrency(pos.currentValue)} ` +
+        `(${fmtCurrency(pos.gain)})`
+      );
+    }
+    lines.push("");
+  }
+
+  // Rebalance actions
+  if (rebalance.data?.actions?.length > 0) {
+    const actions = rebalance.data.actions;
+    lines.push("🔄 *Ações de rebalanceamento*");
+    for (const a of actions) {
+      const arrow = a.action === "APORTAR" ? "🟢 Comprar" : "🔴 Reduzir";
+      lines.push(`  ${arrow} *${a.ticker}*: ${fmtCurrency(a.amount)} (${fmtPct(a.targetPercentage)} alvo)`);
+    }
+    lines.push("");
+  }
+
+  // Sign-off
+  lines.push("💡 *Dica:* pergunte 'rebalance' para ver o passo a passo ou 'cenário' para análise macro.");
+  lines.push("_Dados da API em tempo real — sem IA na consulta._");
+
+  return lines.join("\n");
+}
+
+async function handleRebalance(chatId, user) {
+  const { token, name } = user;
+
+  const [rebalance, portfolio] = await Promise.all([
+    apiCall("/api/rebalance/preview", token),
+    apiCall("/api/portfolio/summary", token),
+  ]);
+
+  if (rebalance.error || !rebalance.data) {
+    return `😕 ${name}, não consegui calcular o rebalanceamento.`;
+  }
+
+  const r = rebalance.data;
+  const p = portfolio.data;
+  const lines = [];
+
+  lines.push(`🔄 *Rebalanceamento — ${name || "investidor"}*`);
+  lines.push("");
+
+  if (r.driftPercentage != null) {
+    if (r.driftPercentage < 1) {
+      lines.push("✅ *Carteira equilibrada!* Drift de apenas " + fmtPct(r.driftPercentage));
+    } else {
+      lines.push(`⚠️ *Drift de ${fmtPct(r.driftPercentage)}* — requer ajustes:`);
+      lines.push("");
+      if (r.actions?.length > 0) {
+        // Sort by amount descending
+        const sorted = [...r.actions].sort((a, b) => b.amount - a.amount);
+        lines.push("| # | Ação | Ativo | Valor | Alvo |");
+        lines.push("|---|------|-------|-------|------|");
+        sorted.forEach((a, i) => {
+          const action = a.action === "APORTAR" ? "🟢 Comprar" : "🔴 Vender";
+          lines.push(`| ${i + 1} | ${action} | *${a.ticker}* | ${fmtCurrency(a.amount)} | ${fmtPct(a.targetPercentage)} |`);
+        });
+      }
+    }
+  }
+
+  if (p) {
+    lines.push("");
+    lines.push(`💰 *Total:* ${fmtCurrency(p.totalValue)}`);
+    lines.push(`💵 *Caixa disponível:* ${fmtCurrency(p.cashBalance)}`);
+  }
+
+  return lines.join("\n");
+}
+
+async function handleCenario(chatId, user) {
+  return `📡 *Cenário macro* — funcionalidade em breve!\n\nEsta análise usará dados do BCB (Selic, IPCA, PIB) para classificar o cenário (C1-C4).`;
+}
+
+async function handleAjuda(chatId, user) {
+  const lines = [];
+  lines.push("🤖 *Paridade de Risco Bot*");
+  lines.push("");
+  lines.push("Comandos disponíveis:");
+  lines.push("");
+  lines.push("📊 *carteira* — resumo da sua carteira");
+  lines.push("🔄 *rebalance* — preview de rebalanceamento");
+  lines.push("🔮 *cenário* — classificação macro (em breve)");
+  lines.push("❓ *ajuda* — esta mensagem");
+  lines.push("");
+  lines.push("📌 *Primeiro uso?*");
+  lines.push("1. Acesse paridaderisco.blackboxinovacao.com.br");
+  lines.push("2. Crie sua conta e faça login");
+  lines.push("3. Vá em Perfil > Editar > Telegram Chat ID");
+  lines.push(`4. Insira \`${chatId}\` e salve`);
+  lines.push("5. Pronto! Já pode me perguntar.");
+  return lines.join("\n");
+}
+
+// ─── Message Router ──────────────────────────────────────────────────────────
+
+function detectIntent(text) {
+  const t = (text || "").toLowerCase().trim();
+
+  if (/^(oi|ola|olá|bom dia|boa tarde|boa noite|hello|hey)/i.test(t)) return "greeting";
+  if (/(carteira|portfolio|posição|resumo|como está|patrimônio|saldo)/i.test(t)) return "carteira";
+  if (/(rebalance|drift|ajustar|corrigir|comprar|vender|aportar)/i.test(t)) return "rebalance";
+  if (/(cenário|cenario|macroecon|pib|ipca|selic|juros|inflação|pib)/i.test(t)) return "cenario";
+  if (/(ajuda|help|comando|o que fazer|funciona)/i.test(t)) return "ajuda";
+  return "carteira"; // default
+}
+
+async function handleMessage(chatId, text) {
+  // Resolve user
+  const user = await resolveToken(chatId);
+  if (!user) {
+    return await handleAjuda(chatId, null);
+  }
+
+  const intent = detectIntent(text);
+  console.log(`[${chatId}] intent=${intent} user=${user.name}`);
+
+  switch (intent) {
+    case "greeting":
+      return `Olá, *${user.name || "investidor"}*! 🖐️\n\nQuer saber como está sua carteira? É só perguntar!`;
+    case "carteira":
+      return await handleCarteira(chatId, user);
+    case "rebalance":
+      return await handleRebalance(chatId, user);
+    case "cenario":
+      return await handleCenario(chatId, user);
+    case "ajuda":
+      return await handleAjuda(chatId, null);
+    default:
+      return await handleCarteira(chatId, user);
+  }
+}
+
+// ─── Main Loop ───────────────────────────────────────────────────────────────
+
+async function main() {
+  console.log(`[Paridade Risco Bot] Starting...`);
+  console.log(`  API: ${API_URL}`);
+  console.log(`  Poll interval: ${POLL_INTERVAL}ms`);
+
+  // Verify token
+  const me = await (await fetch(`${TG_API}/getMe`)).json();
+  if (!me.ok) {
+    console.error("Invalid bot token:", me);
+    process.exit(1);
+  }
+  console.log(`  Bot: @${me.result.username}`);
+
+  console.log(`[Paridade Risco Bot] Listening...`);
+
+  while (true) {
+    try {
+      const updates = await tgGetUpdates();
+
+      for (const update of updates) {
+        const msg = update.message;
+        if (!msg || !msg.text) continue;
+
+        const chatId = msg.chat.id;
+        const text = msg.text;
+
+        console.log(`[${chatId}] ${msg.from?.first_name || "?"}: ${text.slice(0, 80)}`);
+
+        // Send typing action first
+        try {
+          await fetch(`${TG_API}/sendChatAction?chat_id=${chatId}&action=typing`);
+        } catch { /* ignore */ }
+
+        const reply = await handleMessage(chatId, text);
+        await tgSendMessage(chatId, reply);
+      }
+    } catch (e) {
+      console.error("Poll error:", e.message);
+    }
+
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+  }
+}
+
+main().catch((e) => {
+  console.error("Fatal:", e);
+  process.exit(1);
+});
