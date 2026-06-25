@@ -65,9 +65,13 @@ export default function PerfilPage() {
     setEditing(true);
     setEditError(null);
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("pr_session_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch("/api/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           phone: editPhone.trim() || null,
           birthDate: editBirthDate ? new Date(editBirthDate + "T12:00:00").toISOString() : null,
