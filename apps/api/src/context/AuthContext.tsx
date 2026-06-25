@@ -9,6 +9,7 @@ export type UserProfile = {
   name: string;
   email: string;
   phone: string | null;
+  telegramChatId: string | null;
   image: string | null;
   role: "ADMIN" | "USER";
   birthDate: string | null;

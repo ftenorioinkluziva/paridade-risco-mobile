@@ -14,6 +14,7 @@ export async function GET(request: Request) {
     name: user.name,
     email: user.email,
     phone: user.phone,
+    telegramChatId: user.telegramChatId ?? null,
     image: user.image,
     role: user.role,
     birthDate: user.birthDate?.toISOString() ?? null,

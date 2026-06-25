@@ -26,6 +26,7 @@ export default function PerfilPage() {
   const [editMode, setEditMode] = useState(false);
   const [editPhone, setEditPhone] = useState("");
   const [editBirthDate, setEditBirthDate] = useState("");
+  const [editTelegram, setEditTelegram] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [showMcpToken, setShowMcpToken] = useState(false);
@@ -50,6 +51,7 @@ export default function PerfilPage() {
   function enterEditMode() {
     setEditPhone(user?.phone ?? "");
     setEditBirthDate(toDateInput(user?.birthDate));
+    setEditTelegram(user?.telegramChatId ?? "");
     setEditError(null);
     setEditMode(true);
   }
@@ -69,6 +71,7 @@ export default function PerfilPage() {
         body: JSON.stringify({
           phone: editPhone.trim() || null,
           birthDate: editBirthDate ? new Date(editBirthDate + "T12:00:00").toISOString() : null,
+          telegramChatId: editTelegram.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -124,6 +127,13 @@ export default function PerfilPage() {
             <label style={styles.label}>Data de nascimento</label>
             <InputField type="date" value={editBirthDate} onChange={setEditBirthDate} />
           </div>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Telegram Chat ID</label>
+            <InputField value={editTelegram} onChange={setEditTelegram} placeholder="Ex.: 1234567890" />
+            <span style={{ color: colors.textSoft, fontFamily: typography.mono, fontSize: 11 }}>
+              Envie /id para @userinfobot no Telegram para descobrir seu chat_id
+            </span>
+          </div>
           <div style={styles.editActions}>
             <PrimaryButton label={editing ? "Salvando..." : "Salvar"} onPress={handleSave} disabled={editing} />
             <PrimaryButton label="Cancelar" onPress={cancelEdit} tone="neutral" disabled={editing} />
@@ -145,6 +155,10 @@ export default function PerfilPage() {
           <div style={styles.fieldWrap}>
             <label style={styles.fieldLabel}>NASCIMENTO</label>
             <span style={styles.fieldValue}>{user.birthDate?.slice(0, 10) ?? "—"}</span>
+          </div>
+          <div style={styles.fieldWrap}>
+            <label style={styles.fieldLabel}>TELEGRAM</label>
+            <span style={styles.fieldValue}>{user.telegramChatId ?? "—"}</span>
           </div>
         </div>
       )}

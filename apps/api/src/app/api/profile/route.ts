@@ -10,6 +10,7 @@ const updateProfileSchema = z.object({
   birthDate: z.string().datetime().optional().nullable(),
   image: z.string().url().optional().nullable(),
   phone: z.string().max(40).optional().nullable(),
+  telegramChatId: z.string().max(100).optional().nullable(),
   role: z.enum(["ADMIN", "USER"]).optional(),
 });
 
@@ -40,6 +41,7 @@ export async function GET(request: Request) {
     name: user.name,
     email: user.email,
     phone: user.phone,
+    telegramChatId: user.telegramChatId ?? null,
     image: user.image,
     role: user.role,
     birthDate: user.birthDate?.toISOString() ?? null,
@@ -74,6 +76,7 @@ export async function PUT(request: Request) {
       birthDate: parsed.data.birthDate ? new Date(parsed.data.birthDate) : null,
       image: parsed.data.image ?? null,
       phone: parsed.data.phone ?? null,
+      telegramChatId: parsed.data.telegramChatId ?? null,
       role: parsed.data.role,
     })
     .where(eq(users.id, userId))
@@ -82,6 +85,7 @@ export async function PUT(request: Request) {
       id: users.id,
       image: users.image,
       phone: users.phone,
+      telegramChatId: users.telegramChatId,
       role: users.role,
     });
 
@@ -90,6 +94,7 @@ export async function PUT(request: Request) {
     id: updatedUser.id,
     image: updatedUser.image,
     phone: updatedUser.phone,
+    telegramChatId: updatedUser.telegramChatId ?? null,
     role: updatedUser.role,
   });
 }

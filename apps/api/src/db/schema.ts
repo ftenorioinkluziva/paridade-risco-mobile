@@ -34,6 +34,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
+  telegramChatId: text("telegram_chat_id"),
   passwordHash: text("password_hash").notNull(),
   image: text("image"),
   role: userRoleEnum("role").notNull().default("USER"),
