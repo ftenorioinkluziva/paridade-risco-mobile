@@ -25,6 +25,23 @@ services:
       - paridade-risco-network
       - npm_default
 
+  telegram-bot:
+    build:
+      context: ./code/packages/telegram-bot
+    image: paridade-risco-telegram-bot:latest
+    container_name: paridade-risco-telegram-bot
+    restart: unless-stopped
+    env_file:
+      - ./code/packages/telegram-bot/.env
+    environment:
+      API_URL: http://app:3000
+      POLL_INTERVAL: "2000"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - paridade-risco-network
+
 networks:
   paridade-risco-network:
     driver: bridge

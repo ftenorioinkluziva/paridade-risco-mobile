@@ -9,6 +9,7 @@ on:
       - "packages/shared/**"
       - "packages/cli/**"
       - "packages/local-mcp/**"
+      - "packages/telegram-bot/**"
       - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
 
@@ -55,6 +56,8 @@ jobs:
             --include='packages/shared/**' \
             --include='packages/cli/**' \
             --include='packages/local-mcp/**' \
+            --include='packages/telegram-bot/**' \
+            --exclude='packages/telegram-bot/.env' \
             --exclude='*' \
             ./ root@${{ secrets.SSH_HOST }}:$CODE_DIR/
 
@@ -69,6 +72,7 @@ jobs:
             sed -i 's# 2>/dev/null || true##g' apps/api/Dockerfile
             docker system prune -af 2>/dev/null || true
             docker build -f apps/api/Dockerfile -t paridade-risco-api:latest --build-arg DATABASE_URL='${{ secrets.DATABASE_URL }}' .
+            docker build -f packages/telegram-bot/Dockerfile -t paridade-risco-telegram-bot:latest packages/telegram-bot
           "
 
       - name: Deploy container
