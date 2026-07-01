@@ -68,6 +68,23 @@ services:
     networks:
       - paridade-risco-network
 
+  telegram-bot:
+    build:
+      context: ./packages/telegram-bot
+    image: paridade-risco-telegram-bot:latest
+    container_name: paridade-risco-telegram-bot
+    restart: unless-stopped
+    env_file:
+      - ./packages/telegram-bot/.env
+    environment:
+      API_URL: http://api:3000
+      POLL_INTERVAL: "2000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - paridade-risco-network
+
 volumes:
   postgres-data:
 
