@@ -1,10 +1,5 @@
 services:
   app:
-    build:
-      context: ../..
-      dockerfile: apps/api/Dockerfile
-      args:
-        DATABASE_URL: ${DATABASE_URL}
     image: paridade-risco-api:latest
     container_name: paridade-risco-api
     restart: unless-stopped
@@ -26,8 +21,6 @@ services:
       - npm_default
 
   telegram-bot:
-    build:
-      context: ./code/packages/telegram-bot
     image: paridade-risco-telegram-bot:latest
     container_name: paridade-risco-telegram-bot
     restart: unless-stopped

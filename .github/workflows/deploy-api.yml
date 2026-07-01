@@ -65,14 +65,17 @@ jobs:
 
       - name: Install deps & build
         run: |
-          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && rm -rf node_modules && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm ci && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm run build --workspace=@paridade-risco/api"
+          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm ci && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm run build --workspace=@paridade-risco/api"
 
-      - name: Fix & Build Docker image
+      - name: Create telegram-bot .env
+        run: |
+          ssh root@${{ secrets.SSH_HOST }} "mkdir -p $CODE_DIR/packages/telegram-bot && echo 'TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}' > $CODE_DIR/packages/telegram-bot/.env && chmod 600 $CODE_DIR/packages/telegram-bot/.env"
+
+      - name: Build Docker images
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             cd $CODE_DIR
-            sed -i 's# 2>/dev/null || true##g' apps/api/Dockerfile
-            docker system prune -af 2>/dev/null || true
+            docker image prune -f 2>/dev/null || true
             docker build -f apps/api/Dockerfile -t paridade-risco-api:latest --build-arg DATABASE_URL='${{ secrets.DATABASE_URL }}' .
             docker build -f packages/telegram-bot/Dockerfile -t paridade-risco-telegram-bot:latest packages/telegram-bot
           "
@@ -91,8 +94,11 @@ jobs:
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             cd $REMOTE_DIR
-            sleep 5
-            docker compose exec -T -w /app/apps/api app /app/node_modules/.bin/drizzle-kit migrate
+            for i in \$(seq 1 20); do
+              docker compose exec -T -w /app/apps/api app /app/node_modules/.bin/drizzle-kit migrate && break
+              echo 'API not ready, waiting 5s... (attempt \$i/20)'
+              sleep 5
+            done
           "
 
       - name: Query legacy tables
@@ -107,7 +113,8 @@ jobs:
       - name: Health check
         run: |
           sleep 5
-          curl -sf https://paridaderisco.blackboxinovacao.com.br/api/health && echo "Health OK" || echo "Health endpoint not found"
+          curl -sf https://paridaderisco.blackboxinovacao.com.br/api/health && echo "API Health OK" || echo "API Health FAIL"
+          ssh root@${{ secrets.SSH_HOST }} "docker ps --filter name=paridade-risco-telegram-bot --format '{{.Status}}' | grep -q Up && echo 'Bot Health OK' || echo 'Bot Health FAIL'"
 
       - name: Build & Deploy remote-mcp
         run: |
@@ -116,11 +123,11 @@ jobs:
             docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml down --remove-orphans 2>/dev/null || true
             echo 'Using port 3050 for remote-mcp'
             (ufw status && ufw allow 3050/tcp) || echo 'ufw not available'
-            docker system prune -af 2>/dev/null || true
             MCP_PORT=3050 docker compose --project-name remote-mcp -f apps/remote-mcp/docker-compose.yml --env-file $REMOTE_DIR/.env up -d --build
             echo '=== Testing remote-mcp locally ==='
             sleep 3
             curl -sf --connect-timeout 5 http://127.0.0.1:3050/ && echo 'Local OK' || echo 'Local FAIL'
+            docker image prune -f 2>/dev/null || true
           "
 
       - name: Configure NPM proxy for remote-mcp
