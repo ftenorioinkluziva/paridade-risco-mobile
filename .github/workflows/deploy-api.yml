@@ -58,8 +58,8 @@ jobs:
             --include='packages/shared/**' \
             --include='packages/cli/**' \
             --include='packages/local-mcp/**' \
-            --include='packages/telegram-bot/**' \
             --exclude='packages/telegram-bot/.env' \
+            --include='packages/telegram-bot/**' \
             --exclude='*' \
             ./ root@${{ secrets.SSH_HOST }}:$CODE_DIR/
 
