@@ -1,5 +1,7 @@
 name: Deploy API
 
+# Trigger: push to master on monitored paths
+
 on:
   push:
     branches: [master]
