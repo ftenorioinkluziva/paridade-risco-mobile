@@ -149,6 +149,19 @@ export class FinancialDataFetcher {
   }
 
   /**
+   * Fetch Selic daily data from BCB API
+   * Series 11 = daily Selic rate
+   */
+  async fetchSELICData(startDate?: Date, initialValue?: number): Promise<PriceDataPoint[]> {
+    return this.fetchAccumulatedSeriesFromBCB({
+      label: "SELIC",
+      seriesCode: 11,
+      startDate,
+      initialValue,
+    });
+  }
+
+  /**
    * Fetch CDI monthly data from BCB API
    * Series 4391 = CDI monthly rate
    */
@@ -347,9 +360,23 @@ export class FinancialDataFetcher {
     return toUtcDayKey(date);
   }
 
-  private getPriceSource(ticker: string, calculationType: string): PriceSource | null {
-    if (calculationType === "PERCENTUAL") {
-      return ["CDI", "CDI_MENSAL", "IPCA", "IPCA_EXP"].includes(ticker) ? "BCB" : null;
+  private getSourceTicker(asset: typeof assets.$inferSelect): string {
+    return asset.sourceTicker?.trim() || asset.ticker;
+  }
+
+  private getPriceSource(asset: typeof assets.$inferSelect): PriceSource | null {
+    const ticker = this.getSourceTicker(asset);
+
+    if (!ticker) {
+      return null;
+    }
+
+    if (asset.calculationType === "PERCENTUAL") {
+      return ["CDI", "CDI_MENSAL", "SELIC", "IPCA", "IPCA_EXP"].includes(ticker) ? "BCB" : null;
+    }
+
+    if (asset.type === "CAIXA") {
+      return null;
     }
 
     return "YAHOO_FINANCE";
@@ -360,26 +387,35 @@ export class FinancialDataFetcher {
     startDate?: Date,
     initialValue?: number,
   ): Promise<PriceDataPoint[]> {
+    const sourceTicker = this.getSourceTicker(asset);
+
     if (asset.calculationType === "PERCENTUAL") {
       const fetchStartDate = startDate ? this.addUtcDays(this.toUtcDayStart(startDate), 1) : undefined;
 
-      if (asset.ticker === "CDI") {
+      if (sourceTicker === "CDI") {
         return this.fetchCDIData(fetchStartDate, initialValue);
       }
-      if (asset.ticker === "CDI_MENSAL") {
+      if (sourceTicker === "CDI_MENSAL") {
         return this.fetchCDIMensalData(fetchStartDate, initialValue);
       }
-      if (asset.ticker === "IPCA") {
+      if (sourceTicker === "SELIC") {
+        return this.fetchSELICData(fetchStartDate, initialValue);
+      }
+      if (sourceTicker === "IPCA") {
         return this.fetchIPCAData(fetchStartDate, initialValue);
       }
-      if (asset.ticker === "IPCA_EXP") {
+      if (sourceTicker === "IPCA_EXP") {
         return this.fetchIPCAExpectationData(fetchStartDate, initialValue);
       }
 
       return [];
     }
 
-    return this.fetchYahooFinanceData(asset.ticker, startDate);
+    if (asset.type === "CAIXA") {
+      return [];
+    }
+
+    return this.fetchYahooFinanceData(sourceTicker, startDate);
   }
 
   /**
@@ -408,7 +444,7 @@ export class FinancialDataFetcher {
 
       const lastPriceBefore = await this.getLastPriceForAsset(asset.id);
       const lastDateBefore = lastPriceBefore?.priceDate ?? null;
-      const source = this.getPriceSource(asset.ticker, asset.calculationType);
+      const source = this.getPriceSource(asset);
       const prices = await this.fetchPricesForAsset(
         asset,
         incremental ? lastDateBefore ?? undefined : undefined,
@@ -459,7 +495,7 @@ export class FinancialDataFetcher {
       try {
         const lastPriceBefore = await this.getLastPriceForAsset(asset.id);
         const lastDateBefore = lastPriceBefore?.priceDate ?? null;
-        const source = this.getPriceSource(asset.ticker, asset.calculationType);
+        const source = this.getPriceSource(asset);
         const prices = await this.fetchPricesForAsset(
           asset,
           incremental ? lastDateBefore ?? undefined : undefined,
@@ -487,7 +523,7 @@ export class FinancialDataFetcher {
         console.error(`✗ ${asset.ticker}: ${error}`);
         results.push({
           ticker: asset.ticker,
-          source: this.getPriceSource(asset.ticker, asset.calculationType),
+          source: this.getPriceSource(asset),
           fetched: 0,
           inserted: 0,
           updated: 0,
@@ -519,7 +555,7 @@ export class FinancialDataFetcher {
       where: eq(assets.isActive, true),
     });
 
-    const status = [];
+    const status: Array<{ ticker: string; lastUpdate: Date | null; staleDays: number }> = [];
     const now = new Date();
 
     for (const asset of activeAssets) {

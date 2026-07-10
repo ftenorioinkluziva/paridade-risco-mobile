@@ -33,6 +33,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/api/tsconfig.json ./apps/api
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/drizzle.config.ts ./apps/api/drizzle.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/drizzle ./apps/api/drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/apps/api/src/db ./apps/api/src/db
+COPY --from=builder --chown=nextjs:nodejs /app/apps/api/src/lib ./apps/api/src/lib
+COPY --from=builder --chown=nextjs:nodejs /app/apps/api/src/scripts ./apps/api/src/scripts
+COPY --from=builder --chown=nextjs:nodejs /app/packages/shared ./packages/shared
 
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 

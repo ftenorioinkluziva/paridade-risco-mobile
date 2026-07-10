@@ -49,6 +49,28 @@ services:
     networks:
       - paridade-risco-network
 
+  price-scheduler:
+    image: paridade-risco-api:latest
+    container_name: paridade-risco-price-scheduler
+    restart: unless-stopped
+    user: root
+    environment:
+      DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
+      NODE_ENV: production
+      PRICE_SCHEDULER_CRON_INCREMENTAL: "*/15 * * * *"
+      PRICE_SCHEDULER_CRON_FULL: "0 8 * * 1"
+      PRICE_SCHEDULER_TIMEZONE: America/Sao_Paulo
+      npm_config_cache: /tmp/npm-cache
+    working_dir: /app/apps/api
+    command: sh -c "npx tsx src/scripts/price-scheduler.ts --run-on-start"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - paridade-risco-network
+
   remote-mcp:
     build:
       context: .

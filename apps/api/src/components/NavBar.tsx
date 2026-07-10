@@ -14,6 +14,7 @@ type NavLink = {
 
 const NAV_LINKS: NavLink[] = [
   { label: "Resumo", path: "/", authRequired: true },
+  { label: "Cotações", path: "/cotacoes", authRequired: true },
   { label: "Cestas", path: "/cestas", authRequired: true },
   { label: "Fundos", path: "/fundos", authRequired: true },
   { label: "Transações", path: "/transacoes", authRequired: true },
@@ -45,7 +46,7 @@ export function NavBar() {
           onClick={() => router.push("/")}
           style={styles.brand}
         >
-          <span style={styles.brandKicker}>//</span>
+          <span style={styles.brandKicker}>{"//"}</span>
           <span style={styles.brandName}>PARIDADE_RISCO</span>
         </button>
 

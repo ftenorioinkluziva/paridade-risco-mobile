@@ -61,6 +61,7 @@ export const sessions = pgTable("sessions", {
 export const assets = pgTable("assets", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()::text`),
   ticker: text("ticker").notNull(),
+  sourceTicker: text("source_ticker"),
   name: text("name").notNull(),
   type: assetTypeEnum("type").notNull(),
   calculationType: assetCalculationTypeEnum("calculation_type").notNull().default("PRECO"),

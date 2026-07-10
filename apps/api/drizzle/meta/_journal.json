@@ -36,6 +36,13 @@
       "when": 1776000000000,
       "tag": "0004_navy_telegram_chat_id",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783695600000,
+      "tag": "0005_add_asset_source_ticker",
+      "breakpoints": true
     }
   ]
 }

@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Paridade Risco API
 
-## Getting Started
+Aplicacao Next.js do monorepo `paridade-risco-mobile`.
 
-First, run the development server:
+## Desenvolvimento
+
+Execute o servidor local:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev --workspace @paridade-risco/api
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ou, a partir da raiz do monorepo:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev:api
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+A aplicacao fica disponivel em [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Banco de dados
 
-To learn more about Next.js, take a look at the following resources:
+Configure `DATABASE_URL` em `apps/api/.env` e rode as migracoes:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run db:migrate --workspace @paridade-risco/api
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Para popular dados de exemplo:
 
-## Deploy on Vercel
+```bash
+npm run db:seed --workspace @paridade-risco/api
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Build
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build --workspace @paridade-risco/api
+```
+
+## Deploy
+
+O deploy atual e feito em servidor Hetzner com Docker Compose.
+
+Scripts disponiveis:
+
+```bash
+apps/api/scripts/deploy-hetzner.sh
+apps/api/scripts/deploy.ps1
+apps/api/scripts/setup-server.sh
+```
+
+Arquivos relacionados:
+
+```bash
+apps/api/Dockerfile
+apps/api/docker-compose.hetzner.yml
+apps/api/.env.production
+```

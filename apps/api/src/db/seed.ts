@@ -29,15 +29,15 @@ async function seed() {
 
   // ── Assets ──────────────────────────────────────────────────────────────
   const assetData = [
-    { ticker: "BOVA11", name: "ETF Ibovespa", type: "ETF" as const, calculationType: "PRECO" as const },
-    { ticker: "SPXI11", name: "ETF S&P 500", type: "ETF" as const, calculationType: "PRECO" as const },
-    { ticker: "IMAB11", name: "ETF IMA-B", type: "ETF" as const, calculationType: "PRECO" as const },
-    { ticker: "SMAL11", name: "ETF Small Caps", type: "ETF" as const, calculationType: "PRECO" as const },
-    { ticker: "CDB_POS", name: "CDB Pós-fixado", type: "RENDA_FIXA" as const, calculationType: "PERCENTUAL" as const },
-    { ticker: "TESOURO_SELIC", name: "Tesouro Selic", type: "RENDA_FIXA" as const, calculationType: "PERCENTUAL" as const },
-    { ticker: "BTC", name: "Bitcoin", type: "CRYPTO" as const, calculationType: "PRECO" as const },
-    { ticker: "ETH", name: "Ethereum", type: "CRYPTO" as const, calculationType: "PRECO" as const },
-    { ticker: "OURO", name: "Ouro", type: "COMMODITY" as const, calculationType: "PRECO" as const },
+    { ticker: "BOVA11", sourceTicker: "BOVA11.SA", name: "ETF Ibovespa", type: "ETF" as const, calculationType: "PRECO" as const },
+    { ticker: "SPXI11", sourceTicker: "SPXI11.SA", name: "ETF S&P 500", type: "ETF" as const, calculationType: "PRECO" as const },
+    { ticker: "IMAB11", sourceTicker: "IMAB11.SA", name: "ETF IMA-B", type: "ETF" as const, calculationType: "PRECO" as const },
+    { ticker: "SMAL11", sourceTicker: "SMAL11.SA", name: "ETF Small Caps", type: "ETF" as const, calculationType: "PRECO" as const },
+    { ticker: "CDB_POS", sourceTicker: "CDI", name: "CDB Pós-fixado", type: "RENDA_FIXA" as const, calculationType: "PERCENTUAL" as const },
+    { ticker: "TESOURO_SELIC", sourceTicker: "SELIC", name: "Tesouro Selic", type: "RENDA_FIXA" as const, calculationType: "PERCENTUAL" as const },
+    { ticker: "BTC", sourceTicker: "BTC-USD", name: "Bitcoin", type: "CRYPTO" as const, calculationType: "PRECO" as const },
+    { ticker: "ETH", sourceTicker: "ETH-USD", name: "Ethereum", type: "CRYPTO" as const, calculationType: "PRECO" as const },
+    { ticker: "OURO", sourceTicker: "GC=F", name: "Ouro", type: "COMMODITY" as const, calculationType: "PRECO" as const },
     { ticker: "CAIXA", name: "Caixa", type: "CAIXA" as const, calculationType: "PRECO" as const },
   ];
 
@@ -51,6 +51,8 @@ async function seed() {
       const [created] = await db.insert(assets).values(a).returning({ ticker: assets.ticker, id: assets.id });
       newAssets.push(created);
       assetMap[created.ticker] = created.id;
+    } else {
+      await db.update(assets).set({ sourceTicker: a.sourceTicker ?? null }).where(sql`ticker = ${a.ticker}`);
     }
   }
   if (newAssets.length > 0) console.log("Assets created:", newAssets.map(a => a.ticker).join(", "));
