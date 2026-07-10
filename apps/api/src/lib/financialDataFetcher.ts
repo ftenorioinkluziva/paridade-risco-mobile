@@ -57,6 +57,20 @@ const BCB_API = "https://api.bcb.gov.br/dados/serie/bcdata.sgs";
  * Supports multiple data sources: Yahoo Finance, BCB, IPEA
  */
 export class FinancialDataFetcher {
+  private async getMonitorableAssets(): Promise<Array<typeof assets.$inferSelect>> {
+    return db
+      .select()
+      .from(assets)
+      .where(sql`${assets.isActive} = true
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ${assets} canonical
+          WHERE canonical.is_active = true
+            AND canonical.source_ticker = ${assets.ticker}
+        )`)
+      .orderBy(sql`${assets.ticker} ASC`);
+  }
+
   /**
    * Get last update date for a given asset ticker
    */
@@ -485,9 +499,7 @@ export class FinancialDataFetcher {
    * Update all active assets (incremental by default)
    */
   async updateAllAssets(incremental = true): Promise<{ success: boolean; message: string; results: AssetPriceUpdateResult[] }> {
-    const activeAssets = await db.query.assets.findMany({
-      where: eq(assets.isActive, true),
-    });
+    const activeAssets = await this.getMonitorableAssets();
 
     const results: AssetPriceUpdateResult[] = [];
 
@@ -551,9 +563,7 @@ export class FinancialDataFetcher {
    * Get update status for all active assets
    */
   async getUpdateStatus(): Promise<Array<{ ticker: string; lastUpdate: Date | null; staleDays: number }>> {
-    const activeAssets = await db.query.assets.findMany({
-      where: eq(assets.isActive, true),
-    });
+    const activeAssets = await this.getMonitorableAssets();
 
     const status: Array<{ ticker: string; lastUpdate: Date | null; staleDays: number }> = [];
     const now = new Date();

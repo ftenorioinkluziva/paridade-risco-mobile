@@ -27,14 +27,32 @@ export async function GET(request: NextRequest) {
 
     if (from || to) {
       const rows = await db.execute<PriceRow>(
-        sql`SELECT a.ticker, a.name, a.calculation_type, hp.price, hp.price_date
-FROM assets a
-JOIN historical_prices hp ON hp.asset_id = a.id
-WHERE a.is_active = true
-${ticker ? sql`AND a.ticker = ${ticker}` : sql``}
+        sql`WITH monitorable_assets AS (
+  SELECT a.*
+  FROM assets a
+  WHERE a.is_active = true
+    AND NOT EXISTS (
+      SELECT 1
+      FROM assets canonical
+      WHERE canonical.is_active = true
+        AND canonical.source_ticker = a.ticker
+    )
+)
+SELECT DISTINCT ON (a.ticker, hp.price_date)
+  a.ticker, a.name, a.calculation_type, hp.price, hp.price_date
+FROM monitorable_assets a
+JOIN historical_prices hp
+  ON hp.asset_id = a.id
+  OR hp.asset_id IN (
+    SELECT source_asset.id
+    FROM assets source_asset
+    WHERE source_asset.ticker = a.source_ticker
+  )
+WHERE true
+${ticker ? sql`AND (a.ticker = ${ticker} OR a.source_ticker = ${ticker})` : sql``}
 ${from ? sql`AND hp.price_date >= ${from}::date` : sql``}
 ${to ? sql`AND hp.price_date <= ${to}::date` : sql``}
-ORDER BY a.ticker ASC, hp.price_date DESC`,
+ORDER BY a.ticker ASC, hp.price_date DESC, CASE WHEN hp.asset_id = a.id THEN 0 ELSE 1 END ASC`,
       );
       return NextResponse.json(rows.map((r) => ({
         ticker: r.ticker,
@@ -46,17 +64,33 @@ ORDER BY a.ticker ASC, hp.price_date DESC`,
     }
 
     const rows = await db.execute<PriceRow>(
-      sql`SELECT a.ticker, a.name, a.calculation_type, hp.price, hp.price_date
-FROM assets a
+      sql`WITH monitorable_assets AS (
+  SELECT a.*
+  FROM assets a
+  WHERE a.is_active = true
+    AND NOT EXISTS (
+      SELECT 1
+      FROM assets canonical
+      WHERE canonical.is_active = true
+        AND canonical.source_ticker = a.ticker
+    )
+)
+SELECT a.ticker, a.name, a.calculation_type, hp.price, hp.price_date
+FROM monitorable_assets a
 LEFT JOIN LATERAL (
   SELECT price, price_date
-  FROM historical_prices
-  WHERE asset_id = a.id
-  ORDER BY price_date DESC
+  FROM historical_prices hp
+  WHERE hp.asset_id = a.id
+    OR hp.asset_id IN (
+      SELECT source_asset.id
+      FROM assets source_asset
+      WHERE source_asset.ticker = a.source_ticker
+    )
+  ORDER BY price_date DESC, CASE WHEN hp.asset_id = a.id THEN 0 ELSE 1 END ASC
   LIMIT 1
 ) hp ON true
-WHERE a.is_active = true
-${ticker ? sql`AND a.ticker = ${ticker}` : sql``}
+WHERE true
+${ticker ? sql`AND (a.ticker = ${ticker} OR a.source_ticker = ${ticker})` : sql``}
 ORDER BY a.ticker ASC`,
     );
     return NextResponse.json(rows.map((r) => ({
