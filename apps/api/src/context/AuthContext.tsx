@@ -51,6 +51,11 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getPortfolioSummary: () => apiFetch<any>("/api/portfolio/summary"),
+  updateCashBalance: (cashBalance: number) =>
+    apiFetch<any>("/api/portfolio/cash", {
+      method: "PUT",
+      body: JSON.stringify({ cashBalance }),
+    }),
   getRebalancePreview: () => apiFetch<any>("/api/rebalance/preview"),
   getPricesStatus: () => apiFetch<any>("/api/admin/prices"),
   getAssets: () => apiFetch<any[]>("/api/assets"),

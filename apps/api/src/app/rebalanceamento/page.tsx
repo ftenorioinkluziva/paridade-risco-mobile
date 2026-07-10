@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { colors } from "@/theme/colors";
@@ -11,13 +12,32 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { SummaryCard } from "@/components/SummaryCard";
 import { RebalanceDecisionCard } from "@/components/RebalanceDecisionCard";
 import { InlineAlert } from "@/components/InlineAlert";
-import { usePortfolioSummary, useRebalancePreview } from "@/context/AuthContext";
+import { api, usePortfolioSummary, useRebalancePreview } from "@/context/AuthContext";
 import { formatCurrency, formatSignedCurrency } from "@/lib/formatters";
+
+function parseCurrencyInput(value: string) {
+  const normalized = value
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 export default function RebalanceamentoPage() {
   const router = useRouter();
   const portfolio = usePortfolioSummary();
   const rebalance = useRebalancePreview();
+  const [isEditingCash, setIsEditingCash] = useState(false);
+  const [cashInput, setCashInput] = useState("");
+  const [cashError, setCashError] = useState<string | null>(null);
+  const [isSavingCash, setIsSavingCash] = useState(false);
 
   const portfolioError = portfolio.error;
   const rebalanceError = rebalance.error;
@@ -31,6 +51,37 @@ export default function RebalanceamentoPage() {
   const rawCashAfterRebalance = rebalData?.postRebalanceCash ?? (cashAvailable - rebalanceCost);
   const cashAfterRebalance = Math.max(0, rawCashAfterRebalance);
   const cashWasClipped = rawCashAfterRebalance < 0;
+  const parsedCashInput = useMemo(() => parseCurrencyInput(cashInput), [cashInput]);
+  const cashInputIsInvalid = isEditingCash && (parsedCashInput == null || parsedCashInput < 0);
+
+  useEffect(() => {
+    if (!isEditingCash) {
+      setCashInput(cashAvailable.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      setCashError(null);
+    }
+  }, [cashAvailable, isEditingCash]);
+
+  async function saveCashBalance() {
+    const nextCashBalance = parseCurrencyInput(cashInput);
+
+    if (nextCashBalance == null || nextCashBalance < 0) {
+      setCashError("Informe um valor de caixa valido e maior ou igual a zero.");
+      return;
+    }
+
+    setIsSavingCash(true);
+    setCashError(null);
+
+    try {
+      await api.updateCashBalance(nextCashBalance);
+      await Promise.all([portfolio.refetch(), rebalance.refetch()]);
+      setIsEditingCash(false);
+    } catch (error) {
+      setCashError(error instanceof Error ? error.message : "Nao foi possivel atualizar o caixa.");
+    } finally {
+      setIsSavingCash(false);
+    }
+  }
 
   return (
     <AuthGuard>
@@ -90,9 +141,51 @@ export default function RebalanceamentoPage() {
                 title={formatCurrency(cashAvailable)}
                 detail="Recursos disponíveis em caixa"
                 tone={cashAvailable > 0 ? "success" : "default"}
+                trailing={
+                  <PrimaryButton
+                    label={isEditingCash ? "Cancelar" : "Editar"}
+                    onPress={() => {
+                      setIsEditingCash((current) => !current);
+                      setCashError(null);
+                    }}
+                    tone="neutral"
+                    disabled={isSavingCash}
+                  />
+                }
               />
             </div>
           </div>
+
+          {isEditingCash ? (
+            <div style={styles.cashEditor}>
+              <label style={styles.inputGroup}>
+                <span style={styles.inputLabel}>Valor atual em caixa</span>
+                <input
+                  value={cashInput}
+                  onChange={(event) => {
+                    setCashInput(event.target.value);
+                    setCashError(null);
+                  }}
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  style={{
+                    ...styles.input,
+                    borderColor: cashInputIsInvalid ? colors.danger : colors.border,
+                  }}
+                />
+              </label>
+              <div style={styles.editorActions}>
+                <PrimaryButton
+                  label={isSavingCash ? "Salvando..." : "Salvar caixa"}
+                  onPress={saveCashBalance}
+                  disabled={isSavingCash || cashInputIsInvalid}
+                />
+              </div>
+              {cashError ? (
+                <InlineAlert title="Nao foi possivel alterar o caixa" message={cashError} tone="danger" />
+              ) : null}
+            </div>
+          ) : null}
 
           <div style={styles.row}>
             <div style={styles.half}>
@@ -157,6 +250,48 @@ const styles: Record<string, React.CSSProperties> = {
   half: {
     flex: 1,
     minWidth: 0,
+  },
+  cashEditor: {
+    backgroundColor: colors.accentPanel,
+    borderColor: colors.border,
+    borderRadius: layout.radius.md,
+    borderWidth: 1,
+    borderStyle: "solid",
+    display: "flex",
+    flexDirection: "column",
+    gap: layout.space.md,
+    padding: layout.space.lg,
+  },
+  inputGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: layout.space.xs,
+  },
+  inputLabel: {
+    color: colors.textSoft,
+    fontFamily: typography.mono,
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.8,
+  },
+  input: {
+    backgroundColor: colors.surface,
+    borderRadius: layout.radius.sm,
+    borderWidth: 1,
+    borderStyle: "solid",
+    color: colors.text,
+    fontFamily: typography.mono,
+    fontSize: 22,
+    fontWeight: 600,
+    lineHeight: "30px",
+    minHeight: layout.touch.minimum,
+    outline: "none",
+    padding: `${layout.space.sm}px ${layout.space.md}px`,
+    width: "100%",
+  },
+  editorActions: {
+    alignSelf: "flex-start",
+    display: "flex",
   },
   emptyState: {
     backgroundColor: colors.accentPanel,
