@@ -12,7 +12,6 @@ services:
       NODE_ENV: production
       PARIDADE_API_URL: ${PARIDADE_API_URL}
       PARIDADE_SESSION_TOKEN: ${PARIDADE_SESSION_TOKEN}
-      PARIDADE_USER_ID: ${PARIDADE_USER_ID}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
       interval: 30s

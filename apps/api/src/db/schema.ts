@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -144,6 +145,21 @@ export const investmentFunds = pgTable("investment_funds", {
   indexAssetIdx: index("investment_funds_index_asset_idx").on(table.indexAssetId),
 }));
 
+export const idempotencyRecords = pgTable("idempotency_records", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  operation: text("operation").notNull(),
+  key: text("key").notNull(),
+  requestHash: text("request_hash").notNull(),
+  responseBody: jsonb("response_body").notNull(),
+  responseStatus: integer("response_status").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}, (table) => ({
+  scopeIdx: uniqueIndex("idempotency_records_scope_idx").on(table.userId, table.operation, table.key),
+  expiresAtIdx: index("idempotency_records_expires_at_idx").on(table.expiresAt),
+}));
+
 export const usersRelations = relations(users, ({ many, one }) => ({
   baskets: many(baskets),
   portfolio: one(portfolios, { fields: [users.id], references: [portfolios.userId] }),
@@ -202,6 +218,7 @@ export const tables = {
   baskets,
   basketAllocations,
   investmentFunds,
+  idempotencyRecords,
 };
 
 export const nowSql = sql`now()`;

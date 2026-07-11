@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "node src/index.mjs",
-    "start": "node src/index.mjs"
+    "start": "node src/index.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
+    "@paridade-risco/shared": "*",
     "@hono/node-server": "^2.0.6",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "hono": "^4.0.0"

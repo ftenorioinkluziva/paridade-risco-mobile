@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import { investmentFunds } from "@/db/schema";
 import { resolveUserId } from "@/lib/session";
+import { executeIdempotentWrite } from "@/lib/idempotency";
 
 const createFundSchema = z.object({
   currentValue: z.number().nonnegative(),
@@ -62,7 +63,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const [fund] = await db
+  return executeIdempotentWrite({ request, userId, operation: "funds.create", payload: parsed.data, write: async (tx) => {
+    const [fund] = await tx
     .insert(investmentFunds)
     .values({
       currentValue: parsed.data.currentValue.toString(),
@@ -81,12 +83,9 @@ export async function POST(request: Request) {
       name: investmentFunds.name,
     });
 
-  return NextResponse.json({
-    currentValue: Number(fund.currentValue),
-    id: fund.id,
-    indexAssetId: fund.indexAssetId,
-    initialInvestment: Number(fund.initialInvestment),
-    investmentDate: fund.investmentDate.toISOString(),
-    name: fund.name,
-  });
+    return { body: {
+      currentValue: Number(fund.currentValue), id: fund.id, indexAssetId: fund.indexAssetId,
+      initialInvestment: Number(fund.initialInvestment), investmentDate: fund.investmentDate.toISOString(), name: fund.name,
+    }, status: 200 };
+  }});
 }

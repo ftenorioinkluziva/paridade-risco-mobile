@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { resolveUserId } from "@/lib/session";
+import { verifyPricesUpdateAuthorization } from "@/lib/admin-prices-auth";
 
 const updatePricesRequestSchema = z.discriminatedUnion("action", [
   z.object({
@@ -21,39 +22,12 @@ const updatePricesRequestSchema = z.discriminatedUnion("action", [
 /**
  * Check authorization for manual admin calls or trusted production cron calls.
  */
-async function verifyPricesUpdateAuth(
-  request: NextRequest,
-): Promise<{ authorized: boolean; error?: string }> {
-  const cronSecret = process.env.PRICE_UPDATE_CRON_SECRET;
-  const authorization = request.headers.get("authorization");
-  const bearerToken = authorization?.startsWith("Bearer ")
-    ? authorization.slice("Bearer ".length)
-    : null;
-
-  if (cronSecret && bearerToken === cronSecret) {
-    return { authorized: true };
-  }
-
-  let userId = request.headers.get("x-user-id");
-
-  if (!userId) {
-    const resolved = await resolveUserId(request);
-    if (resolved) userId = resolved;
-  }
-
-  if (!userId) {
-    return { authorized: false, error: "Unauthorized: missing admin user or cron token" };
-  }
-
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
+async function verifyPricesUpdateAuth(request: NextRequest) {
+  return verifyPricesUpdateAuthorization(request, {
+    resolveIdentity: resolveUserId,
+    findUser: (userId) => db.query.users.findFirst({ where: eq(users.id, userId) }),
+    cronSecret: process.env.PRICE_UPDATE_CRON_SECRET,
   });
-
-  if (!user || user.role !== "ADMIN") {
-    return { authorized: false, error: "Forbidden: admin access required" };
-  }
-
-  return { authorized: true };
 }
 
 /**

@@ -6,6 +6,7 @@ import { createTransactionSchema } from "@paridade-risco/shared";
 import { db } from "@/db/client";
 import { assets, transactions } from "@/db/schema";
 import { resolveUserId } from "@/lib/session";
+import { executeIdempotentWrite } from "@/lib/idempotency";
 
 export async function GET(request: Request) {
   const userId = await resolveUserId(request);
@@ -19,6 +20,15 @@ export async function GET(request: Request) {
   const assetTickerFilter = url.searchParams.get("assetTicker")?.toUpperCase();
   const fromFilter = url.searchParams.get("from");
   const toFilter = url.searchParams.get("to");
+  const requestedLimit = url.searchParams.get("limit");
+  const limit = requestedLimit === null ? undefined : Number(requestedLimit);
+
+  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 100)) {
+    return NextResponse.json({
+      success: false,
+      error: { code: "INVALID_INPUT", category: "validation", message: "limit must be an integer between 1 and 100", retryable: false, invalidFields: ["limit"] },
+    }, { status: 400 });
+  }
 
   const fromDate = fromFilter ? new Date(fromFilter) : null;
   const toDate = toFilter ? new Date(toFilter) : null;
@@ -63,6 +73,7 @@ export async function GET(request: Request) {
       },
     },
     orderBy: [desc(transactions.tradedAt)],
+    limit,
   });
 
   return NextResponse.json(
@@ -114,36 +125,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Asset not found" }, { status: 404 });
   }
 
-  const [transaction] = await db
-    .insert(transactions)
-    .values({
-      userId,
-      assetId: asset.id,
-      type: parsed.data.type,
-      shares: parsed.data.shares.toString(),
-      pricePerShare: parsed.data.pricePerShare.toString(),
-      tradedAt: new Date(parsed.data.tradedAt),
-    })
-    .returning({
-      id: transactions.id,
-      type: transactions.type,
-      shares: transactions.shares,
-      pricePerShare: transactions.pricePerShare,
-      tradedAt: transactions.tradedAt,
-    });
-
-  return NextResponse.json({
-    id: transaction.id,
-    assetTicker: asset.ticker,
-    assetName: asset.name,
-    type: transaction.type,
-    amount: Number(transaction.shares) * Number(transaction.pricePerShare),
-    tradedAt: new Date(transaction.tradedAt).toISOString(),
-    dateLabel: new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(transaction.tradedAt)),
+  return executeIdempotentWrite({
+    request, userId, operation: "transactions.create", payload: parsed.data,
+    write: async (tx) => {
+      const [transaction] = await tx.insert(transactions).values({
+        userId, assetId: asset.id, type: parsed.data.type,
+        shares: parsed.data.shares.toString(), pricePerShare: parsed.data.pricePerShare.toString(),
+        tradedAt: new Date(parsed.data.tradedAt),
+      }).returning({
+        id: transactions.id, type: transactions.type, shares: transactions.shares,
+        pricePerShare: transactions.pricePerShare, tradedAt: transactions.tradedAt,
+      });
+      return { body: {
+        id: transaction.id, assetTicker: asset.ticker, assetName: asset.name, type: transaction.type,
+        amount: Number(transaction.shares) * Number(transaction.pricePerShare),
+        tradedAt: new Date(transaction.tradedAt).toISOString(),
+        dateLabel: new Intl.DateTimeFormat("pt-BR", {
+          day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+        }).format(new Date(transaction.tradedAt)),
+      }, status: 200 };
+    },
   });
 }

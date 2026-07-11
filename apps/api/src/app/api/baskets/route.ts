@@ -6,6 +6,7 @@ import { createBasketSchema } from "@paridade-risco/shared";
 import { db } from "@/db/client";
 import { assets, basketAllocations, baskets, users } from "@/db/schema";
 import { resolveUserId } from "@/lib/session";
+import { executeIdempotentWrite } from "@/lib/idempotency";
 
 export async function GET(request: Request) {
   const userId = await resolveUserId(request);
@@ -73,9 +74,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "One or more assets were not found" }, { status: 404 });
   }
 
-  let basketId: string | undefined;
-
-  await db.transaction(async (tx) => {
+  return executeIdempotentWrite({ request, userId, operation: "baskets.create", payload: parsed.data, write: async (tx) => {
     const [basket] = await tx
       .insert(baskets)
       .values({
@@ -85,8 +84,6 @@ export async function POST(request: Request) {
         description: "",
       })
       .returning({ id: baskets.id });
-
-    basketId = basket.id;
 
     await tx.insert(basketAllocations).values(
       parsed.data.allocations.map((allocation, index) => ({
@@ -113,7 +110,6 @@ export async function POST(request: Request) {
       .where(eq(baskets.id, basket.id));
 
     await tx.update(users).set({ selectedBasketId: basket.id }).where(eq(users.id, userId));
-  });
-
-  return NextResponse.json({ id: basketId }, { status: 201 });
+    return { body: { id: basket.id }, status: 201 };
+  }});
 }

@@ -70,3 +70,20 @@ export {
   formatDate,
   formatDateTime,
 } from "./formatters";
+
+export {
+  errorCategorySchema,
+  operationErrorSchema,
+  errorEnvelopeSchema,
+  successEnvelopeSchema,
+  operationCatalog,
+  operationPath,
+  operationFailure,
+  toOperationError,
+  errorEnvelope,
+  mcpErrorResult,
+  executeMcpReadOperation,
+  operationToMcpTool,
+} from "./contracts.mjs";
+
+export type OperationError = import("zod").infer<typeof import("./contracts.mjs").operationErrorSchema>;

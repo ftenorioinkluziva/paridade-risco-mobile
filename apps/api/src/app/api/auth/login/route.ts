@@ -7,13 +7,14 @@ import { loginSchema } from "@paridade-risco/shared";
 
 import { db } from "@/db/client";
 import { sessions, users } from "@/db/schema";
+import { operationErrorResponse } from "@/lib/operation-response";
 
 export async function POST(request: Request) {
   const body = await request.json();
   const parsed = loginSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return operationErrorResponse({ code: "INVALID_INPUT", category: "validation", message: "Login input is invalid", retryable: false, invalidFields: [...new Set(parsed.error.issues.map((issue) => issue.path.join(".") || "input"))] }, 400);
   }
 
   const user = await db.query.users.findFirst({
@@ -21,13 +22,13 @@ export async function POST(request: Request) {
   });
 
   if (!user || !user.isActive) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    return operationErrorResponse({ code: "INVALID_CREDENTIALS", category: "authorization", message: "Invalid email or password", retryable: false }, 401);
   }
 
   const passwordMatches = await bcrypt.compare(parsed.data.password, user.passwordHash);
 
   if (!passwordMatches) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    return operationErrorResponse({ code: "INVALID_CREDENTIALS", category: "authorization", message: "Invalid email or password", retryable: false }, 401);
   }
 
   const token = randomBytes(32).toString("hex");

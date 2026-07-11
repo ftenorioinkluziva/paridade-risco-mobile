@@ -19,19 +19,6 @@ export async function resolveUserId(request: Request) {
     }
   }
 
-  const headerUserId = request.headers.get("x-user-id");
-
-  if (headerUserId) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, headerUserId),
-      columns: { id: true },
-    });
-
-    if (user) {
-      return user.id;
-    }
-  }
-
   return null;
 }
 

@@ -40,7 +40,7 @@ GET /api/admin/prices
 ```
 
 **Autorizacao:**
-- Uso manual/admin: enviar `x-user-id` de um usuario `ADMIN`.
+- Uso manual/admin: enviar uma sessão válida de usuário `ADMIN` em `Authorization: Bearer`.
 - Cron de producao: enviar `Authorization: Bearer <PRICE_UPDATE_CRON_SECRET>`.
 
 **Cron diario sugerido:**
@@ -181,4 +181,4 @@ Portfolio API response:
 **Quality:**
 - Typecheck: ✅ PASS
 - Error handling: ✅ Try/catch on all fetches
-- Admin auth: ✅ x-user-id header required, role checked
+- Admin auth: ✅ sessão Bearer validada, usuário derivado da sessão e role verificada

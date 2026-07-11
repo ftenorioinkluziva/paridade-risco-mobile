@@ -22,22 +22,24 @@
  */
 
 import { loadOrInitConfig, saveConfig, apiGet, apiPost } from "@paridade-risco/shared/http-client";
+import { errorEnvelope, executeCliReadOperation, toOperationError } from "@paridade-risco/shared/contracts";
 import { Command } from "commander";
+import { pathToFileURL } from "node:url";
 
 function printJson(data) {
   console.log(JSON.stringify(data, null, 2));
 }
 
 function printError(message, details) {
-  const output = { success: false, error: message, details: details ?? undefined };
-  console.log(JSON.stringify(output, null, 2));
+  const canonical = details?.operationError ?? toOperationError(details, { code: "COMMAND_FAILED", category: "internal", message, retryable: false });
+  console.error(JSON.stringify(errorEnvelope(canonical), null, 2));
   process.exit(1);
 }
 
 async function cmdLogin(email, password) {
-  const result = await apiPost("/api/auth/login", { email, password });
+  const result = await apiPost("/api/auth/login", { email, password }, "login");
   if (!result.ok || !result.data) {
-    printError("Login failed", { status: result.status, error: result.error });
+    printError("Login failed", result);
     return;
   }
 
@@ -54,57 +56,44 @@ async function cmdLogin(email, password) {
 }
 
 async function cmdPortfolio() {
-  const result = await apiGet("/api/portfolio/summary");
-  if (!result.ok) printError("Failed to fetch portfolio", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+  printJson(await executeCliOperation("portfolio_summary"));
 }
 
 async function cmdPricesStatus() {
-  const result = await apiGet("/api/admin/prices");
-  if (!result.ok) printError("Failed to fetch price status", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+  printJson(await executeCliOperation("prices_status"));
 }
 
 async function cmdRebalance() {
-  const result = await apiGet("/api/rebalance/preview");
-  if (!result.ok) printError("Failed to fetch rebalance preview", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+  printJson(await executeCliOperation("rebalance_preview"));
 }
 
 async function cmdListAssets() {
-  const result = await apiGet("/api/assets");
-  if (!result.ok) printError("Failed to fetch assets", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+  printJson(await executeCliOperation("list_assets"));
 }
 
 async function cmdAssetPrices() {
-  const result = await apiGet("/api/assets/prices");
-  if (!result.ok) printError("Failed to fetch asset prices", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+  printJson(await executeCliOperation("asset_prices"));
 }
 
 async function cmdFundsSummary() {
-  const result = await apiGet("/api/funds");
-  if (!result.ok) printError("Failed to fetch funds", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+  printJson(await executeCliOperation("funds_summary"));
 }
 
 async function cmdListBaskets() {
-  const result = await apiGet("/api/baskets");
-  if (!result.ok) printError("Failed to fetch baskets", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+  printJson(await executeCliOperation("list_baskets"));
 }
 
 async function cmdBasketDetail(id) {
-  const result = await apiGet(`/api/baskets/${id}`);
-  if (!result.ok) printError("Failed to fetch basket detail", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+  printJson(await executeCliOperation("basket_detail", { basketId: id }));
 }
 
-async function cmdTransactions() {
-  const result = await apiGet("/api/transactions");
-  if (!result.ok) printError("Failed to fetch transactions", { status: result.status, error: result.error });
-  else printJson({ success: true, data: result.data });
+async function cmdTransactions(limit) {
+  const input = limit === undefined ? {} : { limit: Number(limit) };
+  printJson(await executeCliOperation("transaction_history", input));
+}
+
+export async function executeCliOperation(name, input = {}, request = apiGet) {
+  return executeCliReadOperation(name, input, request);
 }
 
 const program = new Command();
@@ -194,8 +183,9 @@ program
 program
   .command("transactions")
   .description("Get recent transaction history")
-  .action(async () => {
-    try { await cmdTransactions(); }
+  .option("--limit <number>", "Maximum transactions to return (1-100)")
+  .action(async (options) => {
+    try { await cmdTransactions(options.limit); }
     catch (error) { printError("Command failed", error); }
   });
 
@@ -242,4 +232,4 @@ async function main() {
   }
 }
 
-main();
+if (import.meta.url === pathToFileURL(process.argv[1]).href) main();

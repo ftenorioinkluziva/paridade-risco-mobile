@@ -9,6 +9,8 @@ import {
   formatDateForBCB,
   parseBCBDate,
 } from "@paridade-risco/shared";
+import { operationFailure } from "@paridade-risco/shared/contracts";
+import { classifyExternalError, parseBCBResponse, parseYahooResponse, readExternalJson } from "@/lib/external-financial-response";
 
 interface PriceDataPoint {
   date: Date;
@@ -33,20 +35,6 @@ export interface AssetPriceUpdateResult {
   lastDateAfter: Date | null;
   success: boolean;
   message?: string;
-}
-
-interface YahooFinanceResponse {
-  chart: {
-    result: Array<{
-      timestamp: number[];
-      indicators: {
-        quote: Array<{
-          close: (number | null)[];
-        }>;
-      };
-    }>;
-    error: { code: string; description: string } | null;
-  };
 }
 
 const YAHOO_CHART_API = "https://query1.finance.yahoo.com/v8/finance/chart";
@@ -107,6 +95,7 @@ export class FinancialDataFetcher {
       const url = `${YAHOO_CHART_API}/${ticker}?interval=1d&period1=${startUnix}&period2=${endUnix}&events=history&includeAdjustedClose=true`;
 
       const response = await fetch(url, {
+        signal: AbortSignal.timeout(15_000),
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -114,15 +103,13 @@ export class FinancialDataFetcher {
       });
 
       if (!response.ok) {
-        console.error(`Yahoo Finance API error for ${ticker}:`, response.statusText);
-        return [];
+        throw operationFailure("UPSTREAM_HTTP_ERROR", "upstream", `Yahoo Finance returned HTTP ${response.status}`, response.status === 429 || response.status >= 500);
       }
 
-      const data = (await response.json()) as YahooFinanceResponse;
+      const data = parseYahooResponse(await readExternalJson(response, "Yahoo Finance"));
 
       if (data.chart.error) {
-        console.error(`Yahoo Finance error for ${ticker}:`, data.chart.error);
-        return [];
+        throw operationFailure("UPSTREAM_PROVIDER_ERROR", "upstream", `Yahoo Finance provider error: ${data.chart.error.code}`, false);
       }
 
       const result = data.chart.result?.[0];
@@ -144,8 +131,7 @@ export class FinancialDataFetcher {
 
       return prices;
     } catch (error) {
-      console.error(`Error fetching Yahoo Finance data for ${ticker}:`, error);
-      return [];
+      throw classifyExternalError(error, "Yahoo Finance");
     }
   }
 
@@ -235,7 +221,7 @@ export class FinancialDataFetcher {
 
       const url = `${BCB_API}.${args.seriesCode}/dados?formato=json&dataInicial=${startStr}&dataFinal=${endStr}`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
 
       if (response.status === 404) {
         console.log(`BCB API returned no data for ${args.label} between ${startStr} and ${endStr}`);
@@ -243,11 +229,10 @@ export class FinancialDataFetcher {
       }
 
       if (!response.ok) {
-        console.error(`BCB API error for ${args.label}:`, response.statusText);
-        return [];
+        throw operationFailure("UPSTREAM_HTTP_ERROR", "upstream", `BCB returned HTTP ${response.status}`, response.status === 429 || response.status >= 500);
       }
 
-      const data = (await response.json()) as { valor: string; data: string }[];
+      const data = parseBCBResponse(await readExternalJson(response, "BCB"));
 
       const prices: PriceDataPoint[] = [];
       let accumulatedValue = args.initialValue ?? 100;
@@ -263,7 +248,7 @@ export class FinancialDataFetcher {
           continue;
         }
 
-        const rate = parseFloat(entry.valor) / 100;
+        const rate = Number(entry.valor.replace(",", ".")) / 100;
         accumulatedValue = accumulatedValue * (1 + rate);
 
         prices.push({
@@ -274,8 +259,7 @@ export class FinancialDataFetcher {
 
       return prices;
     } catch (error) {
-      console.error(`Error fetching ${args.label} data:`, error);
-      return [];
+      throw classifyExternalError(error, "BCB");
     }
   }
 
