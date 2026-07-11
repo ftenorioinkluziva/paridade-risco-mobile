@@ -6,6 +6,7 @@ const codeOf = (error: unknown) => (error as { operationError?: { code?: string 
 
 test("valid provider fixtures pass runtime validation", () => {
   assert.equal(parseYahooResponse({ chart: { result: [{ timestamp: [1], indicators: { quote: [{ close: [10.5] }] } }], error: null } }).chart.result?.length, 1);
+  assert.equal(parseYahooResponse({ chart: { result: [{ meta: { currency: "BRL" }, timestamp: [1], indicators: { quote: [{ open: [10], high: [11], low: [9], close: [10.5], volume: [100] }] } }], error: null } }).chart.result?.[0]?.indicators.quote[0].close[0], 10.5);
   assert.equal(parseBCBResponse([{ valor: "0,12", data: "10/07/2026" }]).length, 1);
 });
 

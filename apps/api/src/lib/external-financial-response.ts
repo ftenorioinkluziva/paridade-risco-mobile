@@ -6,12 +6,12 @@ const yahooResponseSchema = z.object({
     result: z.array(z.object({
       timestamp: z.array(z.number().int().nonnegative()),
       indicators: z.object({
-        quote: z.array(z.object({ close: z.array(z.number().finite().nullable()) }).strict()).min(1),
-      }).strict(),
-    }).strict()).nullable(),
+        quote: z.array(z.object({ close: z.array(z.number().finite().nullable()) }).passthrough()).min(1),
+      }).passthrough(),
+    }).passthrough()).nullable(),
     error: z.object({ code: z.string(), description: z.string() }).strict().nullable(),
-  }).strict(),
-}).strict();
+  }).passthrough(),
+}).passthrough();
 
 const bcbResponseSchema = z.array(z.object({
   valor: z.string().regex(/^-?\d+(?:[.,]\d+)?$/),
