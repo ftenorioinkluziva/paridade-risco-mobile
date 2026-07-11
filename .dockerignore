@@ -1,5 +1,7 @@
 node_modules
+**/node_modules
 .next
+**/.next
 .git
 .gitignore
 .env
@@ -13,6 +15,10 @@ node_modules
 .impeccable/
 out/
 dist/
+**/out/
+**/dist/
+coverage/
+**/coverage/
 scripts/
 docs/
 skills/

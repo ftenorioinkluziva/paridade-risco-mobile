@@ -5,7 +5,11 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
+COPY apps/remote-mcp/package.json ./apps/remote-mcp/package.json
+COPY packages/cli/package.json ./packages/cli/package.json
+COPY packages/local-mcp/package.json ./packages/local-mcp/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/telegram-bot/package.json ./packages/telegram-bot/package.json
 RUN npm ci
 
 FROM base AS builder
