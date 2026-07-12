@@ -425,15 +425,21 @@ custom_fields:
 **Error Handling:**
 - If create_task fails with validation error, display the exact error and parameters used
 - If API error occurs, log error but continue (local story still valid)
-- Warn user: "⚠️ Story created locally but PM sync failed: {error_message}"
+- Warn user: "⚠️ Story created locally but ClickUp sync failed: {error_message}"
 
-#### 5.4 Verify Story Frontmatter was Updated by PM Sync
+#### 5.4 Update Story Frontmatter with ClickUp Data
 
-- Prefer `story-manager.createStoryAndSyncToPM(storyPath, content)` so save and PM sync happen together
-- If the story was saved outside that helper, call `story-manager.syncStoryToPM(storyPath)` immediately after saving
-- Re-read the story file and verify provider metadata exists in frontmatter
-- For Linear, verify the `linear:` section contains issue id, identifier, url, state and last_sync
-- If metadata is missing, treat the PM sync as failed instead of fabricating it manually
+- Update the frontmatter YAML clickup section with captured values:
+  ```yaml
+  clickup:
+    task_id: "{story_task_id from 5.3}"
+    epic_task_id: "{epic_task_id from 5.1}"
+    list: "Backlog"
+    url: "https://app.clickup.com/t/{story_task_id}"
+    last_sync: "{current ISO 8601 timestamp}"
+  ```
+- Save story file with updated frontmatter
+- Log: "✅ Story task created in ClickUp: {story_task_id}"
 
 - **`Dev Notes` section (CRITICAL):**
   - CRITICAL: This section MUST contain ONLY information extracted from architecture documents. NEVER invent or assume technical details.
@@ -456,20 +462,19 @@ custom_fields:
 
 ### 6. Story Draft Completion and Review
 
-- **Refer to `story-manager.js` PM-aware helpers** when managing story status and metadata
-- **CRITICAL:** Prefer `story-manager.createStoryAndSyncToPM(storyPath, content)` instead of raw file write so local creation and PM sync happen as one flow
+- **Refer to tools/mcp/clickup.yaml** for update_task and get_task operations when managing story status and metadata
 - Consult the validation requirements section before updating task status
 - Review all sections for completeness and accuracy
 - Verify all source references are included for technical details
 - Ensure tasks align with both epic requirements and architecture constraints
 - Update status to "Draft" and save the story file
-- Execute `aiox-core/tasks/execute-checklist` `aiox-core/checklists/story-draft-checklist`
+- Execute `.aiox-core/development/tasks/execute-checklist` `.aiox-core/product/checklists/story-draft-checklist`
 - Provide summary to user including:
   - Story created: `{devStoryLocation}/{epicNum}.{storyNum}.story.md`
   - Status: Draft
   - Key technical components included from architecture docs
   - Any deviations or conflicts noted between epic and architecture
   - Checklist Results
-  - Next steps: For Complex stories, suggest the user carefully review the story draft and also optionally have the PO run the task `aiox-core/tasks/validate-next-story`
+  - Next steps: For Complex stories, suggest the user carefully review the story draft and also optionally have the PO run the task `.aiox-core/development/tasks/validate-next-story`
 
-**PM Integration Note:** This task now includes PM sync verification after story creation. When the configured PM tool is Linear, new stories must be synchronized through `story-manager.syncStoryToPM()` so the corresponding Linear issue is created and the returned metadata is persisted to frontmatter. If PM sync fails, the story file still remains valid locally, but the failure must be reported.
+**ClickUp Integration Note:** This task now includes Epic verification (Section 5.1), ClickUp story task creation (Section 5.3), and automatic frontmatter updates (Section 5.4). Stories are created as subtasks of their parent Epic in ClickUp's Backlog list. If Epic verification or ClickUp sync fails, the story file will still be created locally with a warning message.

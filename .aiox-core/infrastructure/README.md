@@ -17,7 +17,7 @@ infrastructure/
 │   └── *.js                    # Active infrastructure scripts
 │
 ├── integrations/               # External integrations
-│   └── pm-adapters/            # PM tool adapters (5 adapters)
+│   └── pm-adapters/            # PM tool adapters (4 adapters)
 │
 ├── tests/                      # Test utilities
 │   ├── project-status-loader.test.js
@@ -51,7 +51,7 @@ infrastructure/ ← core/ ← development/ ← product/
 ### PM Integration
 - `getPMAdapter()` - Factory for PM tool adapters
 - `PMAdapter` - Base adapter class
-- Adapters: ClickUp, GitHub Projects, Jira, Linear, Local (standalone)
+- Adapters: ClickUp, GitHub Projects, Jira, Local (standalone)
 
 ### Template & Generation
 - `TemplateEngine` - Template rendering

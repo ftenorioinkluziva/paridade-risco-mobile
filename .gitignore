@@ -79,3 +79,22 @@ Thumbs.db
 # MCP configs (may contain tokens)
 .mcp.json
 .opencode.json
+# Testes e caches
+coverage/
+.cache/
+.turbo/
+.nyc_output/
+
+# Temporários do projeto
+tmp/
+temp/
+.aiox/tmp/
+.codex/tmp/
+
+# Arquivos gerados pelo AIOX
+.aiox-core/.installed-manifest.yaml
+.aiox/install-log.txt
+.antigravity/
+.cursor/
+.gemini/
+.kimi/

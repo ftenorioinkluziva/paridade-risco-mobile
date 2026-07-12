@@ -91,7 +91,7 @@ Supporting JavaScript modules:
 |--------|---------|
 | `agent-config-loader.js` | Load and parse agent definitions |
 | `greeting-builder.js` | Build contextual agent greetings |
-| `story-manager.js` | Manage story files, PM sync, and status updates |
+| `story-manager.js` | Manage story files and updates |
 | `decision-recorder.js` | Record agent decisions |
 | `workflow-navigator.js` | Navigate between workflow steps |
 | `task-identifier-resolver.js` | Resolve task references |
@@ -106,8 +106,8 @@ const greeting = await builder.buildGreeting(agentDef, context);
 
 // Story Manager
 const StoryManager = require('./scripts/story-manager');
-await StoryManager.createStoryAndSyncToPM('docs/stories/1.1.story.md', storyContent);
-await StoryManager.updateStoryStatusInPM('docs/stories/1.1.story.md', 'InProgress');
+const story = await StoryManager.loadStory(storyId);
+await story.updateTask(taskId, { status: 'completed' });
 ```
 
 ## Dependencies

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   TrendChart,
@@ -15,11 +16,67 @@ import './Dashboard.css';
  * Main dashboard page
  */
 function Dashboard() {
+  const navigate = useNavigate();
   const { data, loading, error, lastUpdated, refresh } = useHealthData();
+  const [actionNotice, setActionNotice] = useState(null);
   const autoRefresh = useAutoRefresh({
     interval: 30000,
     onRefresh: refresh
   });
+
+  const handleIssueAction = async (issue, action) => {
+    const domainPath = issue.domain ? `/domain/${issue.domain}` : '/';
+
+    if (action === 'guide') {
+      setActionNotice({
+        type: 'info',
+        title: `Manual guide: ${issue.checkId}`,
+        message: 'Opening the related domain details. Follow the failed check details to resolve this manually.'
+      });
+      navigate(domainPath);
+      return;
+    }
+
+    if (action === 'confirm' || action === 'autofix') {
+      const shouldRun = action === 'autofix' || window.confirm(
+        `Run fix for ${issue.checkId} (${issue.name})?`
+      );
+
+      if (!shouldRun) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/health-fix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            checkId: issue.checkId,
+            action: issue.autoFix?.action,
+            domain: issue.domain
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Fix API is not available');
+        }
+
+        setActionNotice({
+          type: 'success',
+          title: `Fix requested: ${issue.checkId}`,
+          message: 'The fix request was accepted. Refreshing health data.'
+        });
+        refresh();
+      } catch {
+        setActionNotice({
+          type: 'warning',
+          title: `Fix not executed: ${issue.checkId}`,
+          message: 'This dashboard is running without the fix API. Opening the domain details so you can review the failing check.'
+        });
+        navigate(domainPath);
+      }
+    }
+  };
 
   if (loading && !data) {
     return (
@@ -125,9 +182,20 @@ function Dashboard() {
 
       {/* Issues and Actions */}
       <section className="dashboard-section">
+        {actionNotice && (
+          <div className={`action-notice action-notice--${actionNotice.type}`}>
+            <div>
+              <strong>{actionNotice.title}</strong>
+              <p>{actionNotice.message}</p>
+            </div>
+            <button type="button" onClick={() => setActionNotice(null)}>
+              Dismiss
+            </button>
+          </div>
+        )}
         <div className="issues-row">
           <div className="issues-col">
-            <IssuesList issues={issues} maxItems={5} />
+            <IssuesList issues={issues} maxItems={5} onAction={handleIssueAction} />
           </div>
           <div className="issues-col">
             <div className="stacked-panels">

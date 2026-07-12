@@ -71,7 +71,16 @@ class ConfigCache {
    * @returns {boolean} True if key exists and is valid
    */
   has(key) {
-    return this.get(key) !== null;
+    if (!this.cache.has(key)) {
+      return false;
+    }
+    const timestamp = this.timestamps.get(key);
+    if (Date.now() - timestamp > this.ttl) {
+      this.cache.delete(key);
+      this.timestamps.delete(key);
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -218,17 +227,44 @@ class ConfigCache {
 // Global cache instance (singleton)
 const globalConfigCache = new ConfigCache();
 
-// Auto cleanup expired entries every minute
-setInterval(() => {
-  const cleared = globalConfigCache.clearExpired();
-  if (cleared > 0) {
-    console.log(`🗑️ Config cache: Cleared ${cleared} expired entries`);
+/**
+ * Module-level TTL sweep timer.
+ * Skip under Jest workers (#797) — see core/config/config-cache.js.
+ * @type {ReturnType<typeof setInterval>|null}
+ */
+let cacheCleanupTimer = null;
+
+function startCacheCleanupTimer() {
+  if (cacheCleanupTimer) return cacheCleanupTimer;
+  if (process.env.JEST_WORKER_ID !== undefined) {
+    return null;
   }
-}, 60 * 1000);
+  cacheCleanupTimer = setInterval(() => {
+    const cleared = globalConfigCache.clearExpired();
+    if (cleared > 0 && process.env.AIOX_DEBUG) {
+      console.log(`🗑️ Config cache: Cleared ${cleared} expired entries`);
+    }
+  }, 60 * 1000);
+  if (typeof cacheCleanupTimer.unref === 'function') {
+    cacheCleanupTimer.unref();
+  }
+  return cacheCleanupTimer;
+}
+
+function disposeConfigCacheTimers() {
+  if (cacheCleanupTimer) {
+    clearInterval(cacheCleanupTimer);
+    cacheCleanupTimer = null;
+  }
+}
+
+startCacheCleanupTimer();
 
 module.exports = {
   ConfigCache,
   globalConfigCache,
+  disposeConfigCacheTimers,
+  startCacheCleanupTimer,
 };
 
 // CLI support

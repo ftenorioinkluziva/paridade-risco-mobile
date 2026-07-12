@@ -402,43 +402,73 @@ ALWAYS cite source documents: `[Source: architecture/{filename}.md#{section}]`
 - Note the API complexity section regarding assignee format mismatch between create and update operations
 - Create new story file: `{devStoryLocation}/{epicNum}.{storyNum}.story.md` using Story Template
 - Fill in basic story information: Title, Status (Draft), Story statement, Acceptance Criteria from Epic
-- **CRITICAL:** Prefer `story-manager.createStoryAndSyncToPM(storyPath, content)` instead of raw file write so local creation and PM sync happen as one flow
 
-##### 5.2.1 Prepare PM Metadata for Frontmatter
+##### 5.2.1 Prepare ClickUp Metadata for Frontmatter
 
-- Do not prefill provider-specific metadata manually
-- `story-manager.syncStoryToPM()` must populate provider metadata after the first successful sync
-- For Linear, expect a `linear:` section in frontmatter with issue id, identifier, url, state, cycle, project and last_sync
+- Prepare ClickUp section structure (will be populated after ClickUp task creation):
+  ```yaml
+  clickup:
+    task_id: ""  # To be filled
+    epic_task_id: "{epic_task_id from 5.1}"
+    list: "Backlog"
+    url: ""  # To be filled
+    last_sync: ""  # To be filled
+  ```
 
-#### 5.3 Sync Story to Configured PM Tool
+#### 5.3 Create Story Task in ClickUp
 
-- **CRITICAL:** If using `createStoryAndSyncToPM`, this step is already included
-- If the story was not created through the helper, call `story-manager.syncStoryToPM(storyPath)` immediately after saving
-- The configured PM adapter is responsible for creating the remote story/issue and persisting returned metadata to frontmatter
-- If the configured PM tool is Linear, this creates or updates the issue in the configured Linear project
+- **Refer to tools/mcp/clickup.yaml** - Review the 'story_creation_workflow' example for complete parameter reference
+- **CRITICAL:** Use validator 'validate-create-task' to prevent format errors
+- **CRITICAL:** Use numeric list_id from Step 5.1, NOT a list name string
+
+**Task Creation Parameters:**
+```yaml
+list_id: "{backlog_list_id}"  # MUST be numeric string from 5.1 (e.g., "901317181013")
+name: "Story {epicNum}.{storyNum}: {Story Title}"
+parent: "{epic_task_id}"  # Creates as subtask of Epic (from 5.1)
+markdown_description: "{entire story .md file content}"
+tags:
+  - "story"
+  - "epic-{epicNum}"
+  - "story-{epicNum}.{storyNum}"
+custom_fields:
+  - id: "epic_number"
+    value: {epicNum}
+  - id: "story_number"
+    value: "{epicNum}.{storyNum}"
+  - id: "story_file_path"
+    value: "{devStoryLocation}/{epicNum}.{storyNum}.story.md"
+  - id: "story-status"
+    value: "Draft"
+```
+
+**Validation Notes:**
+- list_id MUST be numeric string (validated by /^\d+$/)
+- Using "Backlog" or other non-numeric values will fail validation
+- assignees (if provided) must be array, not object
 
 **Response Handling:**
-- **Capture:** sync result URL/metadata from `syncStoryToPM`
-- **Log:** "✅ Story synced to PM tool: {url}"
+- **Capture:** story_task_id from response
+- **Log:** "✅ Story task created in ClickUp: {story_task_id}"
 
 **Error Handling:**
-- If PM sync fails, log error but continue (local story still valid)
-- Warn user: "⚠️ Story created locally but PM sync failed: {error_message}"
+- If create_task fails with validation error, display the exact error and parameters used
+- If API error occurs, log error but continue (local story still valid)
+- Warn user: "⚠️ Story created locally but ClickUp sync failed: {error_message}"
 
-#### 5.4 Verify Story Frontmatter was Updated by PM Sync
+#### 5.4 Update Story Frontmatter with ClickUp Data
 
-- Re-read the saved story file
-- Verify provider metadata was written to frontmatter by `syncStoryToPM`
-- For Linear, verify the `linear:` section includes at least:
+- Update the frontmatter YAML clickup section with captured values:
   ```yaml
-  linear:
-    issue_id: "{linear issue uuid}"
-    identifier: "{team key-number}"
-    url: "{linear issue url}"
-    state_name: "Backlog|Todo|..."
+  clickup:
+    task_id: "{story_task_id from 5.3}"
+    epic_task_id: "{epic_task_id from 5.1}"
+    list: "Backlog"
+    url: "https://app.clickup.com/t/{story_task_id}"
     last_sync: "{current ISO 8601 timestamp}"
   ```
-- If metadata is missing, report PM sync failure instead of inventing metadata manually
+- Save story file with updated frontmatter
+- Log: "✅ Story task created in ClickUp: {story_task_id}"
 
 #### 5.2.5 Predict Specialized Agents and CodeRabbit Tasks
 
@@ -742,14 +772,14 @@ Use the primary agent from "Specialized Agent Assignment" to determine which sel
 - Verify all source references are included for technical details
 - Ensure tasks align with both epic requirements and architecture constraints
 - Update status to "Draft" and save the story file
-- Execute `aiox-core/tasks/execute-checklist` `aiox-core/checklists/story-draft-checklist`
+- Execute `.aiox-core/development/tasks/execute-checklist` `.aiox-core/product/checklists/story-draft-checklist`
 - Provide summary to user including:
   - Story created: `{devStoryLocation}/{epicNum}.{storyNum}.story.md`
   - Status: Draft
   - Key technical components included from architecture docs
   - Any deviations or conflicts noted between epic and architecture
   - Checklist Results
-  - Next steps: For Complex stories, suggest the user carefully review the story draft and also optionally have the PO run the task `aiox-core/tasks/validate-next-story`
+  - Next steps: For Complex stories, suggest the user carefully review the story draft and also optionally have the PO run the task `.aiox-core/development/tasks/validate-next-story`
 
 **ClickUp Integration Note:** This task now includes Epic verification (Section 5.1), ClickUp story task creation (Section 5.3), and automatic frontmatter updates (Section 5.4). Stories are created as subtasks of their parent Epic in ClickUp's Backlog list. If Epic verification or ClickUp sync fails, the story file will still be created locally with a warning message.
 

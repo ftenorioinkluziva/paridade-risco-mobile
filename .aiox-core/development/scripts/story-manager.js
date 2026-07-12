@@ -1,80 +1,18 @@
 // File: common/utils/story-manager.js
 
 /**
- * Story Manager - Handles story file operations and PM synchronization
+ * Story Manager - Handles story file operations and ClickUp synchronization
  *
  * This module provides utilities for:
  * - Reading and parsing story .md files
- * - Saving story files with automatic PM tool sync
+ * - Saving story files with automatic ClickUp sync
  * - Managing story frontmatter and metadata
  */
 
 const fs = require('fs').promises;
 const path = require('path');
 const yaml = require('js-yaml');
-const { detectChanges } = require('./story-update-hook');
-
-function isPlainObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value);
-}
-
-function deepMerge(target = {}, source = {}) {
-  const result = { ...target };
-
-  for (const [key, value] of Object.entries(source)) {
-    if (isPlainObject(value) && isPlainObject(result[key])) {
-      result[key] = deepMerge(result[key], value);
-    } else {
-      result[key] = value;
-    }
-  }
-
-  return result;
-}
-
-function getFrontmatter(content) {
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  return frontmatterMatch ? (yaml.load(frontmatterMatch[1]) || {}) : {};
-}
-
-function buildPMFrontmatterUpdate(adapterName, result) {
-  if (!result || !result.metadata) {
-    return null;
-  }
-
-  const timestamp = result.metadata.last_sync || new Date().toISOString();
-
-  if (adapterName === 'Linear') {
-    return {
-      linear: {
-        issue_id: result.metadata.issue_id,
-        identifier: result.metadata.identifier,
-        url: result.metadata.url || result.url,
-        team_id: result.metadata.team_id,
-        team_key: result.metadata.team_key,
-        team_name: result.metadata.team_name,
-        project_id: result.metadata.project_id,
-        project_name: result.metadata.project_name,
-        state_id: result.metadata.state_id,
-        state_name: result.metadata.state_name,
-        cycle_id: result.metadata.cycle_id,
-        cycle_name: result.metadata.cycle_name,
-        last_sync: timestamp,
-      },
-    };
-  }
-
-  return null;
-}
-
-async function updateStoryStatusInContent(storyPath, status) {
-  const fileContent = await fs.readFile(storyPath, 'utf-8');
-  const updatedContent = fileContent.replace(/(\*\*Status:\*\*\s+).+/m, `$1${status}`);
-
-  if (updatedContent !== fileContent) {
-    await saveStoryFile(storyPath, updatedContent, true);
-  }
-}
+const { syncStoryToClickUp, detectChanges } = require('./story-update-hook');
 
 /**
  * Resolves the ClickUp MCP tool
@@ -148,11 +86,11 @@ async function parseStoryFile(storyFilePath) {
 }
 
 /**
- * Saves a story file and triggers PM synchronization
+ * Saves a story file and triggers ClickUp synchronization
  *
  * @param {string} storyFilePath - Absolute path to story .md file
  * @param {string} content - New story content
- * @param {boolean} skipSync - Skip PM sync (default: false)
+ * @param {boolean} skipSync - Skip ClickUp sync (default: false)
  * @returns {Promise<object>} Save and sync result
  */
 async function saveStoryFile(storyFilePath, content, skipSync = false) {
@@ -170,22 +108,28 @@ async function saveStoryFile(storyFilePath, content, skipSync = false) {
     await fs.writeFile(storyFilePath, content, 'utf-8');
     console.log(`✅ Story file saved: ${path.basename(storyFilePath)}`);
 
-    if (skipSync) {
-      return { saved: true, synced: false, reason: 'skip_requested' };
-    }
-
-    if (!previousContentString) {
-      const syncResult = await syncStoryToPM(storyFilePath);
-      return {
-        saved: true,
-        synced: Boolean(syncResult.success),
-        reason: syncResult.success ? 'created_and_synced' : 'new_file',
-        error: syncResult.success ? undefined : syncResult.error,
-      };
+    // Skip sync if requested or no previous version
+    if (skipSync || !previousContentString) {
+      return { saved: true, synced: false, reason: skipSync ? 'skip_requested' : 'new_file' };
     }
 
     // Detect changes between previous and current content
     const changes = detectChanges(previousContentString, content);
+
+    // Extract metadata from current content
+    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+    const frontmatter = frontmatterMatch ? yaml.load(frontmatterMatch[1]) : {};
+
+    // Create storyFile object for sync
+    const storyFile = {
+      metadata: {
+        clickup_task_id: frontmatter?.clickup?.task_id,
+      },
+      content: content,
+    };
+
+    // Sync to ClickUp if there are changes
+    await syncStoryToClickUp(storyFile, changes);
 
     const hasChanges = changes.status.changed ||
                       changes.tasksCompleted.length > 0 ||
@@ -194,17 +138,8 @@ async function saveStoryFile(storyFilePath, content, skipSync = false) {
                       changes.acceptanceCriteriaChanged;
 
     if (hasChanges) {
-      const syncResult = await syncStoryToPM(storyFilePath);
-      if (syncResult.success) {
-        console.log('✅ Story synced to configured PM tool');
-      }
-
-      return {
-        saved: true,
-        synced: Boolean(syncResult.success),
-        changes: Object.keys(changes).filter(k => changes[k] && changes[k] !== false).length,
-        error: syncResult.success ? undefined : syncResult.error,
-      };
+      console.log('✅ Story synced to ClickUp');
+      return { saved: true, synced: true, changes: Object.keys(changes).filter(k => changes[k] && changes[k] !== false).length };
     } else {
       console.log('ℹ️ No sync needed: no changes detected');
       return { saved: true, synced: false, reason: 'no_changes' };
@@ -231,7 +166,7 @@ async function updateFrontmatter(storyFilePath, updates) {
   const existingFrontmatter = frontmatterMatch ? yaml.load(frontmatterMatch[1]) : {};
 
   // Merge updates
-  const updatedFrontmatter = deepMerge(existingFrontmatter, updates);
+  const updatedFrontmatter = { ...existingFrontmatter, ...updates };
 
   // Serialize back to YAML
   const newFrontmatterYaml = yaml.dump(updatedFrontmatter);
@@ -366,11 +301,6 @@ async function syncStoryToPM(storyPath) {
     const result = await adapter.syncStory(storyPath);
 
     if (result.success) {
-      const frontmatterUpdate = buildPMFrontmatterUpdate(adapter.getName(), result);
-      if (frontmatterUpdate) {
-        await updateFrontmatter(storyPath, frontmatterUpdate);
-      }
-
       console.log('✅ Story synced successfully');
       if (result.url) {
         console.log(`   URL: ${result.url}`);
@@ -382,88 +312,6 @@ async function syncStoryToPM(storyPath) {
     return result;
   } catch (error) {
     console.error('Error syncing story:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
-}
-
-/**
- * Create or overwrite a story file and immediately synchronize it to the
- * configured PM tool so new stories are born with remote metadata.
- * @param {string} storyPath - Path to story markdown file
- * @param {string} content - Story markdown content
- * @returns {Promise<{success: boolean, saved: boolean, synced: boolean, url?: string, error?: string}>}
- */
-async function createStoryAndSyncToPM(storyPath, content) {
-  try {
-    await fs.mkdir(path.dirname(storyPath), { recursive: true });
-
-    const saveResult = await saveStoryFile(storyPath, content, false);
-    if (saveResult.error) {
-      return {
-        success: false,
-        saved: Boolean(saveResult.saved),
-        synced: Boolean(saveResult.synced),
-        error: saveResult.error,
-      };
-    }
-
-    const currentContent = await fs.readFile(storyPath, 'utf-8');
-    const frontmatter = getFrontmatter(currentContent);
-
-    return {
-      success: true,
-      saved: true,
-      synced: Boolean(saveResult.synced),
-      url: frontmatter.linear ? frontmatter.linear.url : undefined,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      saved: false,
-      synced: false,
-      error: error.message,
-    };
-  }
-}
-
-/**
- * Update story status locally and in the configured PM tool.
- * @param {string} storyPath - Path to story markdown file
- * @param {string} status - New story status
- * @returns {Promise<{success: boolean, url?: string, error?: string}>}
- */
-async function updateStoryStatusInPM(storyPath, status) {
-  try {
-    const { getPMAdapter } = require('../../infrastructure/scripts/pm-adapter-factory');
-    const adapter = getPMAdapter();
-    const storyData = await parseStoryFile(storyPath);
-    const storyId = storyData.frontmatter.id;
-
-    if (!storyId) {
-      return {
-        success: false,
-        error: 'Story file missing frontmatter id',
-      };
-    }
-
-    await updateFrontmatter(storyPath, { status });
-    await updateStoryStatusInContent(storyPath, status);
-
-    const result = await adapter.updateStatus(storyId, status);
-    if (!result.success) {
-      return result;
-    }
-
-    const frontmatterUpdate = buildPMFrontmatterUpdate(adapter.getName(), result);
-    if (frontmatterUpdate) {
-      await updateFrontmatter(storyPath, frontmatterUpdate);
-    }
-
-    return result;
-  } catch (error) {
     return {
       success: false,
       error: error.message,
@@ -523,7 +371,5 @@ module.exports = {
   createStoryInClickUp,
   // PM adapter-aware functions (Story 3.20)
   syncStoryToPM,
-  createStoryAndSyncToPM,
   pullStoryFromPM,
-  updateStoryStatusInPM,
 };

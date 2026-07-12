@@ -201,6 +201,48 @@
 }
 
 /* Issues Row */
+.action-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-card);
+  border-left: 4px solid var(--color-info);
+}
+
+.action-notice--success {
+  border-left-color: var(--color-healthy);
+}
+
+.action-notice--warning {
+  border-left-color: var(--color-warning);
+}
+
+.action-notice strong {
+  display: block;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.action-notice p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.action-notice button {
+  flex: 0 0 auto;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
 .issues-row {
   display: grid;
   grid-template-columns: 1.5fr 1fr;

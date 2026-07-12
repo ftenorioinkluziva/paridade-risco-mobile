@@ -17,7 +17,6 @@ const yaml = require('js-yaml');
 const { ClickUpAdapter } = require('../integrations/pm-adapters/clickup-adapter');
 const { GitHubProjectsAdapter } = require('../integrations/pm-adapters/github-adapter');
 const { JiraAdapter } = require('../integrations/pm-adapters/jira-adapter');
-const { LinearAdapter } = require('../integrations/pm-adapters/linear-adapter');
 const { LocalAdapter } = require('../integrations/pm-adapters/local-adapter');
 
 /**
@@ -88,11 +87,6 @@ function getPMAdapter() {
       case 'jira':
         console.log('📌 Using Jira adapter');
         cachedAdapter = new JiraAdapter(toolConfig);
-        break;
-
-      case 'linear':
-        console.log('📌 Using Linear adapter');
-        cachedAdapter = new LinearAdapter(toolConfig);
         break;
 
       case 'local':
