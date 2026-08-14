@@ -1,0 +1,25 @@
+{
+  "story": "docs/stories/4.7.cotacoes-brapi-yahoo-sem-btg.story.md",
+  "validatedAt": "2026-08-14T12:00:00-03:00",
+  "validator": "@po",
+  "verdict": "GO",
+  "score": 9,
+  "confidence": "High",
+  "statusTransition": "Draft -> Ready",
+  "checks": {
+    "goalAndContext": "PASS",
+    "technicalGuidance": "PASS",
+    "references": "PASS",
+    "selfContainment": "PASS",
+    "testing": "PASS",
+    "security": "PASS",
+    "taskSequence": "PASS",
+    "codeRabbit": "PASS",
+    "executorAssignment": "PASS"
+  },
+  "notes": [
+    "Story 4.6 is Ready for Review; creation of 4.7 proceeds by explicit user direction.",
+    "Architecture fallback files are absent in the checkout; the story records this limitation.",
+    "The real Brapi token is intentionally absent from the story and repository."
+  ]
+}

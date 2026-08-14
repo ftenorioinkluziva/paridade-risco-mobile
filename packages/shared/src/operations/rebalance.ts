@@ -9,6 +9,7 @@ export function buildRebalancePreview(args: {
   positions: RawPosition[];
   totalValue: number;
   indexedFundValuesByTicker?: Record<string, number>;
+  currentPricesByTicker?: Record<string, number>;
 }): RebalancePreview {
   if (!args.basket) {
     return {
@@ -21,6 +22,7 @@ export function buildRebalancePreview(args: {
 
   const positionByTicker = new Map(args.positions.map((p) => [p.ticker, p]));
   const indexedFundValuesByTicker = args.indexedFundValuesByTicker ?? {};
+  const currentPricesByTicker = args.currentPricesByTicker ?? {};
 
   const actions: RebalanceAction[] = args.basket.allocations
     .map((allocation, index) => {
@@ -31,13 +33,15 @@ export function buildRebalancePreview(args: {
       const currentPercentage = args.totalValue > 0 ? (currentValue / args.totalValue) * 100 : 0;
       const targetValue = (targetPercentage / 100) * args.totalValue;
       const diffValue = targetValue - currentValue;
+      const currentPrice = currentPricesByTicker[allocation.asset.ticker] ?? position?.currentPrice ?? 0;
 
       return {
         id: `${args.basket!.id}-${index}`,
         ticker: allocation.asset.ticker,
         action: diffValue >= 0 ? "APORTAR" as const : "REDUZIR" as const,
         amount: Math.abs(diffValue),
-        currentPrice: position?.currentPrice ?? 0,
+        currentPrice,
+        estimatedQuantity: currentPrice > 0 ? Math.round((Math.abs(diffValue) / currentPrice) * 100) / 100 : null,
         currentPercentage,
         targetPercentage,
       };

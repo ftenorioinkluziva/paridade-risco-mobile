@@ -1,5 +1,5 @@
 import { db } from "@/db/client";
-import { assets, historicalPrices } from "@/db/schema";
+import { assets, historicalPrices, liveQuotes } from "@/db/schema";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 
 import {
@@ -11,6 +11,8 @@ import {
 } from "@paridade-risco/shared";
 import { operationFailure } from "@paridade-risco/shared/contracts";
 import { classifyExternalError, parseBCBResponse, parseYahooResponse, readExternalJson } from "@/lib/external-financial-response";
+import { fetchMarketQuote, type MarketQuote } from "@/lib/market-data-provider";
+import { isStrategicEtfTicker, STRATEGIC_ETF_TICKERS } from "@/lib/market-data";
 
 interface PriceDataPoint {
   date: Date;
@@ -22,7 +24,7 @@ interface LastPricePoint {
   price: string;
 }
 
-type PriceSource = "YAHOO_FINANCE" | "BCB";
+type PriceSource = "BRAPI" | "YAHOO_FINANCE" | "BCB";
 
 export interface AssetPriceUpdateResult {
   ticker: string;
@@ -33,6 +35,19 @@ export interface AssetPriceUpdateResult {
   skipped: number;
   lastDateBefore: Date | null;
   lastDateAfter: Date | null;
+  success: boolean;
+  message?: string;
+}
+
+export interface MarketQuoteUpdateResult {
+  ticker: string;
+  source: "BRAPI" | "YAHOO_FINANCE" | null;
+  fetched: number;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  observedAt: Date | null;
+  fetchedAt: Date | null;
   success: boolean;
   message?: string;
 }
@@ -539,6 +554,80 @@ export class FinancialDataFetcher {
     return {
       success: results.every((row) => row.success),
       message: `Updated ${activeAssets.length} assets: inserted ${insertedTotal}, updated ${updatedTotal}, skipped ${skippedTotal}`,
+      results,
+    };
+  }
+
+  private async persistMarketQuote(asset: typeof assets.$inferSelect, quote: MarketQuote): Promise<void> {
+    const rawData = {
+      source: quote.source,
+      observedAt: quote.observedAt.toISOString(),
+      fetchedAt: quote.fetchedAt.toISOString(),
+      changePercent: quote.changePercent,
+    };
+    const values = {
+      assetId: asset.id,
+      source: quote.source,
+      topic: asset.ticker,
+      quoteDate: quote.observedAt.toISOString().slice(0, 10),
+      quoteTime: quote.observedAt.toISOString(),
+      last: quote.price.toString(),
+      open: null,
+      high: null,
+      low: null,
+      strike: null,
+      trades: null,
+      expiration: null,
+      rawData,
+      receivedAt: quote.fetchedAt,
+    };
+
+    await db.insert(liveQuotes).values(values).onConflictDoUpdate({
+      target: [liveQuotes.assetId, liveQuotes.source],
+      set: {
+        topic: values.topic,
+        quoteDate: values.quoteDate,
+        quoteTime: values.quoteTime,
+        last: values.last,
+        rawData: values.rawData,
+        receivedAt: values.receivedAt,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  async updateStrategicQuotes(
+    fetchedAt = new Date(),
+    tickers: readonly (typeof STRATEGIC_ETF_TICKERS[number])[] = STRATEGIC_ETF_TICKERS,
+  ): Promise<{ success: boolean; message: string; results: MarketQuoteUpdateResult[] }> {
+    const activeAssets = (await this.getMonitorableAssets()).filter((asset) => isStrategicEtfTicker(asset.ticker));
+    const assetsByTicker = new Map(activeAssets.map((asset) => [asset.ticker, asset]));
+    const results: MarketQuoteUpdateResult[] = [];
+
+    for (const ticker of tickers) {
+      const asset = assetsByTicker.get(ticker);
+      if (!asset) {
+        results.push({ ticker, source: null, fetched: 0, inserted: 0, updated: 0, skipped: 1, observedAt: null, fetchedAt: null, success: false, message: "Strategic ETF is not active" });
+        continue;
+      }
+
+      try {
+        const quote = await fetchMarketQuote(ticker, fetchedAt);
+        await this.persistMarketQuote(asset, quote);
+        results.push({ ticker, source: quote.source, fetched: 1, inserted: 0, updated: 1, skipped: 0, observedAt: quote.observedAt, fetchedAt: quote.fetchedAt, success: true });
+        console.log(`[market-data] ${ticker}: source=${quote.source}, observedAt=${quote.observedAt.toISOString()}`);
+      } catch (error) {
+        const operationError = (error as { operationError?: { code?: string; message?: string } }).operationError;
+        const code = operationError?.code ?? "MARKET_DATA_UNAVAILABLE";
+        console.error(`[market-data] ${ticker}: ${code}`);
+        results.push({ ticker, source: null, fetched: 0, inserted: 0, updated: 0, skipped: 0, observedAt: null, fetchedAt, success: false, message: code });
+      }
+    }
+
+    const failed = results.filter((result) => !result.success).length;
+    return {
+      success: failed === 0,
+      message: `Updated ${results.length} strategic ETFs: successful=${results.length - failed}, failed=${failed}`,
       results,
     };
   }

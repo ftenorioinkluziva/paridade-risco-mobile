@@ -81,6 +81,7 @@ export interface RebalanceAction {
   action: "APORTAR" | "REDUZIR";
   amount: number;
   currentPrice: number;
+  estimatedQuantity: number | null;
   currentPercentage: number;
   targetPercentage: number;
 }

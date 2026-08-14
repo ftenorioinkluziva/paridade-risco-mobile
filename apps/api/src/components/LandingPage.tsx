@@ -16,8 +16,8 @@ export function LandingPage() {
           <div style={styles.kicker}>// PARIDADE_RISCO</div>
           <h1 style={styles.title}>Carteira com lastro</h1>
           <p style={styles.subtitle}>
-            Acompanhe a alocação, desempenho e decisões da sua carteira de
-            investimentos com a metodologia de Paridade de Risco.
+            Conecte suas instituições, entenda sua saúde financeira e tome
+            decisões de investimento com a metodologia de Paridade de Risco.
           </p>
           <div style={styles.actions}>
             <button
@@ -32,25 +32,25 @@ export function LandingPage() {
         <div style={styles.features}>
           <div style={styles.feature}>
             <span style={styles.featureIcon}>📊</span>
-            <h3 style={styles.featureTitle}>Visão Consolidada</h3>
+            <h3 style={styles.featureTitle}>Resumo Financeiro</h3>
             <p style={styles.featureDesc}>
-              Saldo total, posições, drift da carteira e ganho/perda em um
-              só lugar.
+              Patrimônio, caixa, cartões, obrigações e alertas em uma visão
+              rápida do que importa.
             </p>
           </div>
           <div style={styles.feature}>
             <span style={styles.featureIcon}>🔄</span>
-            <h3 style={styles.featureTitle}>Rebalanceamento</h3>
+            <h3 style={styles.featureTitle}>Carteira Pluggy</h3>
             <p style={styles.featureDesc}>
-              Acompanhe o drift dos ativos e visualize o plano de
-              rebalanceamento da sua carteira.
+              Veja os investimentos observados, a aderência à cesta e o plano
+              de rebalanceamento.
             </p>
           </div>
           <div style={styles.feature}>
             <span style={styles.featureIcon}>📋</span>
-            <h3 style={styles.featureTitle}>Transações</h3>
+            <h3 style={styles.featureTitle}>Saúde Financeira</h3>
             <p style={styles.featureDesc}>
-              Registre e acompanhe suas movimentações de compra e venda.
+              Entenda fluxo de caixa, cartão e empréstimos antes de investir.
             </p>
           </div>
         </div>

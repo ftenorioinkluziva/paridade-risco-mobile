@@ -25,14 +25,17 @@ export function RebalanceDecisionCard({
   const hasError = Boolean(error && !data);
   const needsRebalance = Boolean(data?.eligibleForRebalance && actions.length > 0);
   const isBlocked = Boolean(data && !data.eligibleForRebalance);
+  const isPartial = Boolean(data?.analysisStatus === "PARCIAL");
   const statusLabel = hasError ? "Plano nao calculado"
     : isLoading ? "Calculando plano"
     : isBlocked ? "Dados pendentes"
+    : isPartial ? "Análise parcial"
     : needsRebalance ? "Rebalanceamento necessario"
     : "Carteira ajustada";
   const statusColor = hasError ? colors.danger
     : isLoading ? colors.textMuted
     : isBlocked ? colors.warning
+    : isPartial ? colors.warning
     : needsRebalance ? colors.accentCyan
     : colors.primary;
 

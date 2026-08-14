@@ -33,6 +33,17 @@ services:
       DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: http://localhost:3000
+      PLUGGY_ENVIRONMENT: ${PLUGGY_ENVIRONMENT:-sandbox}
+      PLUGGY_API_BASE_URL: ${PLUGGY_API_BASE_URL:-https://api.pluggy.ai}
+      PLUGGY_CLIENT_ID: ${PLUGGY_CLIENT_ID:-}
+      PLUGGY_CLIENT_SECRET: ${PLUGGY_CLIENT_SECRET:-}
+      PLUGGY_SANDBOX_ITEM_ID: ${PLUGGY_SANDBOX_ITEM_ID:-}
+      PLUGGY_SYNC_USER_ID: ${PLUGGY_SYNC_USER_ID:-}
+      PLUGGY_ENABLE_PRODUCTION: ${PLUGGY_ENABLE_PRODUCTION:-false}
+      PLUGGY_IGNORE_MANUAL_RECONCILIATION: ${PLUGGY_IGNORE_MANUAL_RECONCILIATION:-false}
+      PLUGGY_WEBHOOK_SECRET: ${PLUGGY_WEBHOOK_SECRET:-}
+      PLUGGY_WEBHOOK_HEADER: ${PLUGGY_WEBHOOK_HEADER:-x-pluggy-webhook-secret}
+      BRAPI_API_TOKEN: ${BRAPI_API_TOKEN:-}
       npm_config_cache: /tmp/npm-cache
       NODE_ENV: production
     working_dir: /app/apps/api
@@ -57,12 +68,70 @@ services:
     environment:
       DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
       NODE_ENV: production
-      PRICE_SCHEDULER_CRON_INCREMENTAL: "*/15 * * * *"
-      PRICE_SCHEDULER_CRON_FULL: "0 8 * * 1"
+      BRAPI_API_TOKEN: ${BRAPI_API_TOKEN:-}
+      PRICE_SCHEDULER_CRON_QUOTES: "*/10 10-16 * * 1-5"
+      PRICE_SCHEDULER_CRON_FINAL_CAPTURE: "30 17 * * 1-5"
+      PRICE_SCHEDULER_HOLIDAYS: ${PRICE_SCHEDULER_HOLIDAYS:-}
       PRICE_SCHEDULER_TIMEZONE: America/Sao_Paulo
       npm_config_cache: /tmp/npm-cache
     working_dir: /app/apps/api
     command: sh -c "npx tsx src/scripts/price-scheduler.ts --run-on-start"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - paridade-risco-network
+
+  pluggy-scheduler:
+    image: paridade-risco-api:latest
+    container_name: paridade-risco-pluggy-scheduler
+    restart: unless-stopped
+    user: root
+    environment:
+      DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
+      PLUGGY_ENVIRONMENT: ${PLUGGY_ENVIRONMENT:-sandbox}
+      PLUGGY_API_BASE_URL: ${PLUGGY_API_BASE_URL:-https://api.pluggy.ai}
+      PLUGGY_CLIENT_ID: ${PLUGGY_CLIENT_ID:-}
+      PLUGGY_CLIENT_SECRET: ${PLUGGY_CLIENT_SECRET:-}
+      PLUGGY_SANDBOX_ITEM_ID: ${PLUGGY_SANDBOX_ITEM_ID:-}
+      PLUGGY_SYNC_USER_ID: ${PLUGGY_SYNC_USER_ID:-}
+      PLUGGY_ENABLE_PRODUCTION: ${PLUGGY_ENABLE_PRODUCTION:-false}
+      PLUGGY_IGNORE_MANUAL_RECONCILIATION: ${PLUGGY_IGNORE_MANUAL_RECONCILIATION:-false}
+      PLUGGY_SYNC_CRON: ${PLUGGY_SYNC_CRON:-*/30 * * * *}
+      PLUGGY_SYNC_TIMEZONE: ${PLUGGY_SYNC_TIMEZONE:-America/Sao_Paulo}
+      PLUGGY_SYNC_RUN_ON_START: ${PLUGGY_SYNC_RUN_ON_START:-false}
+      npm_config_cache: /tmp/npm-cache
+      NODE_ENV: production
+    working_dir: /app/apps/api
+    command: sh -c "npx tsx src/scripts/pluggy-scheduler.ts"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - paridade-risco-network
+
+  pluggy-webhook-worker:
+    image: paridade-risco-api:latest
+    container_name: paridade-risco-pluggy-webhook-worker
+    restart: unless-stopped
+    user: root
+    environment:
+      DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
+      PLUGGY_ENVIRONMENT: ${PLUGGY_ENVIRONMENT:-sandbox}
+      PLUGGY_API_BASE_URL: ${PLUGGY_API_BASE_URL:-https://api.pluggy.ai}
+      PLUGGY_CLIENT_ID: ${PLUGGY_CLIENT_ID:-}
+      PLUGGY_CLIENT_SECRET: ${PLUGGY_CLIENT_SECRET:-}
+      PLUGGY_ENABLE_PRODUCTION: ${PLUGGY_ENABLE_PRODUCTION:-false}
+      PLUGGY_WEBHOOK_POLL_MS: ${PLUGGY_WEBHOOK_POLL_MS:-5000}
+      PLUGGY_WEBHOOK_MAX_ATTEMPTS: ${PLUGGY_WEBHOOK_MAX_ATTEMPTS:-5}
+      npm_config_cache: /tmp/npm-cache
+      NODE_ENV: production
+    working_dir: /app/apps/api
+    command: sh -c "npx tsx src/scripts/pluggy-webhook-worker.ts"
     depends_on:
       postgres:
         condition: service_healthy

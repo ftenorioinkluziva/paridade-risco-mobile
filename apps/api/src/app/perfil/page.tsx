@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -8,6 +9,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { InputField } from "@/components/InputField";
 import { InlineAlert } from "@/components/InlineAlert";
 import { useAuth } from "@/context/AuthContext";
+import { ADMIN_NAV_LINKS } from "@/components/NavBar";
 import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
@@ -203,6 +205,22 @@ export default function PerfilPage() {
         )}
       </div>
 
+      {user.role === "ADMIN" ? (
+        <section style={{ ...styles.section, marginTop: layout.space.xl }}>
+          <div style={styles.sectionLabel}>// ACESSO_ADMINISTRATIVO</div>
+          <p style={styles.adminDescription}>
+            Ferramentas operacionais disponíveis para administradores.
+          </p>
+          <div style={styles.adminLinks}>
+            {ADMIN_NAV_LINKS.map((link) => (
+              <Link key={link.path} href={link.path} style={styles.adminLink}>
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <PrimaryButton label="Sair" tone="danger" onPress={handleSignOut} />
     </Screen>
   );
@@ -227,4 +245,19 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 0.6, textTransform: "uppercase" as const,
   },
   editActions: { display: "flex", gap: layout.space.sm },
+  adminDescription: { color: colors.textMuted, fontFamily: typography.mono, fontSize: 12, lineHeight: "18px", margin: 0 },
+  adminLinks: { display: "flex", flexWrap: "wrap", gap: layout.space.sm },
+  adminLink: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    border: `1px solid ${colors.border}`,
+    borderRadius: layout.radius.md,
+    color: colors.text,
+    display: "inline-flex",
+    fontFamily: typography.mono,
+    fontSize: 12,
+    minHeight: layout.touch.minimum,
+    padding: `${layout.space.xs}px ${layout.space.md}px`,
+    textDecoration: "none",
+  },
 };

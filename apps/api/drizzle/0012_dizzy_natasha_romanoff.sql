@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "pluggy_sync_runs_one_running_user_idx" ON "pluggy_sync_runs" USING btree ("user_id") WHERE "pluggy_sync_runs"."status" = 'RUNNING';

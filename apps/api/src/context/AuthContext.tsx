@@ -58,7 +58,10 @@ export const api = {
     }),
   getRebalancePreview: () => apiFetch<any>("/api/rebalance/preview"),
   getPricesStatus: () => apiFetch<any>("/api/admin/prices"),
+  getBtgLiveQuotes: () => apiFetch<any[]>("/api/integrations/profit/quotes"),
   getAssets: () => apiFetch<any[]>("/api/assets"),
+  createAsset: (data: { ticker: string; name?: string; type?: string; calculationType?: string }) =>
+    apiFetch<any>("/api/assets", { method: "POST", body: JSON.stringify(data) }),
   getBaskets: () => apiFetch<any[]>("/api/baskets"),
   getBasketDetail: (id: string) => apiFetch<any>(`/api/baskets/${id}`),
   getBasketActive: () => apiFetch<any>("/api/baskets/active"),
@@ -95,6 +98,29 @@ getFundDetail: (id: string) => apiFetch<any>(`/api/funds/${id}`),
     }),
   signOut: () => apiFetch<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
   getMe: () => apiFetch<any>("/api/auth/me"),
+  getPluggyProjection: () => apiFetch<any>("/api/integrations/pluggy/projection"),
+  syncPluggy: () => apiFetch<any>("/api/integrations/pluggy/sync", { method: "POST" }),
+  getPluggyFinancialOverview: (periodDays = 90) => apiFetch<any>(`/api/integrations/pluggy/financial-overview?days=${periodDays}`),
+  getPluggyFinancialHealth: (periodDays = 90) => apiFetch<any>(`/api/integrations/pluggy/financial-health?days=${periodDays}`),
+  getPluggyWebhookEvents: () => apiFetch<any[]>("/api/integrations/pluggy/webhook/events"),
+  retryPluggyWebhookEvent: (id: string) => apiFetch<any>(`/api/integrations/pluggy/webhook/events/${id}/retry`, { method: "POST" }),
+  getPluggyRebalancePreview: (cashForOrders?: number) => apiFetch<any>(cashForOrders === undefined
+    ? "/api/integrations/pluggy/rebalance/preview"
+    : `/api/integrations/pluggy/rebalance/preview?cashForOrders=${encodeURIComponent(cashForOrders)}`),
+  getPluggyMigrationReadiness: () => apiFetch<any>("/api/integrations/pluggy/migration-readiness"),
+  approvePluggyMigration: () => apiFetch<any>("/api/integrations/pluggy/migration", { method: "POST" }),
+  createPluggyMapping: (investmentId: string, assetId: string) =>
+    apiFetch<any>("/api/integrations/pluggy/mappings", {
+      method: "POST",
+      body: JSON.stringify({ investmentId, assetId }),
+    }),
+  markPluggyOutsideStrategy: (investmentId: string, reason: string) =>
+    apiFetch<any>("/api/integrations/pluggy/mappings", {
+      method: "POST",
+      body: JSON.stringify({ investmentId, resolution: "FORA_DA_ESTRATEGIA", reason }),
+    }),
+  deletePluggyMapping: (investmentId: string) =>
+    apiFetch<void>(`/api/integrations/pluggy/mappings/${investmentId}`, { method: "DELETE" }),
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -202,4 +228,22 @@ export function useFundDetail(id: string) {
 }
 export function useProfile() {
   return useAsyncData(() => api.getProfile());
+}
+export function usePluggyProjection() {
+  return useAsyncData(() => api.getPluggyProjection());
+}
+export function usePluggyRebalancePreview(cashForOrders?: number) {
+  return useAsyncData(() => api.getPluggyRebalancePreview(cashForOrders));
+}
+export function usePluggyMigrationReadiness() {
+  return useAsyncData(() => api.getPluggyMigrationReadiness());
+}
+export function usePluggyFinancialOverview(periodDays = 90) {
+  return useAsyncData(() => api.getPluggyFinancialOverview(periodDays));
+}
+export function usePluggyFinancialHealth(periodDays = 90) {
+  return useAsyncData(() => api.getPluggyFinancialHealth(periodDays));
+}
+export function usePluggyWebhookEvents() {
+  return useAsyncData(() => api.getPluggyWebhookEvents());
 }

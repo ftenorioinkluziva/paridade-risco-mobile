@@ -4,6 +4,8 @@ import { db } from "@/db/client";
 import { investmentFunds, users } from "@/db/schema";
 import { buildRebalancePreview, getActiveBasket, getPortfolioSnapshot, getRebalanceEligibility } from "@/lib/portfolio";
 import { resolveUserId } from "@/lib/session";
+import { getPortfolioSourceMode } from "@/lib/portfolio-source";
+import { getPluggyRebalancePreview } from "@/lib/pluggy/rebalance";
 import { and, eq, isNotNull } from "drizzle-orm";
 
 export async function GET(request: Request) {
@@ -17,6 +19,11 @@ export async function GET(request: Request) {
       targetBasketName: "Sem usuario",
       actions: [],
     });
+  }
+
+  const sourceMode = await getPortfolioSourceMode(userId);
+  if (sourceMode === "PLUGGY") {
+    return NextResponse.json(await getPluggyRebalancePreview(userId));
   }
 
   const snapshot = await getPortfolioSnapshot(userId);

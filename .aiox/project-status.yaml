@@ -1,0 +1,19 @@
+status:
+  branch: master
+  modifiedFiles:
+    - .env.example
+    - apps/api/drizzle/meta/_journal.json
+    - apps/api/package.json
+    - apps/api/src/app/api/assets/prices/route.ts
+    - apps/api/src/app/api/assets/route.ts
+  modifiedFilesTotalCount: 103
+  recentCommits:
+    - Adiciona diretórios AIOX ao .gitignore
+    - aiox update
+  currentEpic: Infrastructure
+  currentStory: 0.0.linear-sync-test.story
+  lastUpdate: '2026-08-14T13:53:54.847Z'
+  isGitRepo: true
+timestamp: 1786715634850
+ttl: 60
+gitFingerprint: 1782219171156.1365:1783820450425.8352

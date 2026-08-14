@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { investmentFunds } from "@/db/schema";
 import { getActiveBasket, getPortfolioSnapshot } from "@/lib/portfolio";
+import { getPortfolioSourceMode } from "@/lib/portfolio-source";
+import { getPluggyPortfolioSummary } from "@/lib/pluggy/summary";
 import { resolveUserId } from "@/lib/session";
 
 export async function GET(request: Request) {
@@ -21,6 +23,11 @@ export async function GET(request: Request) {
       allocation: [],
       positions: [],
     });
+  }
+
+  const sourceMode = await getPortfolioSourceMode(userId);
+  if (sourceMode === "PLUGGY") {
+    return NextResponse.json(await getPluggyPortfolioSummary(userId));
   }
 
   const snapshot = await getPortfolioSnapshot(userId);

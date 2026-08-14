@@ -57,6 +57,55 @@
       "when": 1783702800000,
       "tag": "0007_add_idempotency_records",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785847784628,
+      "tag": "0008_natural_leo",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785855443319,
+      "tag": "0009_outstanding_mockingbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785863736055,
+      "tag": "0010_ambitious_lester",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785866248792,
+      "tag": "0011_clear_vapor",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785867796507,
+      "tag": "0012_dizzy_natasha_romanoff",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1785868599872,
+      "tag": "0013_damp_orphan",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1785932724697,
+      "tag": "0014_silky_rockslide",
+      "breakpoints": true
     }
   ]
 }

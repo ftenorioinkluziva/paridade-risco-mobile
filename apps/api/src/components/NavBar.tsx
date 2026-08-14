@@ -6,7 +6,7 @@ import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 import { useAuth } from "@/context/AuthContext";
 
-type NavLink = {
+export type NavLink = {
   label: string;
   path: string;
   authRequired: boolean;
@@ -14,11 +14,15 @@ type NavLink = {
 
 const NAV_LINKS: NavLink[] = [
   { label: "Resumo", path: "/", authRequired: true },
+  { label: "Saúde financeira", path: "/saude-financeira", authRequired: true },
+  { label: "Investimentos", path: "/investimentos", authRequired: true },
   { label: "Cotações", path: "/cotacoes", authRequired: true },
   { label: "Cestas", path: "/cestas", authRequired: true },
-  { label: "Fundos", path: "/fundos", authRequired: true },
-  { label: "Transações", path: "/transacoes", authRequired: true },
-  { label: "Rebalancear", path: "/rebalanceamento", authRequired: true },
+];
+
+export const ADMIN_NAV_LINKS: NavLink[] = [
+  { label: "Pluggy", path: "/pluggy", authRequired: true },
+  { label: "Eventos Pluggy", path: "/pluggy-eventos", authRequired: true },
 ];
 
 export function NavBar() {
