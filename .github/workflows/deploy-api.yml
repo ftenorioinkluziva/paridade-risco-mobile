@@ -20,17 +20,14 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REMOTE_DIR: /root/paridade-risco-v2
-  CODE_DIR: /root/paridade-risco-v2/code
+  REMOTE_DIR: /opt/paridade-risco-mobile
+  CODE_DIR: /opt/paridade-risco-mobile/repo
 
 jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Install SSH key
         run: |
           mkdir -p ~/.ssh
@@ -38,34 +35,9 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Sync code to server
+      - name: Pull latest code
         run: |
-          rsync -az --no-t --delete \
-            --include='*/' \
-            --include='package.json' \
-            --include='package-lock.json' \
-            --include='apps/api/package.json' \
-            --include='apps/api/Dockerfile' \
-            --include='apps/api/docker-compose.hetzner.yml' \
-            --include='apps/api/.env.production' \
-            --include='apps/api/drizzle.config.ts' \
-            --include='apps/api/next.config.ts' \
-            --include='apps/api/tsconfig.json' \
-            --include='apps/api/src/**' \
-            --include='apps/api/drizzle/**' \
-            --include='apps/api/public/**' \
-            --include='apps/remote-mcp/**' \
-            --include='packages/shared/**' \
-            --include='packages/cli/**' \
-            --include='packages/local-mcp/**' \
-            --exclude='packages/telegram-bot/.env' \
-            --include='packages/telegram-bot/**' \
-            --exclude='*' \
-            ./ root@${{ secrets.SSH_HOST }}:$CODE_DIR/
-
-      - name: Install deps & build
-        run: |
-          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm ci && DATABASE_URL='${{ secrets.DATABASE_URL }}' npm run build --workspace=@paridade-risco/api"
+          ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && git pull --ff-only origin master"
 
       - name: Create telegram-bot .env
         run: |
@@ -75,8 +47,9 @@ jobs:
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             cd $CODE_DIR
+            DB_URL=\$(grep '^DATABASE_URL=' $REMOTE_DIR/.env | head -1 | cut -d= -f2-)
             docker image prune -f 2>/dev/null || true
-            docker build -f apps/api/Dockerfile -t paridade-risco-api:latest --build-arg DATABASE_URL='${{ secrets.DATABASE_URL }}' .
+            docker build -f apps/api/Dockerfile -t paridade-risco-api:latest --build-arg DATABASE_URL=\"\$DB_URL\" .
             docker build -f packages/telegram-bot/Dockerfile -t paridade-risco-telegram-bot:latest packages/telegram-bot
           "
 
@@ -84,10 +57,7 @@ jobs:
         run: |
           ssh root@${{ secrets.SSH_HOST }} "
             cd $REMOTE_DIR
-            cp code/apps/api/docker-compose.hetzner.yml docker-compose.yml
-            cp code/apps/api/.env.production .env 2>/dev/null || true
-            docker compose down 2>/dev/null || true
-            docker compose up -d
+            docker compose up -d --remove-orphans
           "
 
       - name: Run migrations
@@ -99,15 +69,6 @@ jobs:
               echo 'API not ready, waiting 5s... (attempt \$i/20)'
               sleep 5
             done
-          "
-
-      - name: Query legacy tables
-        run: |
-          ssh root@${{ secrets.SSH_HOST }} "
-            set -e
-            docker compose -f $REMOTE_DIR/docker-compose.yml cp $CODE_DIR/apps/api/src/scripts/query-legacy.cjs app:/tmp/query.cjs
-            docker compose -f $REMOTE_DIR/docker-compose.yml exec -T -e NODE_PATH=/app/node_modules app node /tmp/query.cjs
-            docker compose -f $REMOTE_DIR/docker-compose.yml exec -T app rm /tmp/query.cjs
           "
 
       - name: Health check
