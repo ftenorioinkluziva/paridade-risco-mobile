@@ -1,19 +1,19 @@
 status:
   branch: master
   modifiedFiles:
-    - .env.example
-    - apps/api/drizzle/meta/_journal.json
-    - apps/api/package.json
-    - apps/api/src/app/api/assets/prices/route.ts
-    - apps/api/src/app/api/assets/route.ts
-  modifiedFilesTotalCount: 103
+    - .aiox/project-status.yaml
+    - apps/api/src/app/cotacoes/page.tsx
+    - apps/api/src/app/globals.css
+    - apps/api/src/app/investimentos/page.tsx
+    - apps/api/src/app/page.tsx
+  modifiedFilesTotalCount: 12
   recentCommits:
+    - 'feat: consolidate Pluggy and resilient market quotes'
     - Adiciona diretórios AIOX ao .gitignore
-    - aiox update
   currentEpic: Infrastructure
   currentStory: 0.0.linear-sync-test.story
-  lastUpdate: '2026-08-14T13:53:54.847Z'
+  lastUpdate: '2026-08-14T17:18:07.721Z'
   isGitRepo: true
-timestamp: 1786715634850
+timestamp: 1786727887723
 ttl: 60
-gitFingerprint: 1782219171156.1365:1783820450425.8352
+gitFingerprint: 1782219171156.1365:1786715998792.6653

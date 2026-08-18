@@ -16,16 +16,16 @@ type ScreenProps = {
 
 export function Screen({ title, subtitle, action, children, hideNav }: ScreenProps) {
   return (
-    <div style={styles.outer}>
+    <div className="app-shell" style={styles.outer}>
       {!hideNav ? <NavBar /> : null}
-      <div style={styles.inner}>
-        <div style={styles.header}>
-          <div style={styles.titleBlock}>
+      <div className="screen-inner" style={styles.inner}>
+        <div className="screen-header" style={styles.header}>
+          <div className="screen-title-block" style={styles.titleBlock}>
             <div style={styles.kicker}>// PARIDADE_RISCO</div>
             <h1 style={styles.title}>{title}</h1>
             <p style={styles.subtitle}>{subtitle}</p>
           </div>
-          {action ? <div>{action}</div> : null}
+          {action ? <div className="screen-action">{action}</div> : null}
         </div>
         {children}
       </div>

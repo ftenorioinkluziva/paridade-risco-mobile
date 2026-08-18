@@ -19,12 +19,12 @@ export function LegacyRouteNotice({ title, legacyLabel }: Props) {
 
   return (
     <AuthGuard>
-      <Screen title={title} subtitle="Esta área está em transição para a experiência baseada no Pluggy.">
+      <Screen title={title} subtitle="Esta área está em transição para a experiência baseada em dados conectados.">
         <div style={styles.card}>
           <div style={styles.kicker}>// ESCOPO_LEGADO_DESATIVADO</div>
           <div style={styles.title}>{legacyLabel}</div>
           <div style={styles.message}>
-            A gestão manual foi pausada enquanto a carteira observada pelo Pluggy se torna a fonte principal do produto.
+            A gestão manual foi pausada enquanto a carteira observada se torna a fonte principal do produto.
             Seus dados legados continuam preservados para compatibilidade e eventual rollback.
           </div>
           <div style={styles.actions}>

@@ -108,13 +108,13 @@ export default function InvestimentosPage() {
     <AuthGuard>
       <Screen
         title="Investimentos"
-        subtitle="Veja a carteira observada pelo Pluggy e o próximo passo da Paridade de Risco."
-        action={<PrimaryButton label="Revisar dados Pluggy" tone="neutral" onPress={() => router.push("/pluggy")} />}
+        subtitle="Veja a carteira observada e o próximo passo da Paridade de Risco."
+        action={<PrimaryButton label="Revisar dados sincronizados" tone="neutral" onPress={() => router.push("/pluggy")} />}
       >
         {portfolio.error ? <InlineAlert title="Erro no resumo da carteira" message={portfolio.error} tone="danger" /> : null}
-        {projection.error ? <InlineAlert title="Erro nos investimentos Pluggy" message={projection.error} tone="danger" /> : null}
+        {projection.error ? <InlineAlert title="Erro nos investimentos sincronizados" message={projection.error} tone="danger" /> : null}
         {rebalance.error ? <InlineAlert title="Erro no plano de rebalanceamento" message={rebalance.error} tone="danger" /> : null}
-        {readiness.error ? <InlineAlert title="Erro no gate Pluggy" message={readiness.error} tone="danger" /> : null}
+        {readiness.error ? <InlineAlert title="Erro na validação dos dados" message={readiness.error} tone="danger" /> : null}
 
         {projectionData?.freshness ? (
           <div style={styles.freshness}>
@@ -128,11 +128,11 @@ export default function InvestimentosPage() {
               <span>Última sincronização: {projectionData.freshness.latestSyncAt ? formatDateTime(projectionData.freshness.latestSyncAt) : "nunca"}</span>
               {projectionData.freshness.ageMinutes !== null ? <span>Idade: {Math.round(projectionData.freshness.ageMinutes)} min</span> : null}
             </div>
-            <span style={styles.sourceBadge}>{readiness.data?.currentMode === "PLUGGY" ? "FONTE PLUGGY ATIVA" : "FONTE PLUGGY"}</span>
+            <span style={styles.sourceBadge}>DADOS SINCRONIZADOS</span>
           </div>
         ) : null}
 
-        <div style={styles.metricsGrid}>
+        <div className="investment-metrics-grid" style={styles.metricsGrid}>
           <SummaryCard eyebrow="PATRIMÔNIO_OBSERVADO" title={formatCurrency(totalObserved)} detail="Investimentos, caixa e posições observadas" tone={totalObserved > 0 ? "success" : "default"} />
           <SummaryCard eyebrow="INVESTIDO_NA_ESTRATÉGIA" title={formatCurrency(investedValue)} detail="Base usada pelo motor de risco" tone={investedValue > 0 ? "success" : "default"} />
           <SummaryCard eyebrow="COBERTURA_DA_ANÁLISE" title={coverage == null ? "—" : formatPercentage(coverage)} detail="Parte dos investimentos considerada pela estratégia" tone={coverage === 100 ? "success" : "warning"} />
@@ -140,13 +140,13 @@ export default function InvestimentosPage() {
         </div>
 
         {plan ? (
-          <section style={styles.cashPlanner}>
+          <section className="investment-cash-planner" style={styles.cashPlanner}>
             <div>
               <div style={styles.sectionLabel}>// APORTE_PLANEJADO</div>
               <div style={styles.sectionTitle}>Quanto você pretende investir agora?</div>
-              <div style={styles.guideDetail}>O motor recalcula a carteira usando o valor escolhido. Esse valor é apenas uma simulação e não altera o saldo Pluggy.</div>
+              <div style={styles.guideDetail}>O motor recalcula a carteira usando o valor escolhido. Esse valor é apenas uma simulação e não altera o saldo observado.</div>
             </div>
-            <div style={styles.cashPlannerControls}>
+            <div className="investment-cash-controls" style={styles.cashPlannerControls}>
               <label htmlFor="cash-for-orders" style={styles.cashInputLabel}>Caixa para ordens</label>
               <input
                 id="cash-for-orders"
@@ -159,7 +159,7 @@ export default function InvestimentosPage() {
               />
               <PrimaryButton label="Aplicar no cálculo" tone="neutral" onPress={applyCashForOrders} />
             </div>
-            <div id="cash-for-orders-help" style={styles.cashPlannerMeta}>
+            <div className="investment-cash-meta" id="cash-for-orders-help" style={styles.cashPlannerMeta}>
               <span>Caixa observado: {formatCurrency(cashAvailable)}</span>
               <span>Reserva mantida: {formatCurrency(cashHeldInReserve)}</span>
               <span>Limite máximo: {formatCurrency(cashAvailable)}</span>
@@ -185,20 +185,20 @@ export default function InvestimentosPage() {
             ) : null}
             <RebalanceDecisionCard data={plan} isLoading={rebalance.isLoading} error={rebalance.error} showActions={false} showMetrics />
             {actions.length > 0 ? (
-              <div style={styles.actionTable}>
+              <div className="investment-action-table" style={styles.actionTable}>
                 <div style={styles.sectionLabel}>// PLANO_DE_AJUSTE_ATÉ_A_CESTA</div>
                 <div style={styles.actionHint}>Detalhamento das ordens estimadas: posição atual, alvo, valor financeiro e quantidade aproximada de cotas.</div>
                 <div style={styles.actionLiveMeta}>
-                  O cálculo usa o último preço BTG disponível e é atualizado automaticamente a cada 5 segundos
+                  O cálculo usa o último preço disponível e é atualizado automaticamente a cada 5 segundos
                   {lastQuoteRefreshAt ? ` · última consulta ${formatDateTime(lastQuoteRefreshAt.toISOString())}` : ""}.
                 </div>
                 {actions.map((action: any) => (
-                  <div key={action.id} style={styles.actionRow}>
+                  <div className="investment-action-row" key={action.id} style={styles.actionRow}>
                     <span style={styles.actionTicker}>{action.ticker}</span>
                     <span style={{ ...styles.actionType, color: action.action === "APORTAR" ? colors.success : colors.warning }}>{action.action === "APORTAR" ? "Comprar" : "Reduzir"}</span>
                     <span style={styles.actionPercent}>{formatPercentage(action.currentPercentage)} → {formatPercentage(action.targetPercentage)}</span>
                     <span style={styles.actionQuantity}>{formatEstimatedQuantity(action.estimatedQuantity)}</span>
-                    <span style={styles.actionAmount}>{formatCurrency(action.amount)}</span>
+                    <span className="investment-action-amount" style={styles.actionAmount}>{formatCurrency(action.amount)}</span>
                   </div>
                 ))}
               </div>
@@ -220,9 +220,9 @@ export default function InvestimentosPage() {
         ) : null}
 
         {projectionData?.totals ? (
-          <div style={styles.metricsGrid}>
+          <div className="investment-metrics-grid" style={styles.metricsGrid}>
             <SummaryCard eyebrow="MAPEADOS" title={String(projectionData.totals.mappedCount)} detail="Vínculos estratégicos aprovados" tone="success" />
-            <SummaryCard eyebrow="PENDENTES" title={String(projectionData.totals.pendingCount + projectionData.totals.suggestedCount)} detail="Precisam de revisão na tela Pluggy" tone={projectionData.totals.pendingCount > 0 ? "warning" : "default"} />
+            <SummaryCard eyebrow="PENDENTES" title={String(projectionData.totals.pendingCount + projectionData.totals.suggestedCount)} detail="Precisam de revisão nos dados sincronizados" tone={projectionData.totals.pendingCount > 0 ? "warning" : "default"} />
             <SummaryCard eyebrow="FORA_DA_ESTRATÉGIA" title={formatCurrency(plan?.outsideStrategyValue ?? summary?.outsideStrategyValue ?? 0)} detail="Patrimônio observado, fora da cesta" />
             <SummaryCard eyebrow="CUSTO_MÉDIO" title={String(projectionData.totals.missingCostBasisCount)} detail="Posições sem custo médio informado" tone={projectionData.totals.missingCostBasisCount > 0 ? "warning" : "default"} />
           </div>
@@ -236,10 +236,10 @@ export default function InvestimentosPage() {
             </div>
             <PrimaryButton label="Revisar mapeamentos" tone="neutral" onPress={() => router.push("/pluggy")} />
           </div>
-          {projection.isLoading ? <div style={styles.emptyState}>Carregando investimentos Pluggy...</div> : null}
-          {!projection.isLoading && investments.length === 0 ? <div style={styles.emptyState}>Nenhum investimento Pluggy sincronizado.</div> : null}
+          {projection.isLoading ? <div style={styles.emptyState}>Carregando investimentos sincronizados...</div> : null}
+          {!projection.isLoading && investments.length === 0 ? <div style={styles.emptyState}>Nenhum investimento sincronizado.</div> : null}
           {investments.length > 0 ? (
-            <div style={styles.positionList}>
+            <div className="investment-position-list" style={styles.positionList}>
               {investments.map((investment: any) => {
                 const status = investment.classification?.mappingStatus ?? "PENDENTE";
                 return (
@@ -258,7 +258,7 @@ export default function InvestimentosPage() {
           ) : null}
         </section>
 
-        {!hasError && !projection.isLoading && !plan ? <div style={styles.emptyState}>A carteira Pluggy ainda está carregando a primeira projeção.</div> : null}
+        {!hasError && !projection.isLoading && !plan ? <div style={styles.emptyState}>A carteira ainda está carregando a primeira projeção.</div> : null}
       </Screen>
     </AuthGuard>
   );

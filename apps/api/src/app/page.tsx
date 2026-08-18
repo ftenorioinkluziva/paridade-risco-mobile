@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { InlineAlert } from "@/components/InlineAlert";
 import { LandingPage } from "@/components/LandingPage";
-import { PrimaryButton } from "@/components/PrimaryButton";
 import { RebalanceDecisionCard } from "@/components/RebalanceDecisionCard";
 import { Screen } from "@/components/Screen";
 import { SummaryCard } from "@/components/SummaryCard";
@@ -29,7 +27,6 @@ function formatMonthLabel(month: string | undefined) {
 }
 
 export default function OverviewPage() {
-  const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const portfolio = usePortfolioSummary();
   const health = usePluggyFinancialHealth();
@@ -97,11 +94,6 @@ export default function OverviewPage() {
         </section>
       ) : null}
 
-      <div style={styles.quickLinks}>
-        <PrimaryButton label="Saúde financeira" tone="neutral" onPress={() => router.push("/saude-financeira")} />
-        <PrimaryButton label="Revisar Pluggy" tone="neutral" onPress={() => router.push("/pluggy")} />
-        <PrimaryButton label="Configurar cesta" tone="neutral" onPress={() => router.push("/cestas")} />
-      </div>
     </Screen>
   );
 }
@@ -112,5 +104,4 @@ const styles: Record<string, React.CSSProperties> = {
   sectionLabel: { color: colors.textSoft, fontFamily: typography.mono, fontSize: 11, fontWeight: 700, letterSpacing: 0.8 },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: 700, marginTop: 5 },
   alertList: { display: "flex", flexDirection: "column", gap: layout.space.sm },
-  quickLinks: { display: "flex", gap: layout.space.sm, flexWrap: "wrap" },
 };

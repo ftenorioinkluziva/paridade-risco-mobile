@@ -94,13 +94,13 @@ export default function FinancialHealthPage() {
     <AuthGuard>
       <Screen
         title="Saúde financeira"
-        subtitle="Entenda caixa, crédito, obrigações e dívidas observados pelo Pluggy."
+        subtitle="Entenda caixa, crédito, obrigações e dívidas observados na sua conta."
         action={<PrimaryButton label={refreshing ? "Atualizando..." : "Atualizar dados"} disabled={refreshing} onPress={refresh} tone="neutral" />}
       >
         {overview.error ? <InlineAlert title="Erro na visão financeira" message={overview.error} tone="danger" /> : null}
         {health.error ? <InlineAlert title="Erro na saúde financeira" message={health.error} tone="danger" /> : null}
 
-        {health.isLoading || overview.isLoading ? <div style={styles.emptyState}>Carregando dados financeiros Pluggy...</div> : null}
+        {health.isLoading || overview.isLoading ? <div style={styles.emptyState}>Carregando dados financeiros...</div> : null}
 
         {data && financial ? (
           <>
@@ -115,7 +115,7 @@ export default function FinancialHealthPage() {
               <div style={styles.statusMeta}>
                 <span>Fonte: {data.source}</span>
                 <span>Atualizado: {formatDateTime(financial.generatedAt)}</span>
-                <span>Pluggy: {financial.freshness.latestSyncAt ? formatDateTime(financial.freshness.latestSyncAt) : "sem sincronização"}</span>
+                <span>Última sincronização: {financial.freshness.latestSyncAt ? formatDateTime(financial.freshness.latestSyncAt) : "sem sincronização"}</span>
               </div>
             </section>
 
@@ -124,7 +124,7 @@ export default function FinancialHealthPage() {
                 <div style={styles.sectionLabel}>// LEITURA_DO_DIA</div>
                 <div style={styles.sectionTitle}>O que merece atenção agora</div>
               </div>
-              <div style={styles.insightGrid}>
+              <div className="mobile-grid-3" style={styles.insightGrid}>
                 <InsightCard
                   label="PRIORIDADE"
                   value={orderedAlerts[0] ? (alertSeverityLabel[orderedAlerts[0].severity] ?? orderedAlerts[0].severity) : "Nenhuma"}
@@ -146,16 +146,16 @@ export default function FinancialHealthPage() {
               </div>
             </section>
 
-            <section style={styles.kpiGrid}>
+            <section className="mobile-grid-4" style={styles.kpiGrid}>
               <MetricCard label="Caixa bancário" value={formatCurrency(financial.cash.balance)} hint="Não inclui limite de cartão" />
               <MetricCard label="Após obrigações" value={formatCurrency(data.indicators.cashAfterUpcomingObligations)} hint={`Horizonte: ${financial.obligations.horizonDays} dias`} tone={financial.liquidityStatus === "INSUFICIENTE" ? "danger" : "default"} />
               <MetricCard label="Fluxo líquido do mês atual" value={formatCurrency(currentMonthCashFlow?.net ?? data.indicators.cashFlowNet)} hint={`${formatMonthLabel(currentMonthCashFlow?.month)} · receitas vs despesas`} tone={(currentMonthCashFlow?.net ?? data.indicators.cashFlowNet) < 0 ? "danger" : "default"} />
               <MetricCard label="Fluxo líquido do mês anterior" value={formatCurrency(previousMonthCashFlow?.net ?? 0)} hint={`${formatMonthLabel(previousMonthCashFlow?.month)} · referência para investir`} tone={(previousMonthCashFlow?.net ?? 0) < 0 ? "danger" : "default"} />
             </section>
 
-            <section style={styles.columns}>
+            <section className="mobile-columns-2" style={styles.columns}>
               <Panel title="// CARTÕES_E_CRÉDITO">
-                {cards.length === 0 ? <div style={styles.muted}>Nenhum cartão Pluggy sincronizado.</div> : cards.map((card: any) => (
+                {cards.length === 0 ? <div style={styles.muted}>Nenhum cartão sincronizado.</div> : cards.map((card: any) => (
                   <div key={card.id} style={styles.rowCard}>
                     <div style={styles.rowHeader}>
                       <strong style={styles.rowTitle}>{card.name}</strong>
@@ -182,7 +182,7 @@ export default function FinancialHealthPage() {
               </Panel>
             </section>
 
-            <section style={styles.columns}>
+            <section className="mobile-columns-2" style={styles.columns}>
               <Panel title="// OBRIGAÇÕES_PRÓXIMAS">
                 {obligations.length === 0 ? <div style={styles.muted}>Nenhuma obrigação observada no horizonte.</div> : obligations.map((obligation: any) => (
                   <div key={obligation.id} style={styles.rowCard}>
@@ -205,10 +205,10 @@ export default function FinancialHealthPage() {
                   <Detail label="Saldo devedor" value={formatNullableCurrency(data.loans.totalOutstanding)} />
                   <Detail label="Parcelas" value={formatNullableCurrency(data.loans.totalInstallment)} />
                 </div>
-                {loans.length === 0 ? <div style={styles.muted}>Nenhum empréstimo Pluggy observado.</div> : loans.map((loan: any) => (
+                {loans.length === 0 ? <div style={styles.muted}>Nenhum empréstimo observado.</div> : loans.map((loan: any) => (
                   <div key={loan.id} style={styles.rowCard}>
                     <div style={styles.rowHeader}>
-                      <strong style={styles.rowTitle}>{loan.name ?? "Empréstimo Pluggy"}</strong>
+                      <strong style={styles.rowTitle}>{loan.name ?? "Empréstimo"}</strong>
                       <span style={{ ...styles.mono, color: statusColor(loan.dataStatus) }}>{loan.dataStatus}</span>
                     </div>
                     <div style={styles.detailGrid}>
@@ -217,7 +217,7 @@ export default function FinancialHealthPage() {
                       <Detail label="Parcela" value={formatNullableCurrency(loan.installmentAmount)} />
                       <Detail label="Vencimento" value={loan.nextDueDate ? formatDate(loan.nextDueDate) : loan.maturityDate ? `${formatDate(loan.maturityDate)} (contrato)` : "Sem data"} />
                     </div>
-                    {loan.dataStatus === "INCOMPLETA" ? <div style={styles.explanation}>O Pluggy não informou todos os campos necessários para calcular a parcela e o próximo vencimento. Os valores disponíveis continuam sendo exibidos.</div> : null}
+                    {loan.dataStatus === "INCOMPLETA" ? <div style={styles.explanation}>Não foram informados todos os campos necessários para calcular a parcela e o próximo vencimento. Os valores disponíveis continuam sendo exibidos.</div> : null}
                   </div>
                 ))}
               </Panel>

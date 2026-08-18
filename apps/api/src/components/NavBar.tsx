@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
 import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
@@ -21,14 +22,15 @@ const NAV_LINKS: NavLink[] = [
 ];
 
 export const ADMIN_NAV_LINKS: NavLink[] = [
-  { label: "Pluggy", path: "/pluggy", authRequired: true },
-  { label: "Eventos Pluggy", path: "/pluggy-eventos", authRequired: true },
+  { label: "Dados conectados", path: "/pluggy", authRequired: true },
+  { label: "Eventos de sincronização", path: "/pluggy-eventos", authRequired: true },
 ];
 
 export function NavBar() {
   const { user, isAuthenticated, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Hide NavBar on login page
   if (pathname === "/login") return null;
@@ -37,17 +39,23 @@ export function NavBar() {
     (link) => !link.authRequired || isAuthenticated
   );
 
+  function navigate(path: string) {
+    setMobileMenuOpen(false);
+    router.push(path);
+  }
+
   async function handleSignOut() {
+    setMobileMenuOpen(false);
     await signOut();
     router.push("/login");
   }
 
   return (
-    <nav style={styles.wrapper}>
-      <div style={styles.inner}>
+    <nav className="app-nav" style={styles.wrapper}>
+      <div className="app-nav-inner" style={styles.inner}>
         {/* Brand */}
         <button
-          onClick={() => router.push("/")}
+          onClick={() => navigate("/")}
           style={styles.brand}
         >
           <span style={styles.brandKicker}>{"//"}</span>
@@ -55,13 +63,13 @@ export function NavBar() {
         </button>
 
         {/* Nav links */}
-        <div style={styles.links}>
+        <div className="app-nav-links" style={styles.links}>
           {visibleLinks.map((link) => {
             const isActive = pathname === link.path;
             return (
               <button
                 key={link.path}
-                onClick={() => router.push(link.path)}
+                onClick={() => navigate(link.path)}
                 style={{
                   ...styles.link,
                   ...(isActive ? styles.linkActive : {}),
@@ -73,13 +81,63 @@ export function NavBar() {
           })}
         </div>
 
-        {/* User area */}
-        <div style={styles.userArea}>
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-navigation"
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        >
+          {mobileMenuOpen ? "Fechar" : "Menu"}
+        </button>
+
+        <div
+          id="mobile-navigation"
+          className="mobile-navigation-panel"
+          hidden={!mobileMenuOpen}
+        >
+          {visibleLinks.map((link) => {
+            const isActive = pathname === link.path;
+            return (
+              <button
+                key={link.path}
+                type="button"
+                className={isActive ? "mobile-navigation-link is-active" : "mobile-navigation-link"}
+                aria-current={isActive ? "page" : undefined}
+                onClick={() => navigate(link.path)}
+              >
+                {link.label}
+              </button>
+            );
+          })}
           {isAuthenticated && user ? (
             <>
-              <span style={styles.userEmail}>{user.email}</span>
               <button
-                onClick={() => router.push("/perfil")}
+                type="button"
+                className={pathname === "/perfil" ? "mobile-navigation-link is-active" : "mobile-navigation-link"}
+                aria-current={pathname === "/perfil" ? "page" : undefined}
+                onClick={() => navigate("/perfil")}
+              >
+                Perfil
+              </button>
+              <button type="button" className="mobile-navigation-link is-danger" onClick={handleSignOut}>
+                Sair
+              </button>
+            </>
+          ) : (
+            <button type="button" className="mobile-navigation-link" onClick={() => navigate("/login")}>
+              Entrar
+            </button>
+          )}
+        </div>
+
+        {/* User area */}
+        <div className="app-nav-user" style={styles.userArea}>
+          {isAuthenticated && user ? (
+            <>
+              <span className="user-email" style={styles.userEmail}>{user.email}</span>
+              <button
+                onClick={() => navigate("/perfil")}
                 style={styles.link}
               >
                 Perfil
@@ -90,7 +148,7 @@ export function NavBar() {
             </>
           ) : (
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => navigate("/login")}
               style={styles.link}
             >
               Entrar
@@ -107,6 +165,7 @@ const styles: Record<string, React.CSSProperties> = {
     position: "sticky",
     top: 0,
     zIndex: 100,
+    width: "100%",
     backgroundColor: colors.background,
     borderBottom: `1px solid ${colors.border}`,
   },

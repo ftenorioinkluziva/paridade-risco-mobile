@@ -29,7 +29,7 @@ export function PrimaryButton({ label, onPress, disabled = false, tone = "primar
   };
 
   return (
-    <button style={btnStyle} disabled={disabled} onClick={onPress}>
+    <button className="primary-button" style={btnStyle} disabled={disabled} onClick={onPress}>
       <span style={labelStyle}>{label}</span>
     </button>
   );

@@ -40,7 +40,7 @@ export function LandingPage() {
           </div>
           <div style={styles.feature}>
             <span style={styles.featureIcon}>🔄</span>
-            <h3 style={styles.featureTitle}>Carteira Pluggy</h3>
+            <h3 style={styles.featureTitle}>Carteira conectada</h3>
             <p style={styles.featureDesc}>
               Veja os investimentos observados, a aderência à cesta e o plano
               de rebalanceamento.
