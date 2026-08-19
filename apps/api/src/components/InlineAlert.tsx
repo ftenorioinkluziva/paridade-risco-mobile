@@ -11,22 +11,22 @@ type Props = {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
-  tone?: "warning" | "danger";
+  tone?: "warning" | "danger" | "success";
 };
 
 export function InlineAlert({ title, message, actionLabel, onAction, tone = "warning" }: Props) {
-  const isDanger = tone === "danger";
+  const toneColor = tone === "danger" ? colors.danger : tone === "success" ? colors.success : colors.warning;
 
   return (
     <div
       role="alert"
       style={{
         ...styles.alert,
-        borderColor: isDanger ? colors.danger : colors.warning,
+        borderColor: toneColor,
       }}
     >
       <div style={styles.content}>
-        <div style={{ ...styles.title, color: isDanger ? colors.danger : colors.warning }}>{title}</div>
+        <div style={{ ...styles.title, color: toneColor }}>{title}</div>
         <div style={styles.message}>{message}</div>
       </div>
       {actionLabel && onAction ? (

@@ -1,5 +1,5 @@
-import { PluggyApiError, type PluggyClient, type PluggyResource } from "./client";
-import { readPluggyConfig, type PluggyConfig } from "./config";
+import { PluggyApiError, PluggyClient, type PluggyResource } from "./client";
+import { getUserPluggyConfig, readPluggyConfig, type PluggyConfig } from "./config";
 import {
   createSyncRun,
   finishSyncRun,
@@ -163,18 +163,20 @@ export async function syncPluggyItem(input: {
 }
 
 export async function syncConfiguredPluggyItem(input: {
-  client: PluggyClient;
+  client?: PluggyClient;
   database: PluggyDatabase;
   userId: string;
   config?: PluggyConfig;
 }) {
-  const config = input.config ?? readPluggyConfig();
+  const config = input.config ?? (await getUserPluggyConfig(input.userId, input.database));
+  const client = input.client ?? new PluggyClient(config);
+
   if (!config.sandboxItemId) {
-    throw new Error("PLUGGY_SANDBOX_ITEM_ID is required for configured sync");
+    throw new Error("Item ID da Pluggy não está configurado");
   }
 
   return syncPluggyItem({
-    client: input.client,
+    client,
     database: input.database,
     userId: input.userId,
     itemId: config.sandboxItemId,

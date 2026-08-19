@@ -61,9 +61,46 @@ export function readPluggyConfig(env: Readonly<Record<string, string | undefined
   };
 }
 
+export class PluggyNotConfiguredError extends Error {
+  readonly code = "PLUGGY_NOT_CONFIGURED";
+
+  constructor(message = "Credenciais da Pluggy não foram configuradas no seu perfil") {
+    super(message);
+    this.name = "PluggyNotConfiguredError";
+  }
+}
+
+export async function getUserPluggyConfig(
+  userId: string,
+  database?: any
+): Promise<PluggyConfig> {
+  const dbInstance = database ?? (await import("@/db/client")).db;
+  const credentials = await dbInstance.query.userPluggyCredentials.findFirst({
+    where: (table: any, { eq }: any) => eq(table.userId, userId),
+  });
+
+  if (!credentials || !credentials.clientId || !credentials.clientSecret || !credentials.itemId) {
+    throw new PluggyNotConfiguredError();
+  }
+
+  const env = process.env;
+  const environmentValue = asNonEmpty(env.PLUGGY_ENVIRONMENT) ?? "sandbox";
+  const apiBaseUrl = (asNonEmpty(env.PLUGGY_API_BASE_URL) ?? "https://api.pluggy.ai").replace(/\/+$/, "");
+
+  return {
+    environment: environmentValue === "production" ? "production" : "sandbox",
+    apiBaseUrl,
+    clientId: credentials.clientId.trim(),
+    clientSecret: credentials.clientSecret.trim(),
+    sandboxItemId: credentials.itemId.trim(),
+    ignoreManualReconciliation: isEnabled(env.PLUGGY_IGNORE_MANUAL_RECONCILIATION),
+  };
+}
+
 export function readPluggyWebhookConfig(env: Readonly<Record<string, string | undefined>> = process.env): PluggyWebhookConfig {
   return {
     secret: asNonEmpty(env.PLUGGY_WEBHOOK_SECRET),
     header: asNonEmpty(env.PLUGGY_WEBHOOK_HEADER)?.toLowerCase() ?? "x-pluggy-webhook-secret",
   };
 }
+

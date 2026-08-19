@@ -369,6 +369,19 @@ export const pluggyWebhookEvents = pgTable("pluggy_webhook_events", {
   itemReceivedIdx: index("pluggy_webhook_events_item_received_idx").on(table.itemId, table.receivedAt),
 }));
 
+export const userPluggyCredentials = pgTable("user_pluggy_credentials", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  clientId: text("client_id").notNull(),
+  clientSecret: text("client_secret").notNull(),
+  itemId: text("item_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdateFn(() => new Date()),
+});
+
+export const userPluggyCredentialsRelations = relations(userPluggyCredentials, ({ one }) => ({
+  user: one(users, { fields: [userPluggyCredentials.userId], references: [users.id] }),
+}));
+
 export const usersRelations = relations(users, ({ many, one }) => ({
   baskets: many(baskets),
   portfolio: one(portfolios, { fields: [users.id], references: [portfolios.userId] }),
@@ -377,6 +390,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(sessions),
   investmentFunds: many(investmentFunds),
   portfolioSourcePreference: one(portfolioSourcePreferences, { fields: [users.id], references: [portfolioSourcePreferences.userId] }),
+  pluggyCredentials: one(userPluggyCredentials, { fields: [users.id], references: [userPluggyCredentials.userId] }),
   pluggyConnections: many(pluggyConnections),
   pluggyAccounts: many(pluggyAccounts),
   pluggyInvestments: many(pluggyInvestments),
@@ -499,6 +513,7 @@ export const tables = {
   pluggyTransactions,
   pluggySyncRuns,
   pluggyWebhookEvents,
+  userPluggyCredentials,
 };
 
 export const nowSql = sql`now()`;

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { getPluggyProjection } from "@/lib/pluggy/projection";
 import { PluggyClient } from "@/lib/pluggy/client";
-import { readPluggyConfig } from "@/lib/pluggy/config";
+import { getUserPluggyConfig, PluggyNotConfiguredError } from "@/lib/pluggy/config";
 import { PluggySyncInProgressError, syncConfiguredPluggyItem } from "@/lib/pluggy/sync";
 import { resolveUserId } from "@/lib/session";
 
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const config = readPluggyConfig();
+    const config = await getUserPluggyConfig(userId, db);
     const summary = await syncConfiguredPluggyItem({
       client: new PluggyClient(config),
       database: db,
@@ -30,6 +30,13 @@ export async function POST(request: Request) {
       freshness: projection.freshness,
     });
   } catch (error) {
+    if (error instanceof PluggyNotConfiguredError) {
+      return NextResponse.json({
+        error: error.message,
+        code: "PLUGGY_NOT_CONFIGURED",
+      }, { status: 400 });
+    }
+
     if (error instanceof PluggySyncInProgressError) {
       return NextResponse.json({
         error: error.message,
