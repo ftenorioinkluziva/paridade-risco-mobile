@@ -1,6 +1,5 @@
 "use client";
 
-import type { LoginInput } from "@paridade-risco/shared";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -8,33 +7,50 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { InputField } from "@/components/InputField";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
-import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
 
-export default function LoginPage() {
-  const { signIn } = useAuth();
+import { authClient } from "@/lib/auth-client";
+
+export default function SignupPage() {
   const router = useRouter();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const input: LoginInput = { email: email.trim(), password };
-  const isValid = input.email.length > 0 && input.password.length > 0;
+  const isValid =
+    name.length > 0 &&
+    email.length > 0 &&
+    password.length >= 8 &&
+    password === confirmPassword;
 
-  async function handleLogin() {
+  async function handleSignup() {
     if (!isValid || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
       setSubmitError(null);
-      await signIn(input);
+
+      const result = await authClient.signUp.email({
+        email,
+        password,
+        name,
+      });
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
       router.push("/");
-    } catch {
+    } catch (error) {
       setSubmitError(
-        "Confira email e senha. Se estiverem corretos, tente novamente em alguns segundos."
+        error instanceof Error
+          ? error.message
+          : "Não foi possível criar a conta. Tente novamente."
       );
     } finally {
       setIsSubmitting(false);
@@ -43,22 +59,32 @@ export default function LoginPage() {
 
   function handleWebSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void handleLogin();
+    void handleSignup();
   }
 
   return (
-    <Screen title="Acesso" subtitle="Entre para ver somente a sua carteira.">
+    <Screen title="Criar Conta" subtitle="Preencha seus dados para começar.">
       <form onSubmit={handleWebSubmit} style={styles.form}>
         <div style={styles.section}>
-          <div style={styles.sectionLabel}>// ACESSO</div>
+          <div style={styles.sectionLabel}>// CADASTRO</div>
 
           {submitError ? (
             <InlineAlert
-              title="Não foi possível entrar"
+              title="Não foi possível criar a conta"
               message={submitError}
               tone="danger"
             />
           ) : null}
+
+          <div style={styles.fieldWrap}>
+            <label style={styles.fieldLabel}>Nome</label>
+            <InputField
+              value={name}
+              onChange={setName}
+              type="text"
+              placeholder="Seu nome completo"
+            />
+          </div>
 
           <div style={styles.fieldWrap}>
             <label style={styles.fieldLabel}>Email</label>
@@ -80,15 +106,24 @@ export default function LoginPage() {
             />
           </div>
 
+          <div style={styles.fieldWrap}>
+            <label style={styles.fieldLabel}>Confirmar Senha</label>
+            <InputField
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              type="password"
+              placeholder="••••••••"
+            />
+          </div>
+
           <PrimaryButton
-            label={isSubmitting ? "Entrando…" : "Entrar"}
-            onPress={handleLogin}
+            label={isSubmitting ? "Criando conta…" : "Criar Conta"}
+            onPress={handleSignup}
             disabled={isSubmitting}
           />
 
           <div style={styles.links}>
-            <a href="/signup" style={styles.link}>Criar conta</a>
-            <a href="/reset-password" style={styles.link}>Esqueci minha senha</a>
+            <a href="/login" style={styles.link}>Já tem conta? Entrar</a>
           </div>
         </div>
       </form>
@@ -130,7 +165,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   links: {
     display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "center",
     marginTop: 8,
   },
   link: {

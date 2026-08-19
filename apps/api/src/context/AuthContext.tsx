@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from "react";
 import type { LoginInput } from "@paridade-risco/shared";
 
+import { authClient, API_BASE } from "@/lib/auth-client";
+
 export type UserProfile = {
   id: string;
   name: string;
@@ -27,23 +29,32 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = "pr_session_token";
-const API_BASE =
-  typeof window !== "undefined"
-    ? window.location.origin
-    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+function mapUser(user: any): UserProfile {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone || null,
+    telegramChatId: user.telegramChatId || null,
+    image: user.image || null,
+    role: (user.role as "ADMIN" | "USER") || "USER",
+    birthDate: user.birthDate || null,
+    activeBasketName: user.selectedBasketName || "Sem cesta ativa",
+  };
+}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers,
+    credentials: "same-origin", // Ensure cookies are forwarded for Better Auth session
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(text || `HTTP ${res.status}`);
   }
-  // Some endpoints (e.g. DELETE) return 200/204 with no body
   const body = await res.text();
   if (!body) return undefined as unknown as T;
   return JSON.parse(body);
@@ -66,7 +77,7 @@ export const api = {
   getBasketDetail: (id: string) => apiFetch<any>(`/api/baskets/${id}`),
   getBasketActive: () => apiFetch<any>("/api/baskets/active"),
   getFunds: () => apiFetch<any[]>("/api/funds"),
-getFundDetail: (id: string) => apiFetch<any>(`/api/funds/${id}`),
+  getFundDetail: (id: string) => apiFetch<any>(`/api/funds/${id}`),
   createFund: (data: any) =>
     apiFetch<any>("/api/funds", { method: "POST", body: JSON.stringify(data) }),
   updateFund: (id: string, data: any) =>
@@ -91,13 +102,22 @@ getFundDetail: (id: string) => apiFetch<any>(`/api/funds/${id}`),
       method: "PATCH",
       body: action ? JSON.stringify({ action }) : undefined,
     }),
-  signIn: (input: LoginInput) =>
-    apiFetch<{ token: string; user: any }>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
-  signOut: () => apiFetch<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
-  getMe: () => apiFetch<any>("/api/auth/me"),
+  signIn: async (input: LoginInput) => {
+    const result = await authClient.signIn.email({
+      email: input.email,
+      password: input.password,
+    });
+    if (result.error) throw new Error(result.error.message);
+    return { token: undefined, user: result.data?.user as any };
+  },
+  signOut: async () => {
+    await authClient.signOut();
+  },
+  getMe: async () => {
+    const result = await authClient.getSession();
+    if (result.error) throw new Error(result.error.message);
+    return result.data?.user;
+  },
   getPluggyProjection: () => apiFetch<any>("/api/integrations/pluggy/projection"),
   syncPluggy: () => apiFetch<any>("/api/integrations/pluggy/sync", { method: "POST" }),
   getPluggyFinancialOverview: (periodDays = 90) => apiFetch<any>(`/api/integrations/pluggy/financial-overview?days=${periodDays}`),
@@ -128,16 +148,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const restoreSession = useCallback(async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
     try {
-      const profile = await api.getMe();
-      setUser({ ...profile, activeBasketName: profile.activeBasketName || "Sem cesta ativa" });
+      const result = await authClient.getSession();
+      if (result.data?.user) {
+        setUser(mapUser(result.data.user));
+      }
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      // Session invalid or expired
     } finally {
       setIsLoading(false);
     }
@@ -151,18 +168,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     async signIn(input) {
       const result = await api.signIn(input);
-      localStorage.setItem(STORAGE_KEY, result.token);
-      setUser({ ...result.user, activeBasketName: "Sem cesta ativa" });
+      if (result.user) {
+        setUser({
+          ...result.user,
+          activeBasketName: "Sem cesta ativa",
+        });
+      }
     },
     async signOut() {
       try { await api.signOut(); } catch { /* ignore */ }
-      localStorage.removeItem(STORAGE_KEY);
       setUser(null);
     },
     async refetchUser() {
       try {
-        const profile = await api.getProfile();
-        setUser(profile);
+        const result = await authClient.getSession();
+        if (result.data?.user) {
+          setUser(mapUser(result.data.user));
+        }
       } catch { /* ignore */ }
     },
   }), [isLoading, user, restoreSession]);

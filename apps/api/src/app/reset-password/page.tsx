@@ -1,40 +1,49 @@
 "use client";
 
-import type { LoginInput } from "@paridade-risco/shared";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { InlineAlert } from "@/components/InlineAlert";
 import { InputField } from "@/components/InputField";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
-import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
 
-export default function LoginPage() {
-  const { signIn } = useAuth();
-  const router = useRouter();
+import { authClient } from "@/lib/auth-client";
 
+export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  const input: LoginInput = { email: email.trim(), password };
-  const isValid = input.email.length > 0 && input.password.length > 0;
+  const isValid = email.length > 0;
 
-  async function handleLogin() {
+  async function handleResetPassword() {
     if (!isValid || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
       setSubmitError(null);
-      await signIn(input);
-      router.push("/");
-    } catch {
+
+      const result = await authClient.$fetch("/forget-password", {
+        method: "POST",
+        body: {
+          email,
+          redirectTo: "/reset-password/confirm",
+        },
+      });
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      setIsSuccess(true);
+    } catch (error) {
       setSubmitError(
-        "Confira email e senha. Se estiverem corretos, tente novamente em alguns segundos."
+        error instanceof Error
+          ? error.message
+          : "Não foi possível enviar o email. Tente novamente."
       );
     } finally {
       setIsSubmitting(false);
@@ -43,18 +52,24 @@ export default function LoginPage() {
 
   function handleWebSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void handleLogin();
+    void handleResetPassword();
   }
 
   return (
-    <Screen title="Acesso" subtitle="Entre para ver somente a sua carteira.">
+    <Screen title="Recuperar Senha" subtitle="Informe seu email para receber o link de recuperação.">
       <form onSubmit={handleWebSubmit} style={styles.form}>
         <div style={styles.section}>
-          <div style={styles.sectionLabel}>// ACESSO</div>
+          <div style={styles.sectionLabel}>// RECUPERAR SENHA</div>
 
-          {submitError ? (
+          {isSuccess ? (
             <InlineAlert
-              title="Não foi possível entrar"
+              title="Email enviado"
+              message="Verifique sua caixa de entrada e clique no link para redefinir sua senha."
+              tone="success"
+            />
+          ) : submitError ? (
+            <InlineAlert
+              title="Erro ao enviar email"
               message={submitError}
               tone="danger"
             />
@@ -70,25 +85,14 @@ export default function LoginPage() {
             />
           </div>
 
-          <div style={styles.fieldWrap}>
-            <label style={styles.fieldLabel}>Senha</label>
-            <InputField
-              value={password}
-              onChange={setPassword}
-              type="password"
-              placeholder="••••••••"
-            />
-          </div>
-
           <PrimaryButton
-            label={isSubmitting ? "Entrando…" : "Entrar"}
-            onPress={handleLogin}
+            label={isSubmitting ? "Enviando…" : "Enviar Link"}
+            onPress={handleResetPassword}
             disabled={isSubmitting}
           />
 
           <div style={styles.links}>
-            <a href="/signup" style={styles.link}>Criar conta</a>
-            <a href="/reset-password" style={styles.link}>Esqueci minha senha</a>
+            <a href="/login" style={styles.link}>Voltar para o login</a>
           </div>
         </div>
       </form>
@@ -130,7 +134,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   links: {
     display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "center",
     marginTop: 8,
   },
   link: {

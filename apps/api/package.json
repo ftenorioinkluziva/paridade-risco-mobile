@@ -37,6 +37,7 @@
     "@paridade-risco/shared": "*",
     "@serwist/next": "^9.5.11",
     "bcryptjs": "^3.0.3",
+    "better-auth": "^1.7.1",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
