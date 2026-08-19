@@ -1,6 +1,4 @@
 import { db, closeDb } from "../db/client";
-import { PluggyClient } from "../lib/pluggy/client";
-import { readPluggyConfig } from "../lib/pluggy/config";
 import { claimNextPluggyWebhookEvent } from "../lib/pluggy/repository";
 import { processClaimedPluggyWebhookEvent } from "../lib/pluggy/webhook-processing";
 
@@ -17,7 +15,6 @@ async function processOne() {
   try {
     const result = await processClaimedPluggyWebhookEvent({
       database: db,
-      client: new PluggyClient(readPluggyConfig()),
       event,
       maxAttempts,
     });
