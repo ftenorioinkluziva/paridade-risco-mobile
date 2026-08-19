@@ -1,4 +1,5 @@
-import type { PluggyClient } from "./client";
+import { PluggyClient } from "./client";
+import { getUserPluggyConfig } from "./config";
 import {
   findConnectionByItemId,
   finishPluggyWebhookEvent,
@@ -35,7 +36,6 @@ function eventError(payload: PluggyWebhookPayload): string | null {
 
 export async function processPluggyWebhookEvent(input: {
   database: PluggyDatabase;
-  client: PluggyClient;
   event: ClaimedPluggyWebhookEvent;
 }) {
   const payload = parsePluggyWebhookPayload(input.event.payload);
@@ -51,11 +51,13 @@ export async function processPluggyWebhookEvent(input: {
   await setPluggyWebhookEventUser(input.database, { id: input.event.id, userId: connection.userId });
 
   if (isPluggySyncWebhook(input.event.event)) {
+    const config = await getUserPluggyConfig(connection.userId, input.database);
     await syncPluggyItem({
-      client: input.client,
+      client: new PluggyClient(config),
       database: input.database,
       userId: connection.userId,
       itemId,
+      config,
     });
     return { status: "SUCCEEDED" as const, reason: "ITEM_RESYNCED" };
   }
@@ -74,7 +76,6 @@ export async function processPluggyWebhookEvent(input: {
 
 export async function processClaimedPluggyWebhookEvent(input: {
   database: PluggyDatabase;
-  client: PluggyClient;
   event: ClaimedPluggyWebhookEvent;
   maxAttempts: number;
 }) {
