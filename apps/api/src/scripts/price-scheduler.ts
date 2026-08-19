@@ -6,7 +6,7 @@ import cron from "node-cron";
 import { getFinancialDataFetcher } from "../lib/financialDataFetcher";
 import { getStrategicEtfTickersForSchedule, isB3FinalCaptureWindow, isB3TradingSession, monthlyCallEstimate, STRATEGIC_ETF_TICKERS } from "../lib/market-data";
 
-const CRON_QUOTES = process.env.PRICE_SCHEDULER_CRON_QUOTES ?? "*/10 10-16 * * 1-5";
+const CRON_QUOTES = process.env.PRICE_SCHEDULER_CRON_QUOTES ?? "*/8 10-16 * * 1-5";
 const CRON_FINAL_CAPTURE = process.env.PRICE_SCHEDULER_CRON_FINAL_CAPTURE ?? "30 17 * * 1-5";
 const TIMEZONE = process.env.PRICE_SCHEDULER_TIMEZONE ?? "America/Sao_Paulo";
 

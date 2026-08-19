@@ -69,8 +69,8 @@ services:
       DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
       NODE_ENV: production
       BRAPI_API_TOKEN: ${BRAPI_API_TOKEN:-}
-      PRICE_SCHEDULER_CRON_QUOTES: "*/10 10-16 * * 1-5"
-      PRICE_SCHEDULER_CRON_FINAL_CAPTURE: "30 17 * * 1-5"
+      PRICE_SCHEDULER_CRON_QUOTES: ${PRICE_SCHEDULER_CRON_QUOTES:-*/8 10-16 * * 1-5}
+      PRICE_SCHEDULER_CRON_FINAL_CAPTURE: ${PRICE_SCHEDULER_CRON_FINAL_CAPTURE:-30 17 * * 1-5}
       PRICE_SCHEDULER_HOLIDAYS: ${PRICE_SCHEDULER_HOLIDAYS:-}
       PRICE_SCHEDULER_TIMEZONE: America/Sao_Paulo
       npm_config_cache: /tmp/npm-cache

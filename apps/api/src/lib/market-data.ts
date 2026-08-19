@@ -1,7 +1,6 @@
 export const STRATEGIC_ETF_TICKERS = [
   "B5P211",
   "BOVA11",
-  "BOVV11",
   "DOLA11",
   "FIXA11",
   "IB5M11",
@@ -13,7 +12,7 @@ export const STRATEGIC_ETF_TICKERS = [
   "XFIX11",
 ] as const;
 
-export const STRATEGIC_EQUITY_ETF_TICKERS = ["BOVA11", "BOVV11", "SMAL11", "SPXI11"] as const;
+export const STRATEGIC_EQUITY_ETF_TICKERS = ["BOVA11", "SMAL11", "SPXI11"] as const;
 export const STRATEGIC_FIXED_INCOME_ETF_TICKERS = STRATEGIC_ETF_TICKERS.filter(
   (ticker) => !STRATEGIC_EQUITY_ETF_TICKERS.includes(ticker as (typeof STRATEGIC_EQUITY_ETF_TICKERS)[number]),
 );
@@ -100,7 +99,7 @@ export function classifyMarketQuoteFreshness(observedAt: Date | null, now = new 
 export function monthlyCallEstimate({
   tickers = STRATEGIC_ETF_TICKERS.length,
   tradingDays = 22,
-  intervalMinutes = 10,
+  intervalMinutes = 8,
 }: { tickers?: number; tradingDays?: number; intervalMinutes?: number } = {}): number {
   const sessionMinutes = 7 * 60;
   const callsPerAsset = Math.ceil(sessionMinutes / intervalMinutes);
