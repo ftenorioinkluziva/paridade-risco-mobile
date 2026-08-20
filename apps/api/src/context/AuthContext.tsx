@@ -140,8 +140,8 @@ export const api = {
   getPluggyRebalancePreview: (cashForOrders?: number) => apiFetch<any>(cashForOrders === undefined
     ? "/api/integrations/pluggy/rebalance/preview"
     : `/api/integrations/pluggy/rebalance/preview?cashForOrders=${encodeURIComponent(cashForOrders)}`),
-  getPluggyMigrationReadiness: () => apiFetch<any>("/api/integrations/pluggy/migration-readiness"),
-  approvePluggyMigration: () => apiFetch<any>("/api/integrations/pluggy/migration", { method: "POST" }),
+  getPluggySourceActivationReadiness: () => apiFetch<any>("/api/integrations/pluggy/source-activation-readiness"),
+  approvePluggySourceActivation: () => apiFetch<any>("/api/integrations/pluggy/source-activation", { method: "POST" }),
   createPluggyMapping: (investmentId: string, assetId: string) =>
     apiFetch<any>("/api/integrations/pluggy/mappings", {
       method: "POST",
@@ -270,8 +270,8 @@ export function usePluggyProjection() {
 export function usePluggyRebalancePreview(cashForOrders?: number) {
   return useAsyncData(() => api.getPluggyRebalancePreview(cashForOrders));
 }
-export function usePluggyMigrationReadiness() {
-  return useAsyncData(() => api.getPluggyMigrationReadiness());
+export function usePluggySourceActivationReadiness() {
+  return useAsyncData(() => api.getPluggySourceActivationReadiness());
 }
 export function usePluggyFinancialOverview(periodDays = 90) {
   return useAsyncData(() => api.getPluggyFinancialOverview(periodDays));

@@ -6,7 +6,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { InlineAlert } from "@/components/InlineAlert";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
-import { api, useAssets, usePluggyMigrationReadiness, usePluggyProjection } from "@/context/AuthContext";
+import { api, useAssets, usePluggySourceActivationReadiness, usePluggyProjection } from "@/context/AuthContext";
 import { formatCurrency, formatDateTime } from "@/lib/formatters";
 import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
@@ -44,12 +44,12 @@ const outsideStrategyReasonLabels = Object.fromEntries(outsideStrategyReasons.ma
 
 export default function PluggyPage() {
   const projection = usePluggyProjection();
-  const readiness = usePluggyMigrationReadiness();
+  const readiness = usePluggySourceActivationReadiness();
   const assets = useAssets();
   const [selectedAssets, setSelectedAssets] = useState<Record<string, string>>({});
   const [selectedOutsideReasons, setSelectedOutsideReasons] = useState<Record<string, string>>({});
   const [busyInvestmentId, setBusyInvestmentId] = useState<string | null>(null);
-  const [migrationBusy, setMigrationBusy] = useState(false);
+  const [sourceActivationBusy, setSourceActivationBusy] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -108,16 +108,16 @@ export default function PluggyPage() {
     }
   }
 
-  async function approveMigration() {
-    setMigrationBusy(true);
+  async function approveSourceActivation() {
+    setSourceActivationBusy(true);
     setActionError(null);
     try {
-      await api.approvePluggyMigration();
+      await api.approvePluggySourceActivation();
       await readiness.refetch();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Não foi possível aprovar a fonte Pluggy");
     } finally {
-      setMigrationBusy(false);
+      setSourceActivationBusy(false);
     }
   }
 
@@ -190,27 +190,27 @@ export default function PluggyPage() {
         ) : null}
 
         {readiness.data ? (
-          <div style={{ ...styles.gate, borderColor: readiness.data.canSwitchToPluggy ? colors.success : colors.warning }}>
+          <div style={{ ...styles.gate, borderColor: readiness.data.canActivatePluggy ? colors.success : colors.warning }}>
             <div style={styles.gateHeader}>
               <div>
                 <div style={styles.sectionLabel}>// GATE_ATIVACAO_FONTE</div>
                 <div style={styles.gateTitle}>
                   {readiness.data.currentMode === "PLUGGY"
                     ? "Fonte Pluggy ativa"
-                    : readiness.data.canSwitchToPluggy ? "Pronto para revisão final" : "Ativação bloqueada"}
+                    : readiness.data.canActivatePluggy ? "Pronto para revisão final" : "Ativação bloqueada"}
                 </div>
               </div>
-              <span style={{ ...styles.status, color: readiness.data.canSwitchToPluggy ? colors.success : colors.warning }}>
+              <span style={{ ...styles.status, color: readiness.data.canActivatePluggy ? colors.success : colors.warning }}>
                 {readiness.data.currentMode} → {readiness.data.candidateMode}
               </span>
             </div>
             <div style={styles.gateText}>{readiness.data.nextAction}</div>
-            {readiness.data.canSwitchToPluggy && readiness.data.currentMode === "MANUAL" ? (
-              <div style={styles.migrationAction}>
+            {readiness.data.canActivatePluggy && readiness.data.currentMode === "MANUAL" ? (
+              <div style={styles.sourceActivationAction}>
                 <PrimaryButton
-                  label={migrationBusy ? "Aprovando fonte..." : "Aprovar fonte Pluggy"}
-                  disabled={migrationBusy}
-                  onPress={approveMigration}
+                  label={sourceActivationBusy ? "Aprovando fonte..." : "Aprovar fonte Pluggy"}
+                  disabled={sourceActivationBusy}
+                  onPress={approveSourceActivation}
                 />
                 <span style={styles.muted}>A aprovação muda apenas a fonte de leitura da carteira.</span>
               </div>
@@ -324,7 +324,7 @@ const styles: Record<string, React.CSSProperties> = {
   gateHeader: { display: "flex", justifyContent: "space-between", gap: layout.space.md, alignItems: "flex-start" },
   gateTitle: { color: colors.text, fontSize: 18, fontWeight: 700, marginTop: 4 },
   gateText: { color: colors.textMuted, fontSize: 13, lineHeight: "18px" },
-  migrationAction: { display: "flex", gap: layout.space.sm, alignItems: "center", flexWrap: "wrap" },
+  sourceActivationAction: { display: "flex", gap: layout.space.sm, alignItems: "center", flexWrap: "wrap" },
   metrics: { display: "flex", gap: layout.space.md, flexWrap: "wrap", color: colors.textSoft, fontFamily: typography.mono, fontSize: 11 },
   blockers: { display: "flex", flexDirection: "column", gap: 4, color: colors.warning, fontSize: 12, lineHeight: "18px" },
   warnings: { display: "flex", flexDirection: "column", gap: 4, color: colors.primary, fontSize: 12, lineHeight: "18px" },

@@ -1,14 +1,9 @@
-import { NextResponse } from "next/server";
-
-import { getPluggyMigrationReadiness } from "@/lib/pluggy/migration";
-import { resolveUserId } from "@/lib/session";
+import { GET as getSourceActivationReadiness } from "../source-activation-readiness/route";
 
 export async function GET(request: Request) {
-  const userId = await resolveUserId(request);
-
-  if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 401 });
-  }
-
-  return NextResponse.json(await getPluggyMigrationReadiness(userId));
+  const response = await getSourceActivationReadiness(request);
+  response.headers.set("Deprecation", "true");
+  response.headers.set("Sunset", "Sun, 01 Nov 2026 00:00:00 GMT");
+  response.headers.set("Link", '</api/integrations/pluggy/source-activation-readiness>; rel="successor-version"');
+  return response;
 }

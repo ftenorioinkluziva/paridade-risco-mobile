@@ -1,21 +1,9 @@
-import { NextResponse } from "next/server";
-
-import { approvePluggySource, PluggyMigrationBlockedError } from "@/lib/pluggy/migration";
-import { resolveUserId } from "@/lib/session";
+import { POST as postSourceActivation } from "../source-activation/route";
 
 export async function POST(request: Request) {
-  const userId = await resolveUserId(request);
-
-  if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 401 });
-  }
-
-  try {
-    return NextResponse.json(await approvePluggySource(userId));
-  } catch (error) {
-    if (error instanceof PluggyMigrationBlockedError) {
-      return NextResponse.json({ error: error.message, readiness: error.readiness }, { status: 409 });
-    }
-    throw error;
-  }
+  const response = await postSourceActivation(request);
+  response.headers.set("Deprecation", "true");
+  response.headers.set("Sunset", "Sun, 01 Nov 2026 00:00:00 GMT");
+  response.headers.set("Link", '</api/integrations/pluggy/source-activation>; rel="successor-version"');
+  return response;
 }

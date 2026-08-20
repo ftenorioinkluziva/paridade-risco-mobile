@@ -1,0 +1,40 @@
+schema: 1
+story: '5.6'
+story_title: 'Renomear migração Pluggy para ativação de fonte'
+gate: PASS
+status_reason: 'Domínio, frontend, observabilidade e contratos usam source activation; aliases externos têm sunset explícito e equivalência comprovada no Docker E2E.'
+reviewer: 'Aria (Architect)'
+reviewed_revision: '4f77d11'
+updated: '2026-08-20T17:54:43-03:00'
+
+top_issues: []
+waiver: { active: false }
+quality_score: 98
+expires: '2026-09-03T18:05:00-03:00'
+
+evidence:
+  tests_reviewed: { count: 124 }
+  risks_identified: { count: 2 }
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Mudança não amplia autorização; rotas canônicas e aliases reutilizam a mesma resolução de identidade.'
+  performance:
+    status: PASS
+    notes: 'Aliases delegam ao mesmo handler e não duplicam consultas dentro de uma requisição.'
+  reliability:
+    status: PASS
+    notes: 'Contratos e E2E comprovam equivalência e headers de retirada antes do sunset.'
+  maintainability:
+    status: PASS
+    notes: 'Validador automatizado impede regressão terminológica e a allowlist separa história de domínio ativo.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Medir consumidores dos aliases e removê-los em story explícita após 2026-11-01.'
+      refs: ['docs/pluggy-source-activation-naming.md']
