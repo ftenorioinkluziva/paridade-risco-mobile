@@ -10,7 +10,7 @@ export async function GET(request: Request, context: { params: Promise<{ fundId:
   const userId = await resolveUserId(request);
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { fundId } = await context.params;
@@ -53,7 +53,7 @@ export async function PUT(request: Request, context: { params: Promise<{ fundId:
   const userId = await resolveUserId(request);
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
@@ -103,7 +103,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ fund
   const userId = await resolveUserId(request);
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { fundId } = await context.params;

@@ -42,7 +42,7 @@ test("blocks migration while dual-read is divergent or positions are unmapped", 
   assert.ok(result.blockers.some((blocker) => blocker.includes("sem mapeamento")));
 });
 
-test("allows a reviewed switch only when both sources reconcile", () => {
+test("allows a reviewed activation only when both populated sources reconcile", () => {
   const position = { providerPositionId: "p1", assetId: "a1", ticker: "BOVA11", name: "BOVA11", type: "OUTRO" as const, quantity: 1, currentValue: 80, costBasis: 80, observedAt: null };
   const result = buildMigrationReadiness({
     manual: snapshot({ positions: [position] }),
@@ -53,7 +53,34 @@ test("allows a reviewed switch only when both sources reconcile", () => {
   assert.equal(result.status, "READY");
   assert.equal(result.canSwitchToPluggy, true);
   assert.equal(result.manualCrud.transactions, "ACTIVE");
-  assert.match(result.nextAction, /aprovar explicitamente/);
+  assert.match(result.nextAction, /ativação/);
+});
+
+test("blocks activation for a new account while Pluggy has no mapped positions", () => {
+  const result = buildMigrationReadiness({
+    manual: snapshot({ totalValue: 0, investedValue: 0, cashBalance: 0 }),
+    pluggy: snapshot({ source: "PLUGGY", totalValue: 0, investedValue: 0, cashBalance: 0 }),
+    comparison: comparison("ALINHADO"),
+  });
+
+  assert.equal(result.status, "BLOCKED");
+  assert.equal(result.canSwitchToPluggy, false);
+  assert.equal(result.reconciliation.considered, false);
+  assert.equal(result.reconciliation.baseline, "PLUGGY_ONLY_NEW_ACCOUNT");
+  assert.ok(result.blockers.some((blocker) => blocker.includes("não possui posições")));
+});
+
+test("allows activation for a new account after Pluggy positions are mapped", () => {
+  const position = { providerPositionId: "p1", assetId: "a1", ticker: "BOVA11", name: "BOVA11", type: "OUTRO" as const, quantity: 1, currentValue: 80, costBasis: 80, observedAt: null };
+  const result = buildMigrationReadiness({
+    manual: snapshot({ totalValue: 0, investedValue: 0, cashBalance: 0 }),
+    pluggy: snapshot({ source: "PLUGGY", positions: [position] }),
+    comparison: comparison("DIVERGENTE"),
+  });
+
+  assert.equal(result.status, "READY");
+  assert.equal(result.canSwitchToPluggy, true);
+  assert.equal(result.reconciliation.baseline, "PLUGGY_ONLY_NEW_ACCOUNT");
 });
 
 test("does not block a reconciled switch for investments explicitly outside the strategy", () => {
@@ -98,7 +125,7 @@ test("ignores the fictional manual baseline only when sandbox policy is explicit
   assert.equal(result.blockers.length, 0);
 });
 
-test("reports Pluggy as the active source after an approved switch", () => {
+test("reports an active Pluggy source without hiding missing mapped positions", () => {
   const result = buildMigrationReadiness({
     manual: snapshot({}),
     pluggy: snapshot({ source: "PLUGGY", positions: [] }),
@@ -108,5 +135,6 @@ test("reports Pluggy as the active source after an approved switch", () => {
   });
 
   assert.equal(result.currentMode, "PLUGGY");
+  assert.equal(result.status, "BLOCKED");
   assert.match(result.nextAction, /Fonte Pluggy ativa/);
 });

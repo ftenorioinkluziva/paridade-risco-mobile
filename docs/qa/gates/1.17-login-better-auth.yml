@@ -2,10 +2,10 @@ schema: 1
 story: '1.17'
 story_title: 'Login com Better Auth'
 gate: PASS
-status_reason: 'All issues resolved. Coexistence architecture complete. Code maintainability improved. Implementation is production-ready.'
+status_reason: 'Audit P0-P2 and clean Docker deploy build passed; runtime image contains no build placeholder and the release is ready.'
 reviewer: 'Quinn (Test Architect)'
-reviewed_revision: 'working-tree'
-updated: '2026-08-19T11:30:00.000Z'
+reviewed_revision: '428fc3c'
+updated: '2026-08-20T00:00:00.000Z'
 
 top_issues: []
 
@@ -15,30 +15,29 @@ quality_score: 100
 expires: '2026-09-02T11:30:00.000Z'
 
 evidence:
-  tests_reviewed: { count: 1 }
+  tests_reviewed: { count: 99 }
   risks_identified: { count: 0 }
   trace:
-    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    ac_covered: [1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12]
     ac_gaps: []
+    ac_superseded: [6]
 
 nfr_validation:
   security:
     status: PASS
-    notes: 'All CRITICAL security issues resolved. Coexistence architecture complete.'
+    notes: 'Fail-closed secret, server-side session validation, no profile role escalation and scoped revocable MCP keys validated.'
   performance:
     status: PASS
     notes: 'No performance issues identified.'
   reliability:
     status: PASS
-    notes: 'Web PWA can now call API routes with Better Auth cookies. Legacy session resolution preserved.'
+    notes: 'Web PWA uses Better Auth cookies; MCP uses dedicated scoped keys; greenfield flow no longer depends on user migration.'
   maintainability:
     status: PASS
-    notes: 'authClient unified. mapUser helper extracted. setTimeout replaced with useEffect cleanup.'
+    notes: 'Auth helpers are isolated and tested; the Docker builder supplies a non-persistent build-only placeholder while runtime remains fail-closed.'
 
 recommendations:
   immediate: []
   future:
-    - action: 'Configure additionalFields for proper typing of custom user fields'
-      refs: ['apps/api/src/lib/auth.ts']
-    - action: 'Add integration tests for auth flow'
-      refs: ['apps/api/src/lib/auth.test.ts']
+    - action: 'Upgrade the drizzle-kit toolchain when a compatible version removes the four moderate esbuild advisories'
+      refs: ['apps/api/package.json', 'package-lock.json']

@@ -137,11 +137,11 @@ export default function PluggyPage() {
     <AuthGuard>
       <Screen
         title="Pluggy"
-        subtitle="Revise os investimentos observados antes de liberar a migração da carteira."
+        subtitle="Revise os investimentos observados antes de ativar a fonte Pluggy."
       >
         {actionError ? <InlineAlert title="Ação não concluída" message={actionError} tone="danger" /> : null}
         {projection.error ? <InlineAlert title="Erro na projeção Pluggy" message={projection.error} tone="danger" /> : null}
-        {readiness.error ? <InlineAlert title="Erro no gate de migração" message={readiness.error} tone="danger" /> : null}
+        {readiness.error ? <InlineAlert title="Erro no gate de ativação" message={readiness.error} tone="danger" /> : null}
 
         {connectionIssues.length > 0 ? (
           <div style={styles.connectionAlert}>
@@ -193,11 +193,11 @@ export default function PluggyPage() {
           <div style={{ ...styles.gate, borderColor: readiness.data.canSwitchToPluggy ? colors.success : colors.warning }}>
             <div style={styles.gateHeader}>
               <div>
-                <div style={styles.sectionLabel}>// GATE_MIGRACAO</div>
+                <div style={styles.sectionLabel}>// GATE_ATIVACAO_FONTE</div>
                 <div style={styles.gateTitle}>
                   {readiness.data.currentMode === "PLUGGY"
                     ? "Fonte Pluggy ativa"
-                    : readiness.data.canSwitchToPluggy ? "Pronto para revisão final" : "Migração bloqueada"}
+                    : readiness.data.canSwitchToPluggy ? "Pronto para revisão final" : "Ativação bloqueada"}
                 </div>
               </div>
               <span style={{ ...styles.status, color: readiness.data.canSwitchToPluggy ? colors.success : colors.warning }}>

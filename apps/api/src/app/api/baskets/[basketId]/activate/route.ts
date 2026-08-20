@@ -14,7 +14,7 @@ export async function PATCH(request: Request, context: Params) {
   const { basketId } = await context.params;
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let action = "activate";

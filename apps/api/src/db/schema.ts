@@ -97,6 +97,35 @@ export const verifications = pgTable("verifications", {
   identifierIdx: index("verifications_identifier_idx").on(table.identifier),
 }));
 
+export const apikeys = pgTable("apikey", {
+  id: text("id").primaryKey(),
+  configId: text("config_id").notNull().default("default"),
+  name: text("name"),
+  start: text("start"),
+  referenceId: text("reference_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  prefix: text("prefix"),
+  key: text("key").notNull(),
+  refillInterval: integer("refill_interval"),
+  refillAmount: integer("refill_amount"),
+  lastRefillAt: timestamp("last_refill_at", { withTimezone: true }),
+  enabled: boolean("enabled").default(true),
+  rateLimitEnabled: boolean("rate_limit_enabled").default(true),
+  rateLimitTimeWindow: integer("rate_limit_time_window").default(86_400_000),
+  rateLimitMax: integer("rate_limit_max").default(10),
+  requestCount: integer("request_count").default(0),
+  remaining: integer("remaining"),
+  lastRequest: timestamp("last_request", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdateFn(() => new Date()),
+  permissions: text("permissions"),
+  metadata: text("metadata"),
+}, (table) => ({
+  configIdx: index("apikey_config_id_idx").on(table.configId),
+  keyIdx: uniqueIndex("apikey_key_idx").on(table.key),
+  referenceIdx: index("apikey_reference_id_idx").on(table.referenceId),
+}));
+
 export const assets = pgTable("assets", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()::text`),
   ticker: text("ticker").notNull(),

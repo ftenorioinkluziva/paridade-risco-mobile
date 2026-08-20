@@ -36,7 +36,7 @@ export default function PerfilPage() {
 }
 
 function PerfilContent() {
-  const { user, sessionToken, signOut, refetchUser } = useAuth();
+  const { user, signOut, refetchUser } = useAuth();
   const router = useRouter();
 
   // Dados Pessoais
@@ -48,22 +48,26 @@ function PerfilContent() {
   const [editing, setEditing] = useState(false);
 
   // MCP Token
-  const [showMcpToken, setShowMcpToken] = useState(false);
   const [mcpCopied, setMcpCopied] = useState(false);
-  const [mcpToken, setMcpToken] = useState<string | null>(sessionToken);
+  const [mcpToken, setMcpToken] = useState<string | null>(null);
+  const [mcpKeys, setMcpKeys] = useState<Array<{ id: string; start?: string | null; expiresAt?: Date | string | null }>>([]);
+  const [mcpBusy, setMcpBusy] = useState(false);
+  const [mcpError, setMcpError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (sessionToken) {
-      setMcpToken(sessionToken);
-    } else {
-      authClient.getSession().then((res) => {
-        const token = (res.data as any)?.session?.token ?? (res.data as any)?.token;
-        if (token) {
-          setMcpToken(token);
-        }
-      }).catch(() => {});
+    async function loadMcpKeys() {
+      const result = await authClient.apiKey.list({
+        query: { configId: "mcp", limit: 20 },
+      });
+      if (result.error) {
+        setMcpError(result.error.message ?? "Não foi possível consultar os tokens MCP");
+        return;
+      }
+      setMcpKeys((result.data?.apiKeys ?? []) as typeof mcpKeys);
     }
-  }, [sessionToken]);
+
+    void loadMcpKeys();
+  }, []);
 
   // Pluggy Integration
   const [pluggyClientId, setPluggyClientId] = useState("");
@@ -71,7 +75,6 @@ function PerfilContent() {
   const [pluggyItemId, setPluggyItemId] = useState("");
   const [pluggySecretMasked, setPluggySecretMasked] = useState<string | null>(null);
   const [isPluggyConfigured, setIsPluggyConfigured] = useState(false);
-  const [pluggyUpdatedAt, setPluggyUpdatedAt] = useState<string | null>(null);
   const [pluggyMessage, setPluggyMessage] = useState<{ text: string; tone: "success" | "warning" | "danger" } | null>(null);
   const [testingPluggy, setTestingPluggy] = useState(false);
   const [savingPluggy, setSavingPluggy] = useState(false);
@@ -85,14 +88,48 @@ function PerfilContent() {
     }).catch(() => {});
   }
 
+  async function generateMcpToken() {
+    setMcpBusy(true);
+    setMcpError(null);
+    try {
+      const result = await authClient.apiKey.create({
+        configId: "mcp",
+        name: "MCP principal",
+      });
+      if (result.error || !result.data?.key) {
+        throw new Error(result.error?.message ?? "Não foi possível gerar o token MCP");
+      }
+
+      const previousKeys = mcpKeys;
+      setMcpToken(result.data.key);
+      setMcpKeys([result.data, ...previousKeys] as typeof mcpKeys);
+      await Promise.all(previousKeys.map((key) => authClient.apiKey.delete({ configId: "mcp", keyId: key.id })));
+      setMcpKeys([result.data] as typeof mcpKeys);
+    } catch (error) {
+      setMcpError(error instanceof Error ? error.message : "Não foi possível gerar o token MCP");
+    } finally {
+      setMcpBusy(false);
+    }
+  }
+
+  async function revokeMcpTokens() {
+    setMcpBusy(true);
+    setMcpError(null);
+    try {
+      await Promise.all(mcpKeys.map((key) => authClient.apiKey.delete({ configId: "mcp", keyId: key.id })));
+      setMcpKeys([]);
+      setMcpToken(null);
+    } catch (error) {
+      setMcpError(error instanceof Error ? error.message : "Não foi possível revogar o token MCP");
+    } finally {
+      setMcpBusy(false);
+    }
+  }
+
   useEffect(() => {
     async function loadPluggyProfile() {
       try {
-        const headers: Record<string, string> = {};
-        if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
-
         const res = await fetch("/api/profile/pluggy", {
-          headers,
           credentials: "same-origin",
         });
         if (res.ok) {
@@ -102,7 +139,6 @@ function PerfilContent() {
             setPluggyClientId(data.clientId ?? "");
             setPluggyItemId(data.itemId ?? "");
             setPluggySecretMasked(data.secretMasked ?? null);
-            setPluggyUpdatedAt(data.updatedAt ?? null);
           }
         }
       } catch {
@@ -111,7 +147,7 @@ function PerfilContent() {
     }
 
     void loadPluggyProfile();
-  }, [mcpToken]);
+  }, []);
 
   function enterEditMode() {
     setEditPhone(user?.phone ?? "");
@@ -130,12 +166,9 @@ function PerfilContent() {
     setEditing(true);
     setEditError(null);
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
-
       const res = await fetch("/api/profile", {
         method: "PUT",
-        headers,
+        headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
           phone: editPhone.trim() || null,
@@ -148,7 +181,7 @@ function PerfilContent() {
         throw new Error(err?.error?.message ?? `Erro ${res.status}`);
       }
       setEditMode(false);
-      refetchUser();
+      await refetchUser();
     } catch (err: any) {
       setEditError(err.message ?? "Erro ao salvar. Tente novamente.");
     } finally {
@@ -160,12 +193,9 @@ function PerfilContent() {
     setTestingPluggy(true);
     setPluggyMessage(null);
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
-
       const res = await fetch("/api/profile/pluggy/test", {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
           clientId: pluggyClientId.trim(),
@@ -195,12 +225,9 @@ function PerfilContent() {
     setSavingPluggy(true);
     setPluggyMessage(null);
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
-
       const res = await fetch("/api/profile/pluggy", {
         method: "PUT",
-        headers,
+        headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
           clientId: pluggyClientId.trim(),
@@ -215,7 +242,6 @@ function PerfilContent() {
       setIsPluggyConfigured(true);
       setPluggySecretMasked(data.secretMasked ?? null);
       setPluggyClientSecret("");
-      setPluggyUpdatedAt(data.updatedAt);
       setPluggyMessage({
         text: "Credenciais da Pluggy salvas com sucesso no seu perfil!",
         tone: "success",
@@ -234,12 +260,9 @@ function PerfilContent() {
     setSyncingPluggy(true);
     setPluggyMessage(null);
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
-
       const res = await fetch("/api/integrations/pluggy/sync", {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
       });
       const data = await res.json();
@@ -264,12 +287,8 @@ function PerfilContent() {
     if (!confirm("Tem certeza que deseja remover suas credenciais da Pluggy?")) return;
     setPluggyMessage(null);
     try {
-      const headers: Record<string, string> = {};
-      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
-
       const res = await fetch("/api/profile/pluggy", {
         method: "DELETE",
-        headers,
         credentials: "same-origin",
       });
       if (res.ok) {
@@ -278,7 +297,6 @@ function PerfilContent() {
         setPluggyClientSecret("");
         setPluggyItemId("");
         setPluggySecretMasked(null);
-        setPluggyUpdatedAt(null);
         setPluggyMessage({
           text: "Credenciais da Pluggy removidas com sucesso.",
           tone: "warning",
@@ -460,8 +478,7 @@ function PerfilContent() {
       <div style={{ ...styles.section, marginTop: layout.space.xl }}>
         <div style={styles.sectionLabel}>// MCP_TOKEN</div>
         <p style={{ color: colors.textMuted, fontFamily: typography.mono, fontSize: 12, margin: 0, lineHeight: 1.5 }}>
-          Use este token para configurar o MCP no Claude Code, Cursor
-          ou outros assistentes com suporte a MCP.
+          Credencial exclusiva do MCP, com permissões limitadas, expiração em 90 dias e revogação independente da sua sessão.
         </p>
         {mcpToken ? (
           <>
@@ -470,30 +487,38 @@ function PerfilContent() {
                 backgroundColor: colors.background,
                 borderColor: colors.border, borderWidth: 1, borderStyle: "solid",
                 borderRadius: 4, padding: "10px 12px", fontFamily: typography.mono, fontSize: 12,
-                color: colors.text, wordBreak: "break-all", cursor: "pointer",
-                maxHeight: showMcpToken ? "none" : 40, overflow: "hidden",
+                color: colors.text, wordBreak: "break-all",
               }}
-              onClick={() => setShowMcpToken(!showMcpToken)}
-              title="Clique para mostrar/ocultar"
             >
-              {showMcpToken ? mcpToken : mcpToken.slice(0, 20) + "..."}
+              {mcpToken}
             </div>
+            <InlineAlert title="Token exibido uma única vez" tone="warning" message="Copie agora: o valor completo não será exibido novamente após sair desta página." />
             <div style={{ display: "flex", gap: layout.space.sm }}>
               <PrimaryButton
                 label={mcpCopied ? "Copiado!" : "Copiar token"}
                 onPress={copyMcpToken}
                 tone="neutral"
               />
+              <PrimaryButton label="Revogar" onPress={revokeMcpTokens} tone="danger" disabled={mcpBusy} />
+            </div>
+          </>
+        ) : mcpKeys.length > 0 ? (
+          <>
+            <p style={{ color: colors.text, fontFamily: typography.mono, fontSize: 12, margin: 0 }}>
+              Token ativo: {mcpKeys[0]?.start ?? "pr_mcp_..."} · expira em {mcpKeys[0]?.expiresAt ? new Date(mcpKeys[0].expiresAt).toLocaleDateString("pt-BR") : "data não informada"}
+            </p>
+            <div style={{ display: "flex", gap: layout.space.sm, flexWrap: "wrap" }}>
+              <PrimaryButton label={mcpBusy ? "Gerando..." : "Gerar novo token"} onPress={generateMcpToken} disabled={mcpBusy} />
+              <PrimaryButton label="Revogar" onPress={revokeMcpTokens} tone="danger" disabled={mcpBusy} />
             </div>
           </>
         ) : (
-          <p style={{ color: colors.textMuted, fontFamily: typography.mono, fontSize: 12, margin: 0 }}>
-            Token não encontrado. Faça login novamente.
-          </p>
+          <PrimaryButton label={mcpBusy ? "Gerando..." : "Gerar token MCP"} onPress={generateMcpToken} disabled={mcpBusy} />
         )}
+        {mcpError ? <InlineAlert title="Erro no token MCP" tone="danger" message={mcpError} /> : null}
       </div>
 
-      {user.role === "ADMIN" ? (
+      {user.role === "admin" ? (
         <section style={{ ...styles.section, marginTop: layout.space.xl }}>
           <div style={styles.sectionLabel}>// ACESSO_ADMINISTRATIVO</div>
           <p style={styles.adminDescription}>

@@ -26,5 +26,22 @@
     "dev:mcp": "node packages/local-mcp/src/index.mjs",
     "dev:remote-mcp": "node apps/remote-mcp/src/index.mjs"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "overrides": {
+    "@modelcontextprotocol/sdk": {
+      "@hono/node-server": "1.19.17"
+    },
+    "ajv": {
+      "fast-uri": "3.1.5"
+    },
+    "express-rate-limit": {
+      "ip-address": "10.5.0"
+    },
+    "glob": {
+      "brace-expansion": "5.0.9"
+    },
+    "tsx": {
+      "esbuild": "0.28.2"
+    }
+  }
 }

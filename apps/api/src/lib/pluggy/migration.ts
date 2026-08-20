@@ -21,7 +21,7 @@ export class PluggyMigrationBlockedError extends Error {
   readonly readiness: Awaited<ReturnType<typeof getPluggyMigrationReadiness>>;
 
   constructor(readiness: Awaited<ReturnType<typeof getPluggyMigrationReadiness>>) {
-    super("A migração Pluggy está bloqueada pelo gate de prontidão");
+    super("A ativação da fonte Pluggy está bloqueada pelo gate de prontidão");
     this.name = "PluggyMigrationBlockedError";
     this.readiness = readiness;
   }

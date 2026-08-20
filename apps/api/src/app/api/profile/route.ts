@@ -1,18 +1,11 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { resolveUserId } from "@/lib/session";
-
-const updateProfileSchema = z.object({
-  birthDate: z.string().datetime().optional().nullable(),
-  image: z.string().url().optional().nullable(),
-  phone: z.string().max(40).optional().nullable(),
-  telegramChatId: z.string().max(100).optional().nullable(),
-  role: z.enum(["ADMIN", "USER"]).optional(),
-});
+import { updateProfileSchema } from "@/lib/profile-input";
+import { isAdminRole, normalizeRole } from "@/lib/user-role";
 
 export async function GET(request: Request) {
   const userId = await resolveUserId(request);
@@ -43,7 +36,7 @@ export async function GET(request: Request) {
     phone: user.phone,
     telegramChatId: user.telegramChatId ?? null,
     image: user.image,
-    role: user.role,
+    role: normalizeRole(user.role),
     birthDate: user.birthDate?.toISOString() ?? null,
     initials: user.name
       .split(" ")
@@ -51,7 +44,7 @@ export async function GET(request: Request) {
       .slice(0, 2)
         .map((part: string) => part[0]?.toUpperCase() ?? "")
       .join(""),
-    roleLabel: user.role === "ADMIN" ? "Administrador" : "Investidor",
+    roleLabel: isAdminRole(user.role) ? "Administrador" : "Investidor",
     activeBasketName: user.selectedBasket?.name ?? "Sem cesta ativa",
   });
 }
@@ -60,7 +53,7 @@ export async function PUT(request: Request) {
   const userId = await resolveUserId(request);
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
@@ -77,7 +70,6 @@ export async function PUT(request: Request) {
       image: parsed.data.image ?? null,
       phone: parsed.data.phone ?? null,
       telegramChatId: parsed.data.telegramChatId ?? null,
-      role: parsed.data.role,
     })
     .where(eq(users.id, userId))
     .returning({
@@ -86,7 +78,6 @@ export async function PUT(request: Request) {
       image: users.image,
       phone: users.phone,
       telegramChatId: users.telegramChatId,
-      role: users.role,
     });
 
   return NextResponse.json({
@@ -95,6 +86,5 @@ export async function PUT(request: Request) {
     image: updatedUser.image,
     phone: updatedUser.phone,
     telegramChatId: updatedUser.telegramChatId ?? null,
-    role: updatedUser.role,
   });
 }

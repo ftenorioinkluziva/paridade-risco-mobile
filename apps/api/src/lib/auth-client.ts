@@ -1,4 +1,5 @@
 import { createAuthClient } from "better-auth/client";
+import { apiKeyClient } from "@better-auth/api-key/client";
 
 export const API_BASE =
   typeof window !== "undefined"
@@ -7,4 +8,5 @@ export const API_BASE =
 
 export const authClient = createAuthClient({
   baseURL: API_BASE,
+  plugins: [apiKeyClient()],
 });

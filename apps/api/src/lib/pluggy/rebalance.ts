@@ -19,7 +19,7 @@ export async function getPluggyRebalancePreview(userId: string, input: { cashFor
   const eligibility = getRebalanceEligibility({
     birthDate: profile?.birthDate ?? null,
     phone: profile?.phone ?? null,
-    role: profile?.role ?? "USER",
+    role: profile?.role ?? "user",
   });
 
   return buildPluggyRebalancePreview({
