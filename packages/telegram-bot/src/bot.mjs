@@ -14,6 +14,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { chatReference, signedTelegramHeaders } from "./auth.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -38,6 +39,11 @@ if (existsSync(ENV_PATH)) {
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (!BOT_TOKEN) {
   console.error("TELEGRAM_BOT_TOKEN is required");
+  process.exit(1);
+}
+const TELEGRAM_S2S_SECRET = process.env.TELEGRAM_S2S_SECRET;
+if (!TELEGRAM_S2S_SECRET || TELEGRAM_S2S_SECRET.length < 32) {
+  console.error("TELEGRAM_S2S_SECRET must contain at least 32 characters");
   process.exit(1);
 }
 
@@ -85,9 +91,11 @@ async function tgSendMessage(chatId, text, parseMode = "Markdown") {
 
 // ─── API Client ──────────────────────────────────────────────────────────────
 
-async function apiCall(path, token) {
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+async function apiCall(path, chatId) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...signedTelegramHeaders({ path, chatId, secret: TELEGRAM_S2S_SECRET }),
+  };
   try {
     const res = await fetch(`${API_URL}${path}`, { headers });
     if (res.status === 401) return { error: "unauthorized" };
@@ -99,12 +107,11 @@ async function apiCall(path, token) {
   }
 }
 
-// ─── Token Resolution ────────────────────────────────────────────────────────
+// ─── Identity Resolution ─────────────────────────────────────────────────────
 
-async function resolveToken(chatId) {
-  const { data } = await apiCall(`/api/auth/token-by-telegram?chat_id=${chatId}`, null);
-  if (!data || !data.token) return null;
-  return data;
+async function resolveUser(chatId) {
+  const { data } = await apiCall("/api/profile", chatId);
+  return data ? { ...data, authChatId: String(chatId) } : null;
 }
 
 // ─── Formatting ──────────────────────────────────────────────────────────────
@@ -164,14 +171,14 @@ function analyzeTrend(values) {
 // ─── Command Handlers ────────────────────────────────────────────────────────
 
 async function handleCarteira(chatId, user) {
-  const { token, name } = user;
+  const { authChatId, name } = user;
 
   // Fetch all data in parallel
   const [portfolio, prices, rebalance, basket] = await Promise.all([
-    apiCall("/api/portfolio/summary", token),
-    apiCall("/api/assets/prices", token),
-    apiCall("/api/rebalance/preview", token),
-    apiCall("/api/baskets/active", token),
+    apiCall("/api/portfolio/summary", authChatId),
+    apiCall("/api/assets/prices", authChatId),
+    apiCall("/api/rebalance/preview", authChatId),
+    apiCall("/api/baskets/active", authChatId),
   ]);
 
   // Check errors
@@ -243,11 +250,11 @@ async function handleCarteira(chatId, user) {
 }
 
 async function handleRebalance(chatId, user) {
-  const { token, name } = user;
+  const { authChatId, name } = user;
 
   const [rebalance, portfolio] = await Promise.all([
-    apiCall("/api/rebalance/preview", token),
-    apiCall("/api/portfolio/summary", token),
+    apiCall("/api/rebalance/preview", authChatId),
+    apiCall("/api/portfolio/summary", authChatId),
   ]);
 
   if (rebalance.error || !rebalance.data) {
@@ -380,8 +387,8 @@ async function handleAjuda(chatId, user) {
 }
 
 async function handleTransacoes(chatId, user) {
-  const { token, name } = user;
-  const { data } = await apiCall("/api/transactions", token);
+  const { authChatId, name } = user;
+  const { data } = await apiCall("/api/transactions", authChatId);
   if (!data || !data.length) {
     return `${name}, nenhuma transação encontrada.`;
   }
@@ -400,8 +407,8 @@ async function handleTransacoes(chatId, user) {
 }
 
 async function handleFundos(chatId, user) {
-  const { token, name } = user;
-  const { data } = await apiCall("/api/funds", token);
+  const { authChatId, name } = user;
+  const { data } = await apiCall("/api/funds", authChatId);
   if (!data || !data.length) {
     return `${name}, nenhum fundo de investimento cadastrado.`;
   }
@@ -417,8 +424,8 @@ async function handleFundos(chatId, user) {
 }
 
 async function handlePrecos(chatId, user) {
-  const { token, name } = user;
-  const { data } = await apiCall("/api/assets/prices", token);
+  const { authChatId, name } = user;
+  const { data } = await apiCall("/api/assets/prices", authChatId);
   if (!data || !data.length) {
     return `${name}, nenhum preço disponível.`;
   }
@@ -434,12 +441,12 @@ async function handlePrecos(chatId, user) {
 }
 
 async function handlePerfil(chatId, user) {
-  const { token, name } = user;
+  const { authChatId } = user;
   const lines = [`👤 *Perfil*`];
   lines.push(`  Nome: *${user.name || "—"}*`);
   lines.push(`  Email: *${user.email || "—"}*`);
   // Try fetching profile for more details
-  const { data } = await apiCall("/api/profile", token);
+  const { data } = await apiCall("/api/profile", authChatId);
   if (data) {
     lines.push(`  Telefone: ${data.phone || "—"}`);
     if (data.birthDate) lines.push(`  Nascimento: ${data.birthDate.slice(0, 10)}`);
@@ -451,10 +458,10 @@ async function handlePerfil(chatId, user) {
 }
 
 async function handleAportar(chatId, user) {
-  const { token, name } = user;
+  const { authChatId, name } = user;
   const [portfolio, rebalance] = await Promise.all([
-    apiCall("/api/portfolio/summary", token),
-    apiCall("/api/rebalance/preview", token),
+    apiCall("/api/portfolio/summary", authChatId),
+    apiCall("/api/rebalance/preview", authChatId),
   ]);
   if (portfolio.error) return `😕 ${name}, não consegui acessar sua carteira.`;
   const p = portfolio.data;
@@ -504,13 +511,13 @@ function detectIntent(text) {
 
 async function handleMessage(chatId, text) {
   // Resolve user
-  const user = await resolveToken(chatId);
+  const user = await resolveUser(chatId);
   if (!user) {
     return await handleAjuda(chatId, null);
   }
 
   const intent = detectIntent(text);
-  console.log(`[${chatId}] intent=${intent} user=${user.name}`);
+  console.log(`[telegram:${chatReference(chatId)}] intent=${intent} user=${user.name}`);
 
   switch (intent) {
     case "greeting":
@@ -566,7 +573,7 @@ async function main() {
         const chatId = msg.chat.id;
         const text = msg.text;
 
-        console.log(`[${chatId}] ${msg.from?.first_name || "?"}: ${text.slice(0, 80)}`);
+        console.log(`[telegram:${chatReference(chatId)}] message received`);
 
         // Send typing action first
         try {

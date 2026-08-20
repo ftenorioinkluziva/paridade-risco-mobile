@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/bot.mjs",
-    "dev": "node src/bot.mjs"
+    "dev": "node src/bot.mjs",
+    "test": "node --test test/*.test.mjs"
   }
 }

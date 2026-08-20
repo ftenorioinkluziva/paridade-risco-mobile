@@ -41,7 +41,18 @@ jobs:
 
       - name: Create telegram-bot .env
         run: |
-          ssh root@${{ secrets.SSH_HOST }} "mkdir -p $CODE_DIR/packages/telegram-bot && echo 'TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}' > $CODE_DIR/packages/telegram-bot/.env && chmod 600 $CODE_DIR/packages/telegram-bot/.env"
+          ssh root@${{ secrets.SSH_HOST }} "
+            set -eu
+            mkdir -p $CODE_DIR/packages/telegram-bot
+            touch $REMOTE_DIR/.env
+            TELEGRAM_S2S_SECRET_VALUE=\$(grep '^TELEGRAM_S2S_SECRET=' $REMOTE_DIR/.env | head -1 | cut -d= -f2- || true)
+            if [ -z \"\$TELEGRAM_S2S_SECRET_VALUE\" ]; then
+              TELEGRAM_S2S_SECRET_VALUE=\$(openssl rand -hex 32)
+              printf '\nTELEGRAM_S2S_SECRET=%s\n' \"\$TELEGRAM_S2S_SECRET_VALUE\" >> $REMOTE_DIR/.env
+            fi
+            printf 'TELEGRAM_BOT_TOKEN=%s\nTELEGRAM_S2S_SECRET=%s\n' '${{ secrets.TELEGRAM_BOT_TOKEN }}' \"\$TELEGRAM_S2S_SECRET_VALUE\" > $CODE_DIR/packages/telegram-bot/.env
+            chmod 600 $REMOTE_DIR/.env $CODE_DIR/packages/telegram-bot/.env
+          "
 
       - name: Build Docker images
         run: |
