@@ -15,7 +15,7 @@
 | 3 | criação, leitura, alteração e exclusão de fundo e transação temporários | PASS |
 | 4 | `/investimentos`, `/cotacoes` e `/api/rebalance/preview`; 11 ETFs, sem `BOVV11`, agenda de 8 minutos | PASS |
 | 5 | Pluggy ausente/bloqueado e configurado/pronto contra mock local determinístico | PASS |
-| 6 | chave MCP somente leitura, rejeição de `sync` e invalidação após revogação | PASS |
+| 6 | emissão same-origin, chave MCP somente leitura, rejeição de `sync` e invalidação após revogação | PASS |
 | 7 | cleanup em `finally`, verificação posterior de usuários/ativos namespaced e mensagens com URL/status | PASS |
 | 8 | Chromium desktop `1440x900` e mobile `390x844` | PASS |
 
@@ -40,7 +40,7 @@
 1. A recuperação chamava `/forget-password`, removido na versão atual do Better Auth, e retornava 404; agora usa `/request-password-reset`.
 2. A tela de cotações ainda informava 12 ativos e intervalo de 10 minutos; foi alinhada a 11 ETFs e 8 minutos.
 3. O recurso de transações não possuía endpoint por item para leitura, alteração e exclusão; as rotas autenticadas e limitadas ao proprietário foram adicionadas.
-4. O plugin Better Auth proíbe que o cliente defina permissões de chave. A emissão MCP com escopo passou para uma rota server-side autenticada, permitindo provar leitura sem conceder `sync`.
+4. O plugin Better Auth proíbe que o cliente defina permissões de chave. A emissão MCP com escopo passou para uma rota server-side autenticada e protegida por origem, permitindo provar leitura sem conceder `sync`.
 5. Repetições de mutações de autenticação acionavam corretamente o rate limit. A mutação é exercitada uma vez e as repetições validam os contratos responsivos sem desabilitar a proteção da aplicação.
 
 ## Isolamento e segurança

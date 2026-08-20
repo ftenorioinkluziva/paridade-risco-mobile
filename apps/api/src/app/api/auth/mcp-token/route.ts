@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth, MCP_API_KEY_CONFIG_ID } from "@/lib/auth";
+import { AUTH_TRUSTED_ORIGINS, auth, MCP_API_KEY_CONFIG_ID } from "@/lib/auth";
 
 const createTokenSchema = z.object({
   name: z.string().min(1).max(255),
@@ -9,6 +9,11 @@ const createTokenSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  if (!origin || !AUTH_TRUSTED_ORIGINS.includes(origin)) {
+    return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+  }
+
   const cookie = request.headers.get("cookie");
   if (!cookie) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

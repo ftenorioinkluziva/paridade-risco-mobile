@@ -11,24 +11,25 @@ import { ac, admin, user } from "@/lib/permissions";
 export const MCP_API_KEY_CONFIG_ID = "mcp";
 export const MCP_API_KEY_PERMISSIONS = { mcp: ["read", "sync", "mapping"] } as const;
 const MCP_API_KEY_EXPIRATION_SECONDS = 60 * 60 * 24 * 90;
+export const AUTH_TRUSTED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3002",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3002",
+  "http://127.0.0.1:3001",
+  ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((s) => s.trim()) : []),
+  ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+  ...(process.env.NEXTAUTH_URL ? [process.env.NEXTAUTH_URL] : []),
+  ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
+  ...(process.env.NEXT_PUBLIC_API_URL ? [process.env.NEXT_PUBLIC_API_URL] : []),
+].filter(Boolean);
 
 export const auth = betterAuth({
   appName: "Paridade Risco",
   secret: requireAuthSecret(),
   baseURL: process.env.BETTER_AUTH_URL || process.env.NEXTAUTH_URL || "http://localhost:3000",
-  trustedOrigins: [
-    "http://localhost:3000",
-    "http://localhost:3002",
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3002",
-    "http://127.0.0.1:3001",
-    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((s) => s.trim()) : []),
-    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
-    ...(process.env.NEXTAUTH_URL ? [process.env.NEXTAUTH_URL] : []),
-    ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
-    ...(process.env.NEXT_PUBLIC_API_URL ? [process.env.NEXT_PUBLIC_API_URL] : []),
-  ].filter(Boolean),
+  trustedOrigins: AUTH_TRUSTED_ORIGINS,
   user: {
     additionalFields: {
       phone: {

@@ -247,6 +247,12 @@ test("MCP key supports read scope, rejects sync scope and becomes invalid after 
   const origin = requiredEnvironment("E2E_BASE_URL");
 
   try {
+    const crossOriginResponse = await request.post("/api/auth/mcp-token", {
+      headers: { origin: "https://attacker.invalid" },
+      data: { name: "Rejected cross-origin", permissions: ["read"] },
+    });
+    expectStatus(crossOriginResponse, 403);
+
     const createResponse = await request.post("/api/auth/mcp-token", {
       headers: { origin },
       data: {
