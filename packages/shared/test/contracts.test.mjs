@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { errorEnvelopeSchema, mcpErrorResult, operationCatalog, operationPath, operationToMcpTool } from "../src/contracts.mjs";
 
 test("catalog has runtime contracts and no public credentials", () => {
-  assert.equal(Object.keys(operationCatalog).length, 15);
+  assert.equal(Object.keys(operationCatalog).length, 16);
   for (const contract of Object.values(operationCatalog)) {
     const schema = operationToMcpTool(contract).inputSchema;
     assert.equal(schema.additionalProperties, false);
@@ -19,6 +19,8 @@ test("strict inputs reject missing, extra and incompatible payloads", () => {
   assert.equal(operationPath("get_active_basket", {}), "/api/baskets/active");
   assert.equal(operationPath("pluggy_connection_status", {}), "/api/profile/pluggy");
   assert.equal(operationPath("pluggy_trigger_sync", {}), "/api/integrations/pluggy/sync");
+  assert.equal(operationPath("pluggy_source_activation_readiness", {}), "/api/integrations/pluggy/source-activation-readiness");
+  assert.equal(operationPath("pluggy_migration_readiness", {}), "/api/integrations/pluggy/migration-readiness");
   assert.equal(operationPath("map_pluggy_investment", { investmentId: "inv-1", resolution: "FORA_DA_ESTRATEGIA", reason: "Reserva de emergência" }), "/api/integrations/pluggy/mappings");
   assert.equal(operationPath("pluggy_financial_overview", {}), "/api/integrations/pluggy/financial-overview");
   assert.equal(operationPath("pluggy_financial_health", { days: 30 }), "/api/integrations/pluggy/financial-health?days=30");
@@ -82,7 +84,8 @@ test("all operation outputs have concrete schemas that reject incompatible paylo
     },
     pluggy_investment_projection: { generatedAt, freshness, connections: [], accounts: [], investments: [], totals: { totalInvestedValue: 0, totalOriginalValue: null, totalProfitValue: null, byRiskBucket: {}, mappedCount: 0, suggestedCount: 0, pendingCount: 0, outsideStrategyCount: 0, missingCostBasisCount: 0 } },
     pluggy_rebalance_preview: { source: "PLUGGY", portfolioValue: 0, investedValue: 0, cashAvailable: 0, cashForOrders: 0, cashHeldInReserve: 0, calculationBaseValue: 0, rebalanceCost: 0, buyRequired: 0, sellProceeds: 0, postRebalanceCash: 0, includeCash: false, liquidityStatus: "NAO_CALCULADA", executionReady: false, eligibleForRebalance: false, missingProfileFields: [], analysisStatus: "COMPLETA", observedInvestedValue: 0, outsideStrategyValue: 0, unresolvedValue: 0, unresolvedCount: 0, mappingCoveragePercentage: null, warnings: [], driftPercentage: 0, targetBasketName: "Sem cesta ativa", actions: [] },
-    pluggy_migration_readiness: { source: "PLUGGY", generatedAt, currentMode: "MANUAL", candidateMode: "PLUGGY", status: "BLOCKED", canSwitchToPluggy: false, manualCrudStatus: "ACTIVE", manualCrud: { transactions: "ACTIVE", funds: "ACTIVE", reason: "Revisão necessária" }, reconciliation: { status: "DIVERGENTE", considered: false, baseline: "PLUGGY_ONLY_SANDBOX" }, comparison: { status: "DIVERGENTE", totalValueDelta: 0, investedValueDelta: 0, cashBalanceDelta: 0, positionValueDelta: 0, byTicker: [] }, blockers: [], warnings: [], nextAction: "Revisar" },
+    pluggy_source_activation_readiness: { source: "PLUGGY", generatedAt, currentMode: "MANUAL", candidateMode: "PLUGGY", status: "BLOCKED", canActivatePluggy: false, canSwitchToPluggy: false, manualCrudStatus: "ACTIVE", manualCrud: { transactions: "ACTIVE", funds: "ACTIVE", reason: "Revisão necessária" }, reconciliation: { status: "DIVERGENTE", considered: false, baseline: "PLUGGY_ONLY_SANDBOX" }, comparison: { status: "DIVERGENTE", totalValueDelta: 0, investedValueDelta: 0, cashBalanceDelta: 0, positionValueDelta: 0, byTicker: [] }, blockers: [], warnings: [], nextAction: "Revisar" },
+    pluggy_migration_readiness: { source: "PLUGGY", generatedAt, currentMode: "MANUAL", candidateMode: "PLUGGY", status: "BLOCKED", canActivatePluggy: false, canSwitchToPluggy: false, manualCrudStatus: "ACTIVE", manualCrud: { transactions: "ACTIVE", funds: "ACTIVE", reason: "Revisão necessária" }, reconciliation: { status: "DIVERGENTE", considered: false, baseline: "PLUGGY_ONLY_SANDBOX" }, comparison: { status: "DIVERGENTE", totalValueDelta: 0, investedValueDelta: 0, cashBalanceDelta: 0, positionValueDelta: 0, byTicker: [] }, blockers: [], warnings: [], nextAction: "Revisar" },
     pluggy_trigger_sync: { source: "PLUGGY", sync: { syncRunId: "run-1", accounts: 2, investments: 5, transactions: 10 } },
     map_pluggy_investment: { id: "map-1", investmentId: "inv-1", assetId: "asset-1", status: "MAPEADO" },
   };

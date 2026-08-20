@@ -214,6 +214,31 @@ test("investments, quotes and rebalance use exactly the 11 strategic ETFs", asyn
 test("Pluggy source activation moves from blocked to ready using the deterministic mock", async ({ request }) => {
   await request.delete("/api/profile/pluggy");
 
+  const canonicalReadiness = await request.get("/api/integrations/pluggy/source-activation-readiness");
+  expectStatus(canonicalReadiness, 200);
+  const canonicalReadinessBody = await canonicalReadiness.json();
+  expect(canonicalReadinessBody).toMatchObject({
+    source: "PLUGGY",
+    status: "BLOCKED",
+    canActivatePluggy: false,
+  });
+
+  const legacyReadiness = await request.get("/api/integrations/pluggy/migration-readiness");
+  expectStatus(legacyReadiness, 200);
+  expect(legacyReadiness.headers()["deprecation"]).toBe("true");
+  expect(legacyReadiness.headers()["sunset"]).toContain("01 Nov 2026");
+  expect(await legacyReadiness.json()).toMatchObject({
+    status: canonicalReadinessBody.status,
+    canActivatePluggy: canonicalReadinessBody.canActivatePluggy,
+    canSwitchToPluggy: canonicalReadinessBody.canSwitchToPluggy,
+  });
+
+  const blockedActivation = await request.post("/api/integrations/pluggy/source-activation");
+  expectStatus(blockedActivation, 409);
+  const legacyBlockedActivation = await request.post("/api/integrations/pluggy/migration");
+  expectStatus(legacyBlockedActivation, 409);
+  expect(legacyBlockedActivation.headers()["deprecation"]).toBe("true");
+
   const blockedProfile = await request.get("/api/profile/pluggy");
   expectStatus(blockedProfile, 200);
   expect(await blockedProfile.json()).toMatchObject({ isConfigured: false, hasSecret: false });

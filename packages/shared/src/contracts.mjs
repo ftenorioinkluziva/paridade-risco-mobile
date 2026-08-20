@@ -133,8 +133,8 @@ const pluggyRebalancePreviewSchema = z.object({
   actions: z.array(z.object({ id, ticker: id, action: z.enum(["APORTAR", "REDUZIR"]), amount: finite, currentPrice: finite, currentPercentage: finite, targetPercentage: finite }).strict()),
 }).passthrough();
 
-const pluggyMigrationReadinessSchema = z.object({
-  source: z.literal("PLUGGY"), generatedAt: isoDate, currentMode: z.enum(["MANUAL", "PLUGGY", "DUAL_READ"]), candidateMode: z.literal("PLUGGY"), status: z.enum(["READY", "BLOCKED"]), canSwitchToPluggy: z.boolean(), manualCrudStatus: z.literal("ACTIVE"),
+const pluggySourceActivationReadinessSchema = z.object({
+  source: z.literal("PLUGGY"), generatedAt: isoDate, currentMode: z.enum(["MANUAL", "PLUGGY", "DUAL_READ"]), candidateMode: z.literal("PLUGGY"), status: z.enum(["READY", "BLOCKED"]), canActivatePluggy: z.boolean(), canSwitchToPluggy: z.boolean(), manualCrudStatus: z.literal("ACTIVE"),
   manualCrud: z.object({ transactions: z.literal("ACTIVE"), funds: z.literal("ACTIVE"), reason: id }).strict(),
   reconciliation: z.object({ status: z.enum(["ALINHADO", "DIVERGENTE"]), considered: z.boolean(), baseline: z.enum(["PLUGGY_ONLY_SANDBOX", "PLUGGY_ONLY_NEW_ACCOUNT", "MANUAL_AND_PLUGGY"]) }).strict(),
   comparison: z.object({ status: z.enum(["ALINHADO", "DIVERGENTE"]), totalValueDelta: finite, investedValueDelta: finite, cashBalanceDelta: finite, positionValueDelta: finite, byTicker: z.array(z.object({ ticker: id, manualValue: finite, pluggyValue: finite, delta: finite, status: z.enum(["ALINHADO", "DIVERGENTE"]) }).strict()) }).strict(),
@@ -184,7 +184,8 @@ const definitions = [
   ["pluggy_financial_health", "Pluggy financial health: status, debt indicators, alerts and observed loans for a selected period.", "/api/integrations/pluggy/financial-health", "GET", pluggyPeriodInputSchema, pluggyFinancialHealthSchema],
   ["pluggy_investment_projection", "Pluggy investment projection: observed investments, mapping decisions, classifications, totals and sync freshness.", "/api/integrations/pluggy/projection", "GET", emptyInputSchema, pluggyProjectionSchema],
   ["pluggy_rebalance_preview", "Pluggy rebalance preview: active basket adherence, coverage, planned order cash, liquidity, blockers and suggested actions.", "/api/integrations/pluggy/rebalance/preview", "GET", pluggyRebalanceInputSchema, pluggyRebalancePreviewSchema],
-  ["pluggy_migration_readiness", "Pluggy source activation readiness: current source, reconciliation, blockers and next action.", "/api/integrations/pluggy/migration-readiness", "GET", emptyInputSchema, pluggyMigrationReadinessSchema],
+  ["pluggy_source_activation_readiness", "Pluggy source activation readiness: current source, reconciliation, blockers and next action.", "/api/integrations/pluggy/source-activation-readiness", "GET", emptyInputSchema, pluggySourceActivationReadinessSchema],
+  ["pluggy_migration_readiness", "Deprecated compatibility alias until 2026-11-01; use pluggy_source_activation_readiness.", "/api/integrations/pluggy/migration-readiness", "GET", emptyInputSchema, pluggySourceActivationReadinessSchema],
   ["pluggy_trigger_sync", "Trigger an immediate on-demand sync of user bank accounts and investments from Pluggy Open Finance.", "/api/integrations/pluggy/sync", "POST", emptyInputSchema, pluggySyncOutputSchema],
   ["map_pluggy_investment", "Classify or map an observed Pluggy investment to a strategy asset or mark outside-strategy.", "/api/integrations/pluggy/mappings", "POST", mapPluggyInvestmentInputSchema, mapPluggyInvestmentOutputSchema],
 ];

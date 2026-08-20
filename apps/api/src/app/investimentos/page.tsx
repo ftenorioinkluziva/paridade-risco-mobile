@@ -10,7 +10,7 @@ import { RebalanceDecisionCard } from "@/components/RebalanceDecisionCard";
 import { Screen } from "@/components/Screen";
 import { SummaryCard } from "@/components/SummaryCard";
 import {
-  usePluggyMigrationReadiness,
+  usePluggySourceActivationReadiness,
   usePluggyProjection,
   usePluggyRebalancePreview,
   usePortfolioSummary,
@@ -50,7 +50,7 @@ export default function InvestimentosPage() {
   const [lastQuoteRefreshAt, setLastQuoteRefreshAt] = useState<Date | null>(null);
   const rebalance = usePluggyRebalancePreview(appliedCashForOrders ?? undefined);
   const refetchRebalance = rebalance.refetch;
-  const readiness = usePluggyMigrationReadiness();
+  const readiness = usePluggySourceActivationReadiness();
 
   const summary = portfolio.data;
   const projectionData = projection.data;

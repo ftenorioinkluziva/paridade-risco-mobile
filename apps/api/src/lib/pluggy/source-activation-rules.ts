@@ -2,9 +2,9 @@ import type { PortfolioProviderSnapshot } from "@/lib/portfolio-provider";
 import type { DualReadStatus } from "@/lib/portfolio-dual-read-rules";
 
 export type PortfolioSourceMode = "MANUAL" | "PLUGGY" | "DUAL_READ";
-export type MigrationReadinessStatus = "READY" | "BLOCKED";
+export type SourceActivationReadinessStatus = "READY" | "BLOCKED";
 
-export interface MigrationReadinessInput {
+export interface SourceActivationReadinessInput {
   manual: PortfolioProviderSnapshot;
   pluggy: PortfolioProviderSnapshot;
   comparison: {
@@ -18,7 +18,7 @@ export interface MigrationReadinessInput {
   ignoreManualReconciliation?: boolean;
 }
 
-export function buildMigrationReadiness(input: MigrationReadinessInput) {
+export function buildSourceActivationReadiness(input: SourceActivationReadinessInput) {
   const currentMode = input.currentMode ?? "MANUAL";
   const ignoreManualReconciliation = input.ignoreManualReconciliation ?? false;
   const hasManualPortfolioData = input.manual.positions.length > 0
@@ -51,19 +51,21 @@ export function buildMigrationReadiness(input: MigrationReadinessInput) {
     warnings.push("Conta nova: não há carteira manual para reconciliar; a ativação depende de dados Pluggy sincronizados e mapeados");
   }
 
-  const canSwitchToPluggy = blockers.length === 0;
+  const canActivatePluggy = blockers.length === 0;
   return {
     source: "PLUGGY" as const,
     generatedAt: new Date().toISOString(),
     currentMode,
     candidateMode: "PLUGGY" as const,
-    status: canSwitchToPluggy ? "READY" as const : "BLOCKED" as const,
-    canSwitchToPluggy,
+    status: canActivatePluggy ? "READY" as const : "BLOCKED" as const,
+    canActivatePluggy,
+    // External compatibility field. Remove only after the documented API sunset.
+    canSwitchToPluggy: canActivatePluggy,
     manualCrudStatus: "ACTIVE" as const,
     manualCrud: {
       transactions: "ACTIVE" as const,
       funds: "ACTIVE" as const,
-      reason: canSwitchToPluggy
+      reason: canActivatePluggy
         ? "O CRUD manual permanece disponível durante o período de compatibilidade"
         : "O CRUD manual permanece disponível enquanto a ativação estiver bloqueada",
     },
@@ -79,7 +81,7 @@ export function buildMigrationReadiness(input: MigrationReadinessInput) {
     warnings,
     nextAction: currentMode === "PLUGGY"
       ? "Fonte Pluggy ativa; o CRUD manual permanece disponível para compatibilidade"
-      : canSwitchToPluggy
+      : canActivatePluggy
         ? "Revisar e aprovar explicitamente a ativação da fonte Pluggy"
       : "Sincronizar e mapear posições Pluggy antes de ativar a fonte",
   };
