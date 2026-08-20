@@ -41,7 +41,7 @@ export default defineConfig({
     },
     {
       name: "chromium-desktop",
-      testMatch: /smoke\.spec\.ts/,
+      testMatch: /(smoke|critical-flows)\.spec\.ts/,
       dependencies: ["setup"],
       use: {
         ...authenticatedUse,
@@ -51,7 +51,7 @@ export default defineConfig({
     },
     {
       name: "chromium-mobile",
-      testMatch: /smoke\.spec\.ts/,
+      testMatch: /(smoke|critical-flows)\.spec\.ts/,
       dependencies: ["setup"],
       use: {
         ...authenticatedUse,

@@ -40,7 +40,7 @@ concurrency:
 
 jobs:
   smoke:
-    name: Chromium desktop + mobile
+    name: Chromium smoke + critical flows
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -52,7 +52,7 @@ jobs:
       - run: npm ci
       - run: npm run e2e:install
       - run: npx --prefix tests/e2e playwright install --with-deps chromium
-      - run: npm run e2e:smoke
+      - run: npm run e2e:gate
       - name: Preserve sanitized failure artifacts
         if: ${{ failure() && !cancelled() }}
         uses: actions/upload-artifact@v5

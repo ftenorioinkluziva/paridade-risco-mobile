@@ -1,0 +1,42 @@
+schema: 1
+story: '5.3'
+story_title: 'Cobertura E2E dos fluxos críticos'
+gate: PASS
+status_reason: 'Os oito critérios passaram no gate Chromium desktop/mobile, na repetição antiflake e nos gates gerais; cleanup, logs sanitizados e escopos MCP foram comprovados.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: '4787489893a0cd9215bac91b73dbeff060fe5b0e'
+updated: '2026-08-20T16:28:51.2104148-03:00'
+
+top_issues: []
+
+waiver: { active: false }
+
+quality_score: 100
+expires: '2026-09-03T16:28:51.2104148-03:00'
+
+evidence:
+  tests_reviewed: { count: 116 }
+  risks_identified: { count: 1 }
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Perfil bloqueia escalada; emissão MCP exige sessão e origem confiável; chave read-only nega sync e é revogada; runner não imprime logs sensíveis.'
+  performance:
+    status: PASS
+    notes: 'Gate Chromium concluiu 17 cenários em aproximadamente dez segundos após o ambiente saudável; camadas Docker são reutilizadas.'
+  reliability:
+    status: PASS
+    notes: 'Fluxos críticos passaram 43/43 em repetição; fixture e finally comprovam zero resíduos namespaced.'
+  maintainability:
+    status: PASS
+    notes: 'Runner único seleciona smoke, críticos e gate; mock Pluggy local e documentação mantêm o CI determinístico.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Tratar as quatro vulnerabilidades moderadas transitivas do drizzle-kit na Story 5.7.'
+      refs: ['docs/stories/5.7.drizzle-toolchain-sem-moderadas.story.md']

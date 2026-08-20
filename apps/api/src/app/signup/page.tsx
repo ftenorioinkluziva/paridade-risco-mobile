@@ -85,8 +85,11 @@ export default function SignupPage() {
           ) : null}
 
           <div style={styles.fieldWrap}>
-            <label style={styles.fieldLabel}>Nome</label>
+            <label htmlFor="signup-name" style={styles.fieldLabel}>Nome</label>
             <InputField
+              id="signup-name"
+              name="name"
+              autoComplete="name"
               value={name}
               onChange={setName}
               type="text"
@@ -95,8 +98,11 @@ export default function SignupPage() {
           </div>
 
           <div style={styles.fieldWrap}>
-            <label style={styles.fieldLabel}>Email</label>
+            <label htmlFor="signup-email" style={styles.fieldLabel}>Email</label>
             <InputField
+              id="signup-email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={setEmail}
               type="email"
@@ -105,8 +111,11 @@ export default function SignupPage() {
           </div>
 
           <div style={styles.fieldWrap}>
-            <label style={styles.fieldLabel}>Senha</label>
+            <label htmlFor="signup-password" style={styles.fieldLabel}>Senha</label>
             <InputField
+              id="signup-password"
+              name="password"
+              autoComplete="new-password"
               value={password}
               onChange={setPassword}
               type="password"
@@ -115,8 +124,11 @@ export default function SignupPage() {
           </div>
 
           <div style={styles.fieldWrap}>
-            <label style={styles.fieldLabel}>Confirmar Senha</label>
+            <label htmlFor="signup-password-confirm" style={styles.fieldLabel}>Confirmar Senha</label>
             <InputField
+              id="signup-password-confirm"
+              name="password-confirm"
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={setConfirmPassword}
               type="password"

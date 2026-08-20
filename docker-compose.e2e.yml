@@ -15,6 +15,20 @@ services:
     networks:
       - e2e
 
+  pluggy-mock:
+    image: node:22-alpine
+    working_dir: /app
+    command: ["node", "pluggy-mock.mjs"]
+    volumes:
+      - ./tests/e2e/pluggy-mock.mjs:/app/pluggy-mock.mjs:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:4010/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks:
+      - e2e
+
   api:
     build:
       context: .
@@ -32,6 +46,7 @@ services:
       E2E_USER_PASSWORD: ${E2E_USER_PASSWORD:?E2E_USER_PASSWORD is required}
       PLUGGY_ENVIRONMENT: sandbox
       PLUGGY_ENABLE_PRODUCTION: "false"
+      PLUGGY_API_BASE_URL: http://pluggy-mock:4010
       PLUGGY_CLIENT_ID: ""
       PLUGGY_CLIENT_SECRET: ""
       BRAPI_API_TOKEN: ""
@@ -50,6 +65,8 @@ services:
       start_period: 10s
     depends_on:
       postgres:
+        condition: service_healthy
+      pluggy-mock:
         condition: service_healthy
     networks:
       - e2e

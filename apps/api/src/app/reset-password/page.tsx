@@ -26,7 +26,7 @@ export default function ResetPasswordPage() {
       setIsSubmitting(true);
       setSubmitError(null);
 
-      const result = await authClient.$fetch("/forget-password", {
+      const result = await authClient.$fetch("/request-password-reset", {
         method: "POST",
         body: {
           email,
@@ -76,8 +76,11 @@ export default function ResetPasswordPage() {
           ) : null}
 
           <div style={styles.fieldWrap}>
-            <label style={styles.fieldLabel}>Email</label>
+            <label htmlFor="reset-password-email" style={styles.fieldLabel}>Email</label>
             <InputField
+              id="reset-password-email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={setEmail}
               type="email"

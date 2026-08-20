@@ -120,7 +120,7 @@ export default function CotacoesPage() {
               <strong style={styles.liveStatusTitle}>
                 {isRefreshing ? "Recarregando snapshot..." : "Monitoramento automático ativo"}
               </strong>
-              <span style={styles.liveStatusText}>Consulta a cada 10 minutos durante o pregão, com captura final às 17:30.</span>
+              <span style={styles.liveStatusText}>Consulta a cada 8 minutos durante o pregão, com captura final às 17:30.</span>
               {lastRefreshAt ? (
                 <span style={styles.reloadStatus}>Visualização recarregada em {formatDateTime(lastRefreshAt.toISOString())}</span>
               ) : null}
@@ -134,9 +134,9 @@ export default function CotacoesPage() {
           </div>
           <div style={styles.summaryGrid}>
             <SummaryMetric label="Último ciclo" value={schedulerFetchedAt ? formatDateTime(schedulerFetchedAt) : "Aguardando primeiro ciclo"} />
-            <SummaryMetric label="Cobertura" value={`${freshPrices.length} de ${prices.length || 12} atualizadas`} />
+            <SummaryMetric label="Cobertura" value={`${freshPrices.length} de ${prices.length || 11} atualizadas`} />
             <SummaryMetric label="Origens no snapshot" value={sourceSummary(prices)} />
-            <SummaryMetric label="Agenda" value="10 min · fechamento 17:30" />
+            <SummaryMetric label="Agenda" value="8 min · fechamento 17:30" />
           </div>
         </section>
 
