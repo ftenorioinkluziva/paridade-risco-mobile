@@ -34,7 +34,9 @@
     "dev:mcp": "node packages/local-mcp/src/index.mjs",
     "dev:remote-mcp": "node apps/remote-mcp/src/index.mjs"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
+  },
   "overrides": {
     "@modelcontextprotocol/sdk": {
       "@hono/node-server": "1.19.17"
@@ -48,6 +50,7 @@
     "glob": {
       "brace-expansion": "5.0.9"
     },
+    "esbuild": "0.25.12",
     "tsx": {
       "esbuild": "0.28.2"
     }
