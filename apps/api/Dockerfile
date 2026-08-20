@@ -21,7 +21,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=1
 ENV DATABASE_URL=$DATABASE_URL
-RUN npm run build --workspace=@paridade-risco/api
+# Next imports the auth module while collecting route metadata. This value exists
+# only in the disposable builder stage; the runtime stage must receive the real
+# secret through the deployment environment.
+RUN BETTER_AUTH_SECRET=build-stage-placeholder-never-used-at-runtime npm run build --workspace=@paridade-risco/api
 
 FROM base AS runner
 WORKDIR /app
