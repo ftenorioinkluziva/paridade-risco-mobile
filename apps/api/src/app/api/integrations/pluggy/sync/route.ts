@@ -8,7 +8,7 @@ import { PluggySyncInProgressError, syncConfiguredPluggyItem } from "@/lib/plugg
 import { resolveUserId } from "@/lib/session";
 
 export async function POST(request: Request) {
-  const userId = await resolveUserId(request);
+  const userId = await resolveUserId(request, { mcpPermission: "sync" });
 
   if (!userId) {
     return NextResponse.json({ error: "No user available" }, { status: 401 });

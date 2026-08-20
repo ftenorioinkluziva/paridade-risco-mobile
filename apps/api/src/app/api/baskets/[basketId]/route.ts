@@ -16,7 +16,7 @@ export async function GET(request: Request, context: Params) {
   const { basketId } = await context.params;
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const basket = await db.query.baskets.findFirst({
@@ -58,7 +58,7 @@ export async function PUT(request: Request, context: Params) {
   const { basketId } = await context.params;
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
@@ -117,7 +117,7 @@ export async function DELETE(request: Request, context: Params) {
   const { basketId } = await context.params;
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const basket = await db.query.baskets.findFirst({

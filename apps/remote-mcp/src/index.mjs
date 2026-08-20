@@ -6,7 +6,7 @@
  * Remote MCP server accessible via HTTP, for web-based AI assistants
  * like chatgpt.com and claude.com.
  *
- * Canonical endpoint: POST /mcp with Authorization: Bearer <session token>.
+ * Canonical endpoint: POST /mcp with Authorization: Bearer <scoped MCP API key>.
  */
 
 import { Hono } from "hono";
@@ -74,7 +74,11 @@ export async function executeRemoteMcpTool(name, args, sessionToken, request = e
 }
 
 export function createRemoteMcpApp({
-  validateSession = async (token) => (await apiGet("/api/auth/me", token)).ok,
+  validateSession = async (token) => (await apiGetWithContext(
+    "/api/auth/mcp-token/validate",
+    undefined,
+    { apiUrl: loadApiUrl(), sessionToken: token },
+  )).ok,
   serveAuthenticatedMcp,
 } = {}) {
 const app = new Hono();
@@ -90,7 +94,7 @@ app.use("*", async (c, next) => {
 
 app.get("/", (c) => c.json({ status: "ok", service: "paridade-risco-remote-mcp" }));
 
-function authError(c, message = "Missing, invalid or expired session token") {
+function authError(c, message = "Missing, invalid or expired MCP token") {
   return c.json(errorEnvelope({ code: "UNAUTHORIZED", category: "authorization", message, retryable: false }), 401);
 }
 

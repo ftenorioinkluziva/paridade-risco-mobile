@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { isAdminRole } from "@/lib/user-role";
 
 export type PricesAuthDependencies = {
   resolveIdentity: (request: Request) => Promise<string | null>;
@@ -37,6 +38,6 @@ export async function verifyPricesUpdateAuthorization(request: Request, dependen
 
   // Fallback: Legacy role check for backward compatibility
   const user = await dependencies.findUser(userId);
-  if (!user || user.role !== "ADMIN") return { authorized: false, error: "Forbidden: admin access required" };
+  if (!user || !isAdminRole(user.role)) return { authorized: false, error: "Forbidden: admin access required" };
   return { authorized: true };
 }

@@ -13,12 +13,7 @@ export async function GET(request: Request) {
   const includeCash = true;
 
   if (!userId) {
-    return NextResponse.json({
-      portfolioValue: 0,
-      driftPercentage: 0,
-      targetBasketName: "Sem usuario",
-      actions: [],
-    });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sourceMode = await getPortfolioSourceMode(userId);
@@ -68,7 +63,7 @@ export async function GET(request: Request) {
   const eligibility = getRebalanceEligibility({
     birthDate: userProfile?.birthDate ?? null,
     phone: userProfile?.phone ?? null,
-    role: userProfile?.role ?? "USER",
+    role: userProfile?.role ?? "user",
   });
 
   if (!eligibility.eligibleForRebalance) {

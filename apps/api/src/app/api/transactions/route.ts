@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const userId = await resolveUserId(request);
 
   if (!userId) {
-    return NextResponse.json([]);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const url = new URL(request.url);
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
   const userId = await resolveUserId(request);
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();

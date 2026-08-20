@@ -134,6 +134,13 @@
       "when": 1787193000000,
       "tag": "0018_deactivate_test_assets",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787230000000,
+      "tag": "0019_mcp_api_keys",
+      "breakpoints": true
     }
   ]
 }

@@ -10,7 +10,7 @@ type Params = {
 };
 
 export async function DELETE(request: Request, context: Params) {
-  const userId = await resolveUserId(request);
+  const userId = await resolveUserId(request, { mcpPermission: "mapping" });
   const { investmentId } = await context.params;
 
   if (!userId) {

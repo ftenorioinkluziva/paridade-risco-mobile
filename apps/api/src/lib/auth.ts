@@ -2,13 +2,19 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { admin as adminPlugin } from "better-auth/plugins";
+import { apiKey } from "@better-auth/api-key";
 
 import { db } from "@/db/client";
+import { requireAuthSecret } from "@/lib/auth-config";
 import { ac, admin, user } from "@/lib/permissions";
+
+export const MCP_API_KEY_CONFIG_ID = "mcp";
+export const MCP_API_KEY_PERMISSIONS = { mcp: ["read", "sync", "mapping"] } as const;
+const MCP_API_KEY_EXPIRATION_SECONDS = 60 * 60 * 24 * 90;
 
 export const auth = betterAuth({
   appName: "Paridade Risco",
-  secret: process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET || "paridade-risco-better-auth-secret-key-32ch",
+  secret: requireAuthSecret(),
   baseURL: process.env.BETTER_AUTH_URL || process.env.NEXTAUTH_URL || "http://localhost:3000",
   trustedOrigins: [
     "http://localhost:3000",
@@ -74,6 +80,23 @@ export const auth = betterAuth({
       ac,
       roles: { admin, user },
     }),
+    apiKey([{
+      configId: MCP_API_KEY_CONFIG_ID,
+      defaultPrefix: "pr_mcp_",
+      requireName: true,
+      keyExpiration: {
+        defaultExpiresIn: MCP_API_KEY_EXPIRATION_SECONDS,
+        disableCustomExpiresTime: true,
+      },
+      rateLimit: {
+        enabled: true,
+        timeWindow: 60_000,
+        maxRequests: 120,
+      },
+      permissions: {
+        defaultPermissions: MCP_API_KEY_PERMISSIONS,
+      },
+    }]),
     nextCookies(),
   ],
 });

@@ -17,7 +17,7 @@ async function seed() {
       name: "Test User",
       email,
       passwordHash,
-      role: "USER",
+      role: "user",
       isActive: true,
     }).returning({ id: users.id });
     userId = user;

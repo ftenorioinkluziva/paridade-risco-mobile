@@ -9,8 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test --tsconfig tsconfig.json src/**/*.test.ts",
-    "test:integration": "tsx --test test/idempotency-helper.integration.test.ts",
+    "test": "cross-env BETTER_AUTH_SECRET=test-only-better-auth-secret-32-characters tsx --test --tsconfig tsconfig.json src/**/*.test.ts",
+    "test:integration": "cross-env BETTER_AUTH_SECRET=test-only-better-auth-secret-32-characters tsx --test test/idempotency-helper.integration.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/db/seed.ts",
@@ -34,14 +34,14 @@
     "scheduler:prices:run-now": "tsx src/scripts/price-scheduler.ts --run-on-start"
   },
   "dependencies": {
+    "@better-auth/api-key": "^1.7.1",
     "@paridade-risco/shared": "*",
     "@serwist/next": "^9.5.11",
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.7.1",
     "dotenv": "^16.4.7",
-    "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
-    "next": "16.2.3",
+    "next": "^16.3.1",
     "node-cron": "^4.2.1",
     "postgres": "^3.4.7",
     "react": "19.2.4",
@@ -53,10 +53,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cross-env": "^10.1.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.2.3",
+    "eslint-config-next": "^16.3.1",
     "serwist": "^9.5.11",
-    "tsx": "^4.19.3",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }

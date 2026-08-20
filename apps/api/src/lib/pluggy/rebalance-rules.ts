@@ -54,18 +54,17 @@ export function buildPluggyRebalancePreview(input: PluggyRebalanceRulesInput) {
   const cashForOrders = Math.round(Math.min(maximumCashForOrders, Math.max(0, requestedCashForOrders)) * 100) / 100;
   const cashHeldInReserve = Math.round((maximumCashForOrders - cashForOrders) * 100) / 100;
   const calculationBaseValue = input.provider.investedValue + cashForOrders;
-  const preview = input.eligibleForRebalance
-    ? buildRebalancePreview({
-      basket: input.basket,
-      positions,
-      totalValue: calculationBaseValue,
-      currentPricesByTicker: input.provider.livePricesByTicker,
-    })
-    : buildRebalancePreview({ basket: null, positions, totalValue: calculationBaseValue });
-  const buyRequired = preview.actions
+  const preview = buildRebalancePreview({
+    basket: input.basket,
+    positions,
+    totalValue: calculationBaseValue,
+    currentPricesByTicker: input.provider.livePricesByTicker,
+  });
+  const eligibleActions = input.eligibleForRebalance ? preview.actions : [];
+  const buyRequired = eligibleActions
     .filter((action) => action.action === "APORTAR")
     .reduce((sum, action) => sum + action.amount, 0);
-  const sellProceeds = preview.actions
+  const sellProceeds = eligibleActions
     .filter((action) => action.action === "REDUZIR")
     .reduce((sum, action) => sum + action.amount, 0);
   const postRebalanceCash = cashForOrders - buyRequired + sellProceeds;
@@ -119,6 +118,6 @@ export function buildPluggyRebalancePreview(input: PluggyRebalanceRulesInput) {
     unresolvedCount: input.provider.unresolvedCount,
     mappingCoveragePercentage,
     warnings,
-    actions: preview.actions,
+    actions: eligibleActions,
   };
 }

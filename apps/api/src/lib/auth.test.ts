@@ -2,9 +2,13 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 
 describe("Better Auth Configuration", () => {
-  it("auth module exports correctly", async () => {
+  it("exposes session, RBAC and scoped API-key lifecycle endpoints", async () => {
     const { auth } = await import("@/lib/auth");
-    assert.ok(auth, "auth should be defined");
+    assert.equal(typeof auth.api.getSession, "function");
+    assert.equal(typeof auth.api.userHasPermission, "function");
+    assert.equal(typeof auth.api.createApiKey, "function");
+    assert.equal(typeof auth.api.verifyApiKey, "function");
+    assert.equal(typeof auth.api.deleteApiKey, "function");
   });
 
   it("permissions module exports correctly", async () => {

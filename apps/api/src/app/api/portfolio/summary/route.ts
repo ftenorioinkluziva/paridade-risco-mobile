@@ -12,17 +12,7 @@ export async function GET(request: Request) {
   const userId = await resolveUserId(request);
 
   if (!userId) {
-    return NextResponse.json({
-      totalValue: 0,
-      positionsValue: 0,
-      fundsValue: 0,
-      cashBalance: 0,
-      positionCount: 0,
-      basketDriftPercentage: 0,
-      unrealizedGain: 0,
-      allocation: [],
-      positions: [],
-    });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sourceMode = await getPortfolioSourceMode(userId);

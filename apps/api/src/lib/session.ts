@@ -1,13 +1,36 @@
 import { and, eq, gt } from "drizzle-orm";
 
-import { auth } from "@/lib/auth";
+import { auth, MCP_API_KEY_CONFIG_ID } from "@/lib/auth";
 import { db } from "@/db/client";
 import { sessions, users } from "@/db/schema";
+import { defaultMcpPermission, extractBearerToken, isMcpToken, type McpPermission } from "@/lib/mcp-auth-rules";
 
-export async function resolveUserId(request: Request) {
+export async function resolveMcpApiKeyUserId(token: string, permission: McpPermission): Promise<string | null> {
+  if (!isMcpToken(token)) return null;
+
+  try {
+    const result = await auth.api.verifyApiKey({
+      body: {
+        configId: MCP_API_KEY_CONFIG_ID,
+        key: token,
+        permissions: { mcp: [permission] },
+      },
+    });
+    return result.valid ? result.key?.referenceId ?? null : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveUserId(request: Request, options: { mcpPermission?: McpPermission } = {}) {
+  const bearerToken = extractBearerToken(request);
+  const mcpPermission = options.mcpPermission ?? defaultMcpPermission(request.method);
+
+  if (isMcpToken(bearerToken)) {
+    return mcpPermission ? resolveMcpApiKeyUserId(bearerToken, mcpPermission) : null;
+  }
+
   // First, try legacy session resolution (for MCP/CLI/Telegram backward compat)
-  const authorization = request.headers.get("authorization");
-  const bearerToken = authorization?.startsWith("Bearer ") ? authorization.slice(7) : null;
   const sessionToken = bearerToken ?? request.headers.get("x-session-token");
 
   if (sessionToken) {
