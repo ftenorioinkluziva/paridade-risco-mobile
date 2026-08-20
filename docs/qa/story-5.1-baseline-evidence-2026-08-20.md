@@ -57,6 +57,10 @@ O seed foi corrigido para garantir esse registro de forma idempotente, com `rand
 - Imagem API candidata local: `sha256:a14a4d53c34370bee7c06b4c957b7886a614efd7fc3e726d817021aeed1f11e3`.
 - O seed executado pela imagem final não registra a senha de teste em texto claro.
 
+## Correção de segurança no pre-push
+
+O `npm audit` executado no pre-push encontrou uma vulnerabilidade `high` recém-publicada em `js-yaml@4.1.1`, trazida pelo ESLint. A versão corrigida `4.3.1` foi adicionada como dependência de desenvolvimento explícita da API, permitindo deduplicação da cadeia do ESLint sem alterar o runtime nem antecipar o upgrade do Drizzle. Após a correção, o audit ficou em `0 critical`, `0 high` e nas quatro moderadas já reservadas para a Story 5.7.
+
 ## Rollback
 
 1. O commit base `560aafcc72332948ad99b7a4f5610af93a61f5f3` foi confirmado no repositório local.
