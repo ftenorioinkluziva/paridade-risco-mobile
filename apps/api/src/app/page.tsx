@@ -54,6 +54,8 @@ function OverviewContent() {
 
   return (
     <Screen
+      pageId="resumo"
+      width="wide"
       title="Resumo"
       subtitle="Sua posição financeira, a saúde do caixa e a próxima decisão de investimento."
     >
@@ -61,23 +63,12 @@ function OverviewContent() {
       {health.error ? <InlineAlert title="Erro na saúde financeira" message={health.error} tone="danger" /> : null}
       {rebalance.error ? <InlineAlert title="Erro no rebalanceamento" message={rebalance.error} tone="danger" /> : null}
 
-      <div className="summary-metrics-grid summary-metrics-grid--two">
+      <div className="summary-metrics-grid summary-primary-grid">
         <SummaryCard eyebrow="PATRIMÔNIO_OBSERVADO" title={formatCurrency(totalObserved)} detail="Investimentos, caixa e posições observadas" tone={totalObserved > 0 ? "success" : "default"} />
         <SummaryCard eyebrow="INVESTIDO" title={formatCurrency(investedValue)} detail="Carteira considerada pela estratégia" tone={investedValue > 0 ? "success" : "default"} />
       </div>
 
-      <div className="summary-metrics-grid summary-metrics-grid--three">
-        <SummaryCard eyebrow="CAIXA_BANCÁRIO" title={formatCurrency(cashBalance)} detail="Saldo observado nas contas" tone={cashBalance > 0 ? "success" : "default"} />
-        <SummaryCard eyebrow="OBRIGAÇÕES_PRÓXIMAS" title={formatCurrency(financial?.obligations?.upcomingTotal ?? 0)} detail="Cartões no horizonte de 30 dias" tone={(financial?.obligations?.upcomingTotal ?? 0) > 0 ? "warning" : "default"} />
-        <SummaryCard eyebrow="APÓS_OBRIGAÇÕES" title={formatCurrency(cashAfterObligations)} detail="Caixa após cartões próximos" tone={cashAfterObligations >= 0 ? "success" : "warning"} />
-      </div>
-
-      <div className="summary-metrics-grid summary-metrics-grid--two">
-        <SummaryCard eyebrow="FLUXO_LÍQUIDO_MÊS_ATUAL" title={formatSignedCurrency(currentMonthCashFlow?.net ?? 0)} detail={`${formatMonthLabel(currentMonthCashFlow?.month)} · receitas vs despesas`} tone={(currentMonthCashFlow?.net ?? 0) >= 0 ? "success" : "warning"} />
-        <SummaryCard eyebrow="FLUXO_LÍQUIDO_MÊS_ANTERIOR" title={formatSignedCurrency(previousMonthCashFlow?.net ?? 0)} detail={`${formatMonthLabel(previousMonthCashFlow?.month)} · referência para investir`} tone={(previousMonthCashFlow?.net ?? 0) >= 0 ? "success" : "warning"} />
-      </div>
-
-      <section style={styles.section}>
+      <section className="summary-decision" style={styles.section}>
         <div style={styles.sectionHeader}>
           <div>
             <div style={styles.sectionLabel}>// PRÓXIMA_DECISÃO</div>
@@ -88,6 +79,14 @@ function OverviewContent() {
           <RebalanceDecisionCard data={rebalanceData} isLoading={rebalance.isLoading} error={rebalance.error} compact showActions={false} showMetrics />
         </Link>
       </section>
+
+      <div className="summary-metrics-grid summary-secondary-grid">
+        <SummaryCard eyebrow="CAIXA_BANCÁRIO" title={formatCurrency(cashBalance)} detail="Saldo observado nas contas" tone={cashBalance > 0 ? "success" : "default"} />
+        <SummaryCard eyebrow="OBRIGAÇÕES_PRÓXIMAS" title={formatCurrency(financial?.obligations?.upcomingTotal ?? 0)} detail="Cartões no horizonte de 30 dias" tone={(financial?.obligations?.upcomingTotal ?? 0) > 0 ? "warning" : "default"} />
+        <SummaryCard eyebrow="APÓS_OBRIGAÇÕES" title={formatCurrency(cashAfterObligations)} detail="Caixa após cartões próximos" tone={cashAfterObligations >= 0 ? "success" : "warning"} />
+        <SummaryCard eyebrow="FLUXO_LÍQUIDO_MÊS_ATUAL" title={formatSignedCurrency(currentMonthCashFlow?.net ?? 0)} detail={`${formatMonthLabel(currentMonthCashFlow?.month)} · receitas vs despesas`} tone={(currentMonthCashFlow?.net ?? 0) >= 0 ? "success" : "warning"} />
+        <SummaryCard eyebrow="FLUXO_LÍQUIDO_MÊS_ANTERIOR" title={formatSignedCurrency(previousMonthCashFlow?.net ?? 0)} detail={`${formatMonthLabel(previousMonthCashFlow?.month)} · referência para investir`} tone={(previousMonthCashFlow?.net ?? 0) >= 0 ? "success" : "warning"} />
+      </div>
 
       {alerts.length > 0 ? (
         <section style={styles.section}>

@@ -17,11 +17,11 @@ export function SummaryCard({ eyebrow, title, detail, tone = "default", trailing
   const borderColor = tone === "success" ? colors.primary : tone === "warning" ? colors.warning : colors.border;
 
   return (
-    <div style={{ ...styles.card, borderColor }}>
-      <div style={styles.content}>
-        <div style={styles.eyebrow}>{eyebrow}</div>
-        <div style={{ ...styles.title, color: tone === "success" ? colors.primary : colors.text }}>{title}</div>
-        <div style={styles.detail}>{detail}</div>
+    <div className="responsive-card summary-card" style={{ ...styles.card, borderColor }}>
+      <div className="summary-card-content" style={styles.content}>
+        <div className="summary-card-eyebrow" style={styles.eyebrow}>{eyebrow}</div>
+        <div className="summary-card-value" style={{ ...styles.title, color: tone === "success" ? colors.primary : colors.text }}>{title}</div>
+        <div className="summary-card-detail" style={styles.detail}>{detail}</div>
       </div>
       {trailing ? <div>{trailing}</div> : null}
     </div>

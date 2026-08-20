@@ -7,12 +7,13 @@
   --border: #2A2B30;
   --text: #FFFFFF;
   --text-muted: #A1A1AA;
-  --text-soft: #8B8B95;
+  --text-soft: #A6A6B0;
   --primary: #22C55E;
   --primary-strong: #16A34A;
   --success: #22C55E;
   --warning: #F59E0B;
-  --danger: #EF4444;
+  --danger: #F87171;
+  --danger-strong: #B91C1C;
   --accent-cyan: #22D3EE;
   --accent-panel: #181A1F;
   --command-ink: #0F1115;
@@ -104,6 +105,70 @@ a:hover {
 
 .summary-metrics-grid--three {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summary-primary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summary-secondary-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.critical-screen .screen-inner {
+  gap: 16px !important;
+}
+
+.critical-screen .screen-header {
+  align-items: center !important;
+  min-height: 70px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.critical-screen .screen-inner > * {
+  min-width: 0;
+}
+
+.summary-card {
+  padding: 16px !important;
+  background: color-mix(in srgb, var(--surface) 42%, transparent);
+}
+
+.summary-card-value,
+.summary-card-detail {
+  overflow-wrap: anywhere;
+}
+
+.summary-secondary-grid .summary-card-value {
+  font-size: clamp(18px, 1.7vw, 23px) !important;
+  line-height: 28px !important;
+}
+
+.summary-decision .decision-card-link {
+  width: min(100%, 640px);
+}
+
+.page-investimentos .investment-cash-planner,
+.page-saude-financeira .screen-inner > section,
+.page-pluggy .screen-inner > section,
+.page-perfil .screen-inner > section {
+  scroll-margin-top: 72px;
+}
+
+.page-cotacoes table,
+.page-pluggy table {
+  font-variant-numeric: tabular-nums;
+}
+
+.critical-screen :is(p, span, strong, td, th) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1199px) {
+  .summary-secondary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .app-nav-links {
@@ -263,7 +328,9 @@ a:hover {
   .mobile-navigation-link.is-danger { color: var(--danger); }
   .app-nav-user { display: none !important; }
   .screen-inner { gap: 16px !important; padding: 16px 12px 24px !important; }
+  .critical-screen .screen-inner { gap: 12px !important; }
   .screen-header { flex-direction: column; gap: 12px !important; }
+  .critical-screen .screen-header { align-items: stretch !important; min-height: 0; padding-bottom: 12px; }
   .screen-title-block { gap: 4px !important; }
   .screen-title-block h1 { font-size: 26px !important; line-height: 32px; }
   .screen-action { width: 100%; }
@@ -283,11 +350,17 @@ a:hover {
   .investment-action-row .investment-action-amount { text-align: right; }
   .summary-metrics-grid--two,
   .summary-metrics-grid--three,
+  .summary-primary-grid,
+  .summary-secondary-grid,
   .mobile-grid-2,
   .mobile-grid-3,
   .mobile-grid-4,
   .mobile-columns-2 { grid-template-columns: minmax(0, 1fr) !important; }
   .primary-button { min-height: 44px !important; }
+  .summary-card { padding: 14px !important; }
+  .summary-card-value { font-size: 22px !important; line-height: 28px !important; }
+  .summary-card-detail { line-height: 18px !important; }
+  .summary-decision .decision-card-link { width: 100%; }
 }
 
 @media (min-width: 681px) and (max-width: 1023px) {

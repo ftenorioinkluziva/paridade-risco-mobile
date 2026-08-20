@@ -171,11 +171,11 @@ try {
   const testFiles = mode === "artifact-check"
     ? ["artifact-probe.spec.ts"]
     : mode === "responsive"
-      ? ["responsive-foundation.spec.ts"]
+      ? ["responsive-foundation.spec.ts", "responsive-critical.spec.ts"]
     : mode === "critical"
       ? ["critical-flows.spec.ts"]
       : mode === "gate"
-        ? ["smoke.spec.ts", "critical-flows.spec.ts", "responsive-foundation.spec.ts"]
+        ? ["smoke.spec.ts", "critical-flows.spec.ts", "responsive-foundation.spec.ts", "responsive-critical.spec.ts"]
         : ["smoke.spec.ts"];
   const testEnv = mode === "artifact-check" ? { ...env, E2E_ARTIFACT_PROBE: "1" } : env;
   const testArgs = ["test", ...testFiles, "--config", "tests/e2e/playwright.config.ts", ...projectArgs];

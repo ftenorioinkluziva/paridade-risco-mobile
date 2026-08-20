@@ -76,7 +76,7 @@ export default defineConfig({
     },
     {
       name: "responsive-foundation",
-      testMatch: /responsive-foundation\.spec\.ts/,
+      testMatch: /responsive-(foundation|critical)\.spec\.ts/,
       dependencies: ["setup"],
       use: {
         ...authenticatedUse,

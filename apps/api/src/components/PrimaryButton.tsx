@@ -17,8 +17,8 @@ export function PrimaryButton({ label, onPress, disabled = false, tone = "primar
 
   const btnStyle: React.CSSProperties = {
     ...styles.base,
-    backgroundColor: isDanger ? colors.danger : isNeutral ? colors.surfaceAlt : colors.primary,
-    borderColor: isDanger ? colors.danger : isNeutral ? colors.border : colors.primaryStrong,
+    backgroundColor: isDanger ? colors.dangerStrong : isNeutral ? colors.surfaceAlt : colors.primary,
+    borderColor: isDanger ? colors.dangerStrong : isNeutral ? colors.border : colors.primaryStrong,
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.5 : 1,
   };

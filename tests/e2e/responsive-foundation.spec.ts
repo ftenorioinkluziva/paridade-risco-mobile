@@ -52,7 +52,7 @@ test("semantic widths are applied by page type", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.goto("/");
-  await expect(page.locator(".screen-inner--standard")).toBeVisible();
+  await expect(page.locator(".screen-inner--wide")).toBeVisible();
 
   await page.goto("/investimentos");
   await expect(page.locator(".screen-inner--wide")).toBeVisible();
