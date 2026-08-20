@@ -122,4 +122,4 @@ baseline auditada
 
 - 2026-08-20: Epic criado por @pm para o ciclo de confiabilidade, simplificação e responsividade.
 - 2026-08-20: Stories 5.1–5.9 validadas GO por @po; dependência 5.5 → 5.4 explicitada.
-- 2026-08-20: Story 5.1 encerrada administrativamente; próxima elegível: 5.2. [closure-key: 5.1:commit:d61cede4fe3dbaa77dfc079b719a49f615fe8e86]
+- 2026-08-20: Story 5.1 encerrada administrativamente; próxima elegível: 5.2. [closure-key: 5.1:commit:01af84123e53eab7fea2401b96a3aa60923bb572]

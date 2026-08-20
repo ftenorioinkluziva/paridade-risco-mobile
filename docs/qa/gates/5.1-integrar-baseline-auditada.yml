@@ -4,8 +4,8 @@ story_title: 'Integrar e fixar a baseline auditada'
 gate: PASS
 status_reason: 'O candidato auditado passou pelos gates de código, build, Compose e smoke autenticado; os invariantes operacionais e o rollback estão documentados.'
 reviewer: 'Quinn (Test Architect)'
-reviewed_revision: 'd61cede4fe3dbaa77dfc079b719a49f615fe8e86'
-updated: '2026-08-20T14:28:08.0407827-03:00'
+reviewed_revision: '01af84123e53eab7fea2401b96a3aa60923bb572'
+updated: '2026-08-20T14:39:27.3192942-03:00'
 
 top_issues: []
 
@@ -24,7 +24,7 @@ evidence:
 nfr_validation:
   security:
     status: PASS
-    notes: 'O seed local usa o hash nativo do Better Auth, não registra a senha no log e não cria migração de usuários.'
+    notes: 'O seed local usa o hash nativo do Better Auth, não registra a senha no log e não cria migração de usuários; o pre-push ficou sem vulnerabilidades high/critical.'
   performance:
     status: PASS
     notes: 'O scheduler manteve a cadência de oito minutos e atualizou os 11 ativos com sucesso.'
