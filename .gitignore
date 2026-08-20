@@ -91,6 +91,7 @@ temp/
 .aiox/tmp/
 .aiox/sdc/
 .aiox/waves/
+.aiox/*.lock
 .codex/tmp/
 
 # Arquivos gerados pelo AIOX
