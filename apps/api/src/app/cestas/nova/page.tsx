@@ -21,7 +21,7 @@ type AllocationRow = {
 export default function NovaCestaPage() {
   const router = useRouter();
 
-const { data: funds, isLoading: fundsLoading } = useFunds();
+  const { data: funds } = useFunds();
   const { data: assets, isLoading: assetsLoading } = useAssets();
 
   const optionMap = new Map<string, { ticker: string; label: string }>();

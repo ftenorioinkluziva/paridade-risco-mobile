@@ -1,13 +1,9 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 
 export function LandingPage() {
-  const router = useRouter();
-
   return (
     <div style={styles.outer}>
       <NavBar />
@@ -20,12 +16,12 @@ export function LandingPage() {
             decisões de investimento com a metodologia de Paridade de Risco.
           </p>
           <div style={styles.actions}>
-            <button
-              onClick={() => router.push("/login")}
-              style={styles.primaryButton}
+            <Link
+              href="/login"
+              style={{ ...styles.primaryButton, textDecoration: "none", display: "inline-block" }}
             >
               Entrar na plataforma
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -61,7 +57,6 @@ export function LandingPage() {
 
 // Reuse NavBar at top but without requiring auth
 function NavBar() {
-  const router = useRouter();
   return (
     <nav style={styles.navWrapper}>
       <div style={styles.navInner}>
@@ -69,12 +64,12 @@ function NavBar() {
           <span style={styles.brandKicker}>//</span>
           <span style={styles.brandName}>PARIDADE_RISCO</span>
         </div>
-        <button
-          onClick={() => router.push("/login")}
-          style={styles.loginLink}
+        <Link
+          href="/login"
+          style={{ ...styles.loginLink, textDecoration: "none", display: "inline-block" }}
         >
           Entrar
-        </button>
+        </Link>
       </div>
     </nav>
   );

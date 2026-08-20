@@ -32,7 +32,10 @@ services:
     environment:
       DATABASE_URL: postgresql://paridade:${DB_PASSWORD:-paridade}@postgres:5432/paridade
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:${API_PORT:-3002}}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-${NEXTAUTH_SECRET:-paridade-risco-better-auth-secret-key-32ch}}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:${API_PORT:-3002}}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-http://localhost:3000,http://localhost:3002,http://127.0.0.1:3000,http://127.0.0.1:3002}
       PLUGGY_ENVIRONMENT: ${PLUGGY_ENVIRONMENT:-sandbox}
       PLUGGY_API_BASE_URL: ${PLUGGY_API_BASE_URL:-https://api.pluggy.ai}
       PLUGGY_CLIENT_ID: ${PLUGGY_CLIENT_ID:-}
@@ -47,7 +50,7 @@ services:
       npm_config_cache: /tmp/npm-cache
       NODE_ENV: production
     working_dir: /app/apps/api
-    command: sh -c "npx --yes drizzle-kit migrate && node server.js"
+    command: sh -c "npx tsx src/db/migrate.ts && node server.js"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s

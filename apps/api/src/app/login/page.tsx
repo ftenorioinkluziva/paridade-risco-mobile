@@ -2,7 +2,7 @@
 
 import type { LoginInput } from "@paridade-risco/shared";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { InlineAlert } from "@/components/InlineAlert";
 import { InputField } from "@/components/InputField";
@@ -13,8 +13,14 @@ import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
 
 export default function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

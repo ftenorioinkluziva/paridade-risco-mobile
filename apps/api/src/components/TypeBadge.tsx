@@ -34,7 +34,7 @@ export function TypeBadge({ label, variant }: Props) {
 const styles: Record<string, React.CSSProperties> = {
   badge: {
     display: "inline-flex",
-    borderRadius: 4,
+    borderRadius: layout.radius.sm,
     padding: "2px 6px",
     borderWidth: 1,
     borderStyle: "solid",

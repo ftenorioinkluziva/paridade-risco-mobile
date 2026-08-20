@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { InlineAlert } from "@/components/InlineAlert";
 import { InputField } from "@/components/InputField";
@@ -9,11 +9,19 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
+import { useAuth } from "@/context/AuthContext";
 
 import { authClient } from "@/lib/auth-client";
 
 export default function SignupPage() {
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

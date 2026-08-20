@@ -12,7 +12,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { errorEnvelope, executeMcpReadOperation, mcpErrorResult, operationCatalog, operationToMcpTool } from "@paridade-risco/shared/contracts";
-import { apiGetWithContext } from "@paridade-risco/shared/http-client";
+import { apiGetWithContext, apiRequestWithContext } from "@paridade-risco/shared/http-client";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
@@ -30,22 +30,10 @@ function loadApiUrl() {
 
 // ─── HTTP Client ─────────────────────────────────────────────────────────────
 
-async function apiGet(path, sessionToken, operation) {
-  return apiGetWithContext(path, operation, { apiUrl: loadApiUrl(), sessionToken });
-}
-
-async function apiPost(path, body, sessionToken) {
-  const headers = { "Content-Type": "application/json" };
-  if (sessionToken) headers["Authorization"] = `Bearer ${sessionToken}`;
-
-  try {
-    const url = `${loadApiUrl().replace(/\/+$/, "")}${path}`;
-    const res = await fetch(url, { method: "POST", headers, body: body ? JSON.stringify(body) : undefined });
-    const data = res.ok ? await res.json() : null;
-    return { ok: res.ok, status: res.status, data, error: !res.ok ? `HTTP ${res.status}` : undefined };
-  } catch (e) {
-    return { ok: false, status: 0, error: e instanceof Error ? e.message : "Network error" };
-  }
+async function executeRemoteApi(path, sessionToken, operation, body) {
+  const contract = operationCatalog[operation];
+  const method = contract?.method ?? "GET";
+  return apiRequestWithContext(method, path, operation, body, { apiUrl: loadApiUrl(), sessionToken });
 }
 
 // ─── MCP Server Factory ──────────────────────────────────────────────────────
@@ -78,11 +66,11 @@ export function extractBearerToken(authorization) {
   return match?.[1] ?? null;
 }
 
-export async function executeRemoteMcpTool(name, args, sessionToken, request = apiGet) {
+export async function executeRemoteMcpTool(name, args, sessionToken, request = executeRemoteApi) {
   if (!operationCatalog[name]) {
     return mcpErrorResult({ code: "UNKNOWN_OPERATION", category: "validation", message: `Unknown tool: ${name}`, retryable: false });
   }
-  return executeMcpReadOperation(name, args, (path, operation) => request(path, sessionToken, operation));
+  return executeMcpReadOperation(name, args, (path, operation, body) => request(path, sessionToken, operation, body));
 }
 
 export function createRemoteMcpApp({

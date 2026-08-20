@@ -103,27 +103,7 @@ export async function apiGet(path, operation) {
 }
 
 export async function apiGetWithContext(path, operation, context = {}) {
-  try {
-    const response = await fetch(context.apiUrl ? `${context.apiUrl.replace(/\/+$/, "")}${path}` : buildUrl(path), {
-      headers: context.sessionToken ? { "Content-Type": "application/json", Authorization: `Bearer ${context.sessionToken}` } : buildHeaders(),
-    });
-    const payload = await readJson(response);
-    if (!response.ok) return failureFromResponse(response, payload);
-    const data = validateOperationOutput(operation, payload);
-    return {
-      ok: true,
-      status: response.status,
-      data: data ?? undefined,
-    };
-  } catch (error) {
-    const canonical = classifyRequestError(error);
-    return {
-      ok: false,
-      status: 0,
-      error: canonical.message,
-      operationError: canonical,
-    };
-  }
+  return apiRequestWithContext("GET", path, operation, undefined, context);
 }
 
 /**
@@ -131,10 +111,21 @@ export async function apiGetWithContext(path, operation, context = {}) {
  * Returns { ok, status, data?, error? }.
  */
 export async function apiPost(path, body, operation) {
+  return apiPostWithContext(path, body, operation);
+}
+
+export async function apiPostWithContext(path, body, operation, context = {}) {
+  return apiRequestWithContext("POST", path, operation, body, context);
+}
+
+export async function apiRequestWithContext(method, path, operation, body, context = {}) {
   try {
-    const response = await fetch(buildUrl(path), {
-      method: "POST",
-      headers: buildHeaders(),
+    const url = context.apiUrl ? `${context.apiUrl.replace(/\/+$/, "")}${path}` : buildUrl(path);
+    const headers = context.sessionToken ? { "Content-Type": "application/json", Authorization: `Bearer ${context.sessionToken}` } : buildHeaders();
+
+    const response = await fetch(url, {
+      method,
+      headers,
       body: body ? JSON.stringify(body) : undefined,
     });
     const payload = await readJson(response);

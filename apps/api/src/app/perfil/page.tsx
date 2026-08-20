@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { AuthGuard } from "@/components/AuthGuard";
 import { Screen } from "@/components/Screen";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { InputField } from "@/components/InputField";
@@ -13,16 +14,29 @@ import { ADMIN_NAV_LINKS } from "@/components/NavBar";
 import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
+import { authClient } from "@/lib/auth-client";
 
-const STORAGE_KEY = "pr_session_token";
-
-function toDateInput(iso: string | null | undefined): string {
-  if (!iso) return "";
-  return iso.slice(0, 10);
+function toDateInput(dateVal: unknown): string {
+  if (!dateVal) return "";
+  if (dateVal instanceof Date) return dateVal.toISOString().slice(0, 10);
+  if (typeof dateVal === "string") return dateVal.slice(0, 10);
+  try {
+    return new Date(dateVal as any).toISOString().slice(0, 10);
+  } catch {
+    return String(dateVal).slice(0, 10);
+  }
 }
 
 export default function PerfilPage() {
-  const { user, signOut, isAuthenticated, refetchUser } = useAuth();
+  return (
+    <AuthGuard>
+      <PerfilContent />
+    </AuthGuard>
+  );
+}
+
+function PerfilContent() {
+  const { user, sessionToken, signOut, refetchUser } = useAuth();
   const router = useRouter();
 
   // Dados Pessoais
@@ -36,6 +50,20 @@ export default function PerfilPage() {
   // MCP Token
   const [showMcpToken, setShowMcpToken] = useState(false);
   const [mcpCopied, setMcpCopied] = useState(false);
+  const [mcpToken, setMcpToken] = useState<string | null>(sessionToken);
+
+  useEffect(() => {
+    if (sessionToken) {
+      setMcpToken(sessionToken);
+    } else {
+      authClient.getSession().then((res) => {
+        const token = (res.data as any)?.session?.token ?? (res.data as any)?.token;
+        if (token) {
+          setMcpToken(token);
+        }
+      }).catch(() => {});
+    }
+  }, [sessionToken]);
 
   // Pluggy Integration
   const [pluggyClientId, setPluggyClientId] = useState("");
@@ -44,13 +72,10 @@ export default function PerfilPage() {
   const [pluggySecretMasked, setPluggySecretMasked] = useState<string | null>(null);
   const [isPluggyConfigured, setIsPluggyConfigured] = useState(false);
   const [pluggyUpdatedAt, setPluggyUpdatedAt] = useState<string | null>(null);
-  const [loadingPluggy, setLoadingPluggy] = useState(true);
   const [pluggyMessage, setPluggyMessage] = useState<{ text: string; tone: "success" | "warning" | "danger" } | null>(null);
   const [testingPluggy, setTestingPluggy] = useState(false);
   const [savingPluggy, setSavingPluggy] = useState(false);
   const [syncingPluggy, setSyncingPluggy] = useState(false);
-
-  const mcpToken = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
 
   function copyMcpToken() {
     if (!mcpToken) return;
@@ -61,19 +86,15 @@ export default function PerfilPage() {
   }
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace("/login");
-    }
-  }, [isAuthenticated, router]);
-
-  useEffect(() => {
     async function loadPluggyProfile() {
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
         const headers: Record<string, string> = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
+        if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
 
-        const res = await fetch("/api/profile/pluggy", { headers });
+        const res = await fetch("/api/profile/pluggy", {
+          headers,
+          credentials: "same-origin",
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.isConfigured) {
@@ -86,15 +107,11 @@ export default function PerfilPage() {
         }
       } catch {
         // Falha silenciosa ao carregar credenciais
-      } finally {
-        setLoadingPluggy(false);
       }
     }
 
-    if (isAuthenticated) {
-      void loadPluggyProfile();
-    }
-  }, [isAuthenticated]);
+    void loadPluggyProfile();
+  }, [mcpToken]);
 
   function enterEditMode() {
     setEditPhone(user?.phone ?? "");
@@ -113,13 +130,13 @@ export default function PerfilPage() {
     setEditing(true);
     setEditError(null);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
 
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers,
+        credentials: "same-origin",
         body: JSON.stringify({
           phone: editPhone.trim() || null,
           birthDate: editBirthDate ? new Date(editBirthDate + "T12:00:00").toISOString() : null,
@@ -143,13 +160,13 @@ export default function PerfilPage() {
     setTestingPluggy(true);
     setPluggyMessage(null);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
 
       const res = await fetch("/api/profile/pluggy/test", {
         method: "POST",
         headers,
+        credentials: "same-origin",
         body: JSON.stringify({
           clientId: pluggyClientId.trim(),
           clientSecret: pluggyClientSecret.trim() || undefined,
@@ -178,13 +195,13 @@ export default function PerfilPage() {
     setSavingPluggy(true);
     setPluggyMessage(null);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
 
       const res = await fetch("/api/profile/pluggy", {
         method: "PUT",
         headers,
+        credentials: "same-origin",
         body: JSON.stringify({
           clientId: pluggyClientId.trim(),
           clientSecret: pluggyClientSecret.trim() || undefined,
@@ -217,13 +234,13 @@ export default function PerfilPage() {
     setSyncingPluggy(true);
     setPluggyMessage(null);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
 
       const res = await fetch("/api/integrations/pluggy/sync", {
         method: "POST",
         headers,
+        credentials: "same-origin",
       });
       const data = await res.json();
       if (!res.ok) {
@@ -247,13 +264,13 @@ export default function PerfilPage() {
     if (!confirm("Tem certeza que deseja remover suas credenciais da Pluggy?")) return;
     setPluggyMessage(null);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
       const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (mcpToken) headers["Authorization"] = `Bearer ${mcpToken}`;
 
       const res = await fetch("/api/profile/pluggy", {
         method: "DELETE",
         headers,
+        credentials: "same-origin",
       });
       if (res.ok) {
         setIsPluggyConfigured(false);
@@ -293,14 +310,14 @@ export default function PerfilPage() {
       title="Perfil"
       subtitle="Suas informações de cadastro e integrações."
       action={
-        <PrimaryButton
-          label={editMode ? "Editando..." : "Editar"}
-          onPress={enterEditMode}
-          tone="neutral"
-          disabled={editMode || editing}
-        />
-      }
-    >
+          <PrimaryButton
+            label={editMode ? "Editando..." : "Editar"}
+            onPress={enterEditMode}
+            tone="neutral"
+            disabled={editMode || editing}
+          />
+        }
+      >
       {editError ? (
         <InlineAlert title="Erro" message={editError} tone="danger" />
       ) : null}
@@ -342,7 +359,7 @@ export default function PerfilPage() {
           </div>
           <div style={styles.fieldWrap}>
             <label style={styles.fieldLabel}>NASCIMENTO</label>
-            <span style={styles.fieldValue}>{user.birthDate?.slice(0, 10) ?? "—"}</span>
+            <span style={styles.fieldValue}>{toDateInput(user.birthDate) || "—"}</span>
           </div>
           <div style={styles.fieldWrap}>
             <label style={styles.fieldLabel}>TELEGRAM</label>

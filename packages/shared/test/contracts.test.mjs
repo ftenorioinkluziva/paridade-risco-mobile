@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { errorEnvelopeSchema, mcpErrorResult, operationCatalog, operationPath, operationToMcpTool } from "../src/contracts.mjs";
 
 test("catalog has runtime contracts and no public credentials", () => {
-  assert.equal(Object.keys(operationCatalog).length, 14);
+  assert.equal(Object.keys(operationCatalog).length, 15);
   for (const contract of Object.values(operationCatalog)) {
     const schema = operationToMcpTool(contract).inputSchema;
     assert.equal(schema.additionalProperties, false);
@@ -16,10 +16,10 @@ test("strict inputs reject missing, extra and incompatible payloads", () => {
   assert.throws(() => operationPath("basket_detail", { basketId: "bad" }), (e) => e.operationError.code === "INVALID_INPUT");
   assert.throws(() => operationPath("portfolio_summary", { extra: true }), (e) => e.operationError.code === "INVALID_INPUT");
   assert.equal(operationPath("basket_detail", { basketId: "123e4567-e89b-42d3-a456-426614174000" }), "/api/baskets/123e4567-e89b-42d3-a456-426614174000");
-  assert.equal(operationPath("transaction_history", {}), "/api/transactions");
-  assert.equal(operationPath("transaction_history", { limit: 20 }), "/api/transactions?limit=20");
-  assert.throws(() => operationPath("transaction_history", { limit: 0 }), (e) => e.operationError.code === "INVALID_INPUT");
-  assert.throws(() => operationPath("transaction_history", { limit: 101 }), (e) => e.operationError.code === "INVALID_INPUT");
+  assert.equal(operationPath("get_active_basket", {}), "/api/baskets/active");
+  assert.equal(operationPath("pluggy_connection_status", {}), "/api/profile/pluggy");
+  assert.equal(operationPath("pluggy_trigger_sync", {}), "/api/integrations/pluggy/sync");
+  assert.equal(operationPath("map_pluggy_investment", { investmentId: "inv-1", resolution: "FORA_DA_ESTRATEGIA", reason: "Reserva de emergência" }), "/api/integrations/pluggy/mappings");
   assert.equal(operationPath("pluggy_financial_overview", {}), "/api/integrations/pluggy/financial-overview");
   assert.equal(operationPath("pluggy_financial_health", { days: 30 }), "/api/integrations/pluggy/financial-health?days=30");
   assert.equal(operationPath("pluggy_rebalance_preview", { cashForOrders: 123.45 }), "/api/integrations/pluggy/rebalance/preview?cashForOrders=123.45");
@@ -28,10 +28,11 @@ test("strict inputs reject missing, extra and incompatible payloads", () => {
   assert.throws(() => operationPath("pluggy_financial_health", { days: 366 }), (e) => e.operationError.code === "INVALID_INPUT");
 });
 
-test("transaction limit is represented faithfully in the MCP schema", () => {
-  const schema = operationToMcpTool(operationCatalog.transaction_history).inputSchema;
-  assert.deepEqual(schema.properties.limit, { type: "integer", minimum: 1, maximum: 100 });
-  assert.deepEqual(schema.required, []);
+test("mapping input and enum is represented faithfully in the MCP schema", () => {
+  const schema = operationToMcpTool(operationCatalog.map_pluggy_investment).inputSchema;
+  assert.equal(schema.properties.investmentId.type, "string");
+  assert.deepEqual(schema.properties.resolution, { type: "string", enum: ["MAPEADO", "FORA_DA_ESTRATEGIA"] });
+  assert.deepEqual(schema.required, ["investmentId"]);
 });
 
 test("planned order cash is represented as a decimal in the MCP schema", () => {
@@ -67,13 +68,12 @@ test("all operation outputs have concrete schemas that reject incompatible paylo
   const valid = {
     portfolio_summary: { totalValue: 0, positionsValue: 0, fundsValue: 0, cashBalance: 0, positionCount: 0, basketDriftPercentage: 0, unrealizedGain: 0, allocation: [], positions: [] },
     prices_status: { success: true, status: [], timestamp: "2026-07-10T12:00:00.000Z" },
-    rebalance_preview: { portfolioValue: 0, driftPercentage: 0, targetBasketName: "Sem cesta", actions: [] },
     list_assets: [{ id: "a", ticker: "AAA", name: "Asset" }],
     asset_prices: [{ ticker: "AAA", name: "Asset", calculationType: "MARKET", price: 1, priceDate: "2026-07-10" }],
-    funds_summary: [{ currentValue: 1, id: "f", indexAssetName: null, indexAssetTicker: null, initialInvestment: 1, investmentDate: "2026-07-10T12:00:00.000Z", name: "Fund", updatedAt: "2026-07-10T12:00:00.000Z" }],
     list_baskets: [{ id: "b", name: "Basket", assetCount: 0, status: "ATIVA" }],
+    get_active_basket: { id: "b", name: "Basket", description: "Default basket" },
     basket_detail: { id: "b", name: "Basket", status: "ATIVA", description: null, allocations: [] },
-    transaction_history: [{ id: "t", assetTicker: "AAA", assetName: "Asset", type: "COMPRA", shares: 1, pricePerShare: 2, amount: 2, tradedAt: "2026-07-10T12:00:00.000Z", dateLabel: "10 jul" }],
+    pluggy_connection_status: { isConfigured: true, clientId: "cid", itemId: "item-123" },
     pluggy_financial_overview: financialOverview,
     pluggy_financial_health: {
       source: "PLUGGY", generatedAt, healthStatus: "INCOMPLETA", financial: financialOverview,
@@ -83,6 +83,8 @@ test("all operation outputs have concrete schemas that reject incompatible paylo
     pluggy_investment_projection: { generatedAt, freshness, connections: [], accounts: [], investments: [], totals: { totalInvestedValue: 0, totalOriginalValue: null, totalProfitValue: null, byRiskBucket: {}, mappedCount: 0, suggestedCount: 0, pendingCount: 0, outsideStrategyCount: 0, missingCostBasisCount: 0 } },
     pluggy_rebalance_preview: { source: "PLUGGY", portfolioValue: 0, investedValue: 0, cashAvailable: 0, cashForOrders: 0, cashHeldInReserve: 0, calculationBaseValue: 0, rebalanceCost: 0, buyRequired: 0, sellProceeds: 0, postRebalanceCash: 0, includeCash: false, liquidityStatus: "NAO_CALCULADA", executionReady: false, eligibleForRebalance: false, missingProfileFields: [], analysisStatus: "COMPLETA", observedInvestedValue: 0, outsideStrategyValue: 0, unresolvedValue: 0, unresolvedCount: 0, mappingCoveragePercentage: null, warnings: [], driftPercentage: 0, targetBasketName: "Sem cesta ativa", actions: [] },
     pluggy_migration_readiness: { source: "PLUGGY", generatedAt, currentMode: "MANUAL", candidateMode: "PLUGGY", status: "BLOCKED", canSwitchToPluggy: false, manualCrudStatus: "ACTIVE", manualCrud: { transactions: "ACTIVE", funds: "ACTIVE", reason: "Revisão necessária" }, reconciliation: { status: "DIVERGENTE", considered: false, baseline: "PLUGGY_ONLY_SANDBOX" }, comparison: { status: "DIVERGENTE", totalValueDelta: 0, investedValueDelta: 0, cashBalanceDelta: 0, positionValueDelta: 0, byTicker: [] }, blockers: [], warnings: [], nextAction: "Revisar" },
+    pluggy_trigger_sync: { source: "PLUGGY", sync: { syncRunId: "run-1", accounts: 2, investments: 5, transactions: 10 } },
+    map_pluggy_investment: { id: "map-1", investmentId: "inv-1", assetId: "asset-1", status: "MAPEADO" },
   };
   for (const [name, contract] of Object.entries(operationCatalog)) {
     assert.equal(contract.outputSchema.safeParse(valid[name]).success, true, `${name} valid fixture`);

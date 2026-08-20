@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";

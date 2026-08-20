@@ -21,8 +21,8 @@
  *   pr config show                                      Show config (no secrets)
  */
 
-import { loadOrInitConfig, saveConfig, apiGet, apiPost } from "@paridade-risco/shared/http-client";
-import { errorEnvelope, executeCliReadOperation, toOperationError } from "@paridade-risco/shared/contracts";
+import { loadOrInitConfig, saveConfig, apiRequestWithContext } from "@paridade-risco/shared/http-client";
+import { errorEnvelope, executeCliReadOperation, operationCatalog, toOperationError } from "@paridade-risco/shared/contracts";
 import { Command } from "commander";
 import { pathToFileURL } from "node:url";
 
@@ -37,7 +37,7 @@ function printError(message, details) {
 }
 
 async function cmdLogin(email, password) {
-  const result = await apiPost("/api/auth/login", { email, password }, "login");
+  const result = await apiRequestWithContext("POST", "/api/auth/login", "login", { email, password });
   if (!result.ok || !result.data) {
     printError("Login failed", result);
     return;
@@ -63,8 +63,9 @@ async function cmdPricesStatus() {
   printJson(await executeCliOperation("prices_status"));
 }
 
-async function cmdRebalance() {
-  printJson(await executeCliOperation("rebalance_preview"));
+async function cmdRebalance(cash) {
+  const input = cash !== undefined ? { cashForOrders: Number(cash) } : {};
+  printJson(await executeCliOperation("pluggy_rebalance_preview", input));
 }
 
 async function cmdListAssets() {
@@ -75,24 +76,39 @@ async function cmdAssetPrices() {
   printJson(await executeCliOperation("asset_prices"));
 }
 
-async function cmdFundsSummary() {
-  printJson(await executeCliOperation("funds_summary"));
-}
-
 async function cmdListBaskets() {
   printJson(await executeCliOperation("list_baskets"));
+}
+
+async function cmdActiveBasket() {
+  printJson(await executeCliOperation("get_active_basket"));
 }
 
 async function cmdBasketDetail(id) {
   printJson(await executeCliOperation("basket_detail", { basketId: id }));
 }
 
-async function cmdTransactions(limit) {
-  const input = limit === undefined ? {} : { limit: Number(limit) };
-  printJson(await executeCliOperation("transaction_history", input));
+async function cmdFinancialOverview(days) {
+  const input = days !== undefined ? { days: Number(days) } : {};
+  printJson(await executeCliOperation("pluggy_financial_overview", input));
 }
 
-export async function executeCliOperation(name, input = {}, request = apiGet) {
+async function cmdFinancialHealth(days) {
+  const input = days !== undefined ? { days: Number(days) } : {};
+  printJson(await executeCliOperation("pluggy_financial_health", input));
+}
+
+async function cmdSyncPluggy() {
+  printJson(await executeCliOperation("pluggy_trigger_sync"));
+}
+
+function defaultCliRequest(path, operation, body) {
+  const contract = operationCatalog[operation];
+  const method = contract?.method ?? "GET";
+  return apiRequestWithContext(method, path, operation, body);
+}
+
+export async function executeCliOperation(name, input = {}, request = defaultCliRequest) {
   return executeCliReadOperation(name, input, request);
 }
 
@@ -133,15 +149,16 @@ program
 
 program
   .command("rebalance")
-  .description("Get rebalance preview")
-  .action(async () => {
-    try { await cmdRebalance(); }
+  .description("Get Pluggy rebalance preview")
+  .option("--cash <number>", "Cash amount for orders")
+  .action(async (options) => {
+    try { await cmdRebalance(options.cash); }
     catch (error) { printError("Rebalance command failed", error); }
   });
 
 program
   .command("list-assets")
-  .description("List all available assets")
+  .description("List the 11 strategy assets")
   .action(async () => {
     try { await cmdListAssets(); }
     catch (error) { printError("Command failed", error); }
@@ -149,17 +166,9 @@ program
 
 program
   .command("asset-prices")
-  .description("Get current prices for all assets")
+  .description("Get current prices for all strategy assets")
   .action(async () => {
     try { await cmdAssetPrices(); }
-    catch (error) { printError("Command failed", error); }
-  });
-
-program
-  .command("funds-summary")
-  .description("Get summary of all funds")
-  .action(async () => {
-    try { await cmdFundsSummary(); }
     catch (error) { printError("Command failed", error); }
   });
 
@@ -168,6 +177,14 @@ program
   .description("List all baskets")
   .action(async () => {
     try { await cmdListBaskets(); }
+    catch (error) { printError("Command failed", error); }
+  });
+
+program
+  .command("active-basket")
+  .description("Get active basket")
+  .action(async () => {
+    try { await cmdActiveBasket(); }
     catch (error) { printError("Command failed", error); }
   });
 
@@ -181,11 +198,28 @@ program
   });
 
 program
-  .command("transactions")
-  .description("Get recent transaction history")
-  .option("--limit <number>", "Maximum transactions to return (1-100)")
+  .command("financial-overview")
+  .description("Get Pluggy financial overview")
+  .option("--days <number>", "Period in days (default: 90)")
   .action(async (options) => {
-    try { await cmdTransactions(options.limit); }
+    try { await cmdFinancialOverview(options.days); }
+    catch (error) { printError("Command failed", error); }
+  });
+
+program
+  .command("financial-health")
+  .description("Get Pluggy financial health status")
+  .option("--days <number>", "Period in days (default: 90)")
+  .action(async (options) => {
+    try { await cmdFinancialHealth(options.days); }
+    catch (error) { printError("Command failed", error); }
+  });
+
+program
+  .command("sync-pluggy")
+  .description("Trigger instant sync with Pluggy Open Finance")
+  .action(async () => {
+    try { await cmdSyncPluggy(); }
     catch (error) { printError("Command failed", error); }
   });
 

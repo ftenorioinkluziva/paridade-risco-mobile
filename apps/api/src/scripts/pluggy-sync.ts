@@ -2,24 +2,36 @@ import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PluggyClient } from "../lib/pluggy/client";
-import { readPluggyConfig } from "../lib/pluggy/config";
-import { syncPluggyItem } from "../lib/pluggy/sync";
+import { getUserPluggyConfig, readPluggyConfig } from "../lib/pluggy/config";
+import { syncConfiguredPluggyItem } from "../lib/pluggy/sync";
 import { closeDb, db } from "../db/client";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(scriptDirectory, "../../../../.env") });
 
 async function main() {
-  const config = readPluggyConfig();
-  const userId = process.env.PLUGGY_SYNC_USER_ID?.trim();
-  if (!userId) throw new Error("PLUGGY_SYNC_USER_ID is required for pluggy-sync");
-  if (!config.sandboxItemId) throw new Error("PLUGGY_SANDBOX_ITEM_ID is required for pluggy-sync");
+  const userArgIndex = process.argv.indexOf("--user");
+  let userId = userArgIndex !== -1 && process.argv[userArgIndex + 1]
+    ? process.argv[userArgIndex + 1].trim()
+    : process.env.PLUGGY_SYNC_USER_ID?.trim();
 
-  const summary = await syncPluggyItem({
+  if (!userId) {
+    const firstUser = await db.query.userPluggyCredentials.findFirst();
+    if (firstUser) userId = firstUser.userId;
+  }
+  if (!userId) throw new Error("Nenhum usuário com credenciais Pluggy encontrado no banco e PLUGGY_SYNC_USER_ID não foi informado");
+
+  let config;
+  try {
+    config = await getUserPluggyConfig(userId, db);
+  } catch {
+    config = readPluggyConfig();
+  }
+
+  const summary = await syncConfiguredPluggyItem({
     client: new PluggyClient(config),
     database: db,
     userId,
-    itemId: config.sandboxItemId,
     config,
   });
 

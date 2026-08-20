@@ -82,7 +82,10 @@ a:hover {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.app-nav-links { min-width: 0; }
+.app-nav-links {
+  min-width: 0;
+  white-space: nowrap;
+}
 .mobile-menu-toggle,
 .mobile-navigation-panel { display: none; }
 .screen-action { flex: 0 0 auto; }
@@ -108,13 +111,14 @@ a:hover {
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 880px) {
   .app-nav-inner {
-    align-items: stretch !important;
+    align-items: center !important;
     flex-wrap: wrap;
     gap: 0 !important;
     height: auto !important;
-    padding: 0 12px !important;
+    min-height: 48px !important;
+    padding: 6px 12px !important;
   }
 
   .app-nav-links {
@@ -125,7 +129,7 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 44px;
+    min-height: 36px;
     margin-left: auto;
     padding: 0 12px;
     border: 1px solid var(--border);

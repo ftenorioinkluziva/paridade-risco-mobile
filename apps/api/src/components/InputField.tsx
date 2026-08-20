@@ -22,7 +22,7 @@ const styles: Record<string, React.CSSProperties> = {
   input: {
     backgroundColor: colors.accentPanel,
     borderColor: colors.border,
-    borderRadius: 4,
+    borderRadius: layout.radius.sm,
     borderWidth: 1,
     borderStyle: "solid",
     color: colors.text,

@@ -29,16 +29,17 @@ async function seed() {
 
   // ── Assets ──────────────────────────────────────────────────────────────
   const assetData = [
-    { ticker: "BOVA11", sourceTicker: "BOVA11.SA", name: "ETF Ibovespa", type: "ETF" as const, calculationType: "PRECO" as const },
-    { ticker: "SPXI11", sourceTicker: "SPXI11.SA", name: "ETF S&P 500", type: "ETF" as const, calculationType: "PRECO" as const },
-    { ticker: "IMAB11", sourceTicker: "IMAB11.SA", name: "ETF IMA-B", type: "ETF" as const, calculationType: "PRECO" as const },
-    { ticker: "SMAL11", sourceTicker: "SMAL11.SA", name: "ETF Small Caps", type: "ETF" as const, calculationType: "PRECO" as const },
-    { ticker: "CDB_POS", sourceTicker: "CDI", name: "CDB Pós-fixado", type: "RENDA_FIXA" as const, calculationType: "PERCENTUAL" as const },
-    { ticker: "TESOURO_SELIC", sourceTicker: "SELIC", name: "Tesouro Selic", type: "RENDA_FIXA" as const, calculationType: "PERCENTUAL" as const },
-    { ticker: "BTC", sourceTicker: "BTC-USD", name: "Bitcoin", type: "CRYPTO" as const, calculationType: "PRECO" as const },
-    { ticker: "ETH", sourceTicker: "ETH-USD", name: "Ethereum", type: "CRYPTO" as const, calculationType: "PRECO" as const },
-    { ticker: "OURO", sourceTicker: "GC=F", name: "Ouro", type: "COMMODITY" as const, calculationType: "PRECO" as const },
-    { ticker: "CAIXA", name: "Caixa", type: "CAIXA" as const, calculationType: "PRECO" as const },
+    { ticker: "B5P211", sourceTicker: "B5P211.SA", name: "IT NOW IMA-B5 P2 ETF", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "BOVA11", sourceTicker: "BOVA11.SA", name: "ETF Ibovespa", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "DOLA11", sourceTicker: "DOLA11.SA", name: "BB ETF INDICE FUTURO DE DOLAR S&P/B3", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "FIXA11", sourceTicker: "FIXA11.SA", name: "BB ETF RENDA FIXA PRE INDICE FUTURO DE TAXAS JUROS S&P/B3", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "IB5M11", sourceTicker: "IB5M11.SA", name: "IT NOW IMA-B5+ ETF", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "IMAB11", sourceTicker: "IMAB11.SA", name: "ETF IMA-B", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "IRFM11", sourceTicker: "IRFM11.SA", name: "IT NOW IRF-M P2 ETF", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "LFTS11", sourceTicker: "LFTS11.SA", name: "INVESTO TEVA TESOURO SELIC ETF", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "SMAL11", sourceTicker: "SMAL11.SA", name: "ETF Small Caps", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "SPXI11", sourceTicker: "SPXI11.SA", name: "ETF S&P 500", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
+    { ticker: "XFIX11", sourceTicker: "XFIX11.SA", name: "Trend Ifix", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
   ];
 
   const existingAssets = await db.query.assets.findMany({ columns: { ticker: true, id: true } });
@@ -52,7 +53,7 @@ async function seed() {
       newAssets.push(created);
       assetMap[created.ticker] = created.id;
     } else {
-      await db.update(assets).set({ sourceTicker: a.sourceTicker ?? null }).where(sql`ticker = ${a.ticker}`);
+      await db.update(assets).set({ sourceTicker: a.sourceTicker ?? null, isActive: true }).where(sql`ticker = ${a.ticker}`);
     }
   }
   if (newAssets.length > 0) console.log("Assets created:", newAssets.map(a => a.ticker).join(", "));

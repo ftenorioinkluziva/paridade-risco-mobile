@@ -53,34 +53,38 @@ export function NavBar() {
   return (
     <nav className="app-nav" style={styles.wrapper}>
       <div className="app-nav-inner" style={styles.inner}>
-        {/* Brand */}
-        <button
-          onClick={() => navigate("/")}
-          style={styles.brand}
-        >
-          <span style={styles.brandKicker}>{"//"}</span>
-          <span style={styles.brandName}>PARIDADE_RISCO</span>
-        </button>
+        {/* Left Section: Brand + Links */}
+        <div style={styles.leftGroup}>
+          <button
+            onClick={() => navigate("/")}
+            style={styles.brand}
+            title="Paridade de Risco"
+          >
+            <span style={styles.brandKicker}>{"//"}</span>
+            <span style={styles.brandName}>PARIDADE_RISCO</span>
+          </button>
 
-        {/* Nav links */}
-        <div className="app-nav-links" style={styles.links}>
-          {visibleLinks.map((link) => {
-            const isActive = pathname === link.path;
-            return (
-              <button
-                key={link.path}
-                onClick={() => navigate(link.path)}
-                style={{
-                  ...styles.link,
-                  ...(isActive ? styles.linkActive : {}),
-                }}
-              >
-                {link.label}
-              </button>
-            );
-          })}
+          {/* Desktop Nav links */}
+          <div className="app-nav-links" style={styles.links}>
+            {visibleLinks.map((link) => {
+              const isActive = pathname === link.path;
+              return (
+                <button
+                  key={link.path}
+                  onClick={() => navigate(link.path)}
+                  style={{
+                    ...styles.link,
+                    ...(isActive ? styles.linkActive : {}),
+                  }}
+                >
+                  {link.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
+        {/* Mobile menu toggle */}
         <button
           type="button"
           className="mobile-menu-toggle"
@@ -91,6 +95,34 @@ export function NavBar() {
           {mobileMenuOpen ? "Fechar" : "Menu"}
         </button>
 
+        {/* Desktop User area */}
+        <div className="app-nav-user" style={styles.userArea}>
+          {isAuthenticated && user ? (
+            <>
+              <button
+                onClick={() => navigate("/perfil")}
+                style={{
+                  ...styles.link,
+                  ...(pathname === "/perfil" ? styles.linkActive : {}),
+                }}
+              >
+                Perfil
+              </button>
+              <button onClick={handleSignOut} style={styles.signOut}>
+                Sair
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              style={styles.loginBtn}
+            >
+              Entrar
+            </button>
+          )}
+        </div>
+
+        {/* Mobile Navigation Panel */}
         <div
           id="mobile-navigation"
           className="mobile-navigation-panel"
@@ -130,31 +162,6 @@ export function NavBar() {
             </button>
           )}
         </div>
-
-        {/* User area */}
-        <div className="app-nav-user" style={styles.userArea}>
-          {isAuthenticated && user ? (
-            <>
-              <span className="user-email" style={styles.userEmail}>{user.email}</span>
-              <button
-                onClick={() => navigate("/perfil")}
-                style={styles.link}
-              >
-                Perfil
-              </button>
-              <button onClick={handleSignOut} style={styles.signOut}>
-                Sair
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => navigate("/login")}
-              style={styles.link}
-            >
-              Entrar
-            </button>
-          )}
-        </div>
       </div>
     </nav>
   );
@@ -166,86 +173,106 @@ const styles: Record<string, React.CSSProperties> = {
     top: 0,
     zIndex: 100,
     width: "100%",
-    backgroundColor: colors.background,
+    backgroundColor: "rgba(22, 23, 27, 0.95)",
+    backdropFilter: "blur(12px)",
     borderBottom: `1px solid ${colors.border}`,
   },
   inner: {
     display: "flex",
     alignItems: "center",
-    gap: layout.space.xl,
-    maxWidth: layout.contentMaxWidth,
+    justifyContent: "space-between",
+    gap: layout.space.md,
+    maxWidth: 1280,
     margin: "0 auto",
-    padding: `0 ${layout.space.xl}px`,
-    height: 48,
+    padding: "0 24px",
+    height: 52,
+  },
+  leftGroup: {
+    display: "flex",
+    alignItems: "center",
+    gap: layout.space.lg,
+    flex: 1,
+    minWidth: 0,
   },
   brand: {
     display: "flex",
     alignItems: "center",
-    gap: layout.space.xs,
+    gap: 6,
     background: "none",
     border: "none",
     cursor: "pointer",
-    padding: 0,
+    padding: "4px 0",
+    flexShrink: 0,
     color: colors.text,
   },
   brandKicker: {
     color: colors.primary,
     fontFamily: typography.mono,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 700,
   },
   brandName: {
     fontFamily: typography.mono,
-    fontSize: 12,
-    fontWeight: 600,
-    letterSpacing: 0.5,
-    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: 0.6,
+    color: colors.text,
   },
   links: {
     display: "flex",
     alignItems: "center",
-    gap: layout.space.sm,
-    flex: 1,
+    gap: 4,
+    whiteSpace: "nowrap",
+    overflowX: "auto",
+    scrollbarWidth: "none",
   },
   link: {
     background: "none",
     border: "none",
     cursor: "pointer",
-    padding: `${layout.space.xs}px ${layout.space.sm}px`,
+    padding: "6px 12px",
     color: colors.textMuted,
     fontFamily: typography.mono,
     fontSize: 12,
     fontWeight: 500,
-    borderRadius: 4,
+    borderRadius: 6,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
     transition: "color 0.15s, background 0.15s",
   },
   linkActive: {
-    color: colors.text,
-    backgroundColor: colors.surface,
+    color: "#FFFFFF",
+    backgroundColor: colors.surfaceAlt,
+    fontWeight: 600,
   },
   userArea: {
     display: "flex",
     alignItems: "center",
     gap: layout.space.sm,
-  },
-  userEmail: {
-    color: colors.textSoft,
-    fontFamily: typography.mono,
-    fontSize: 11,
-    maxWidth: 160,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   signOut: {
-    background: "none",
-    border: `1px solid ${colors.border}`,
+    background: "rgba(239, 68, 68, 0.08)",
+    border: "1px solid rgba(239, 68, 68, 0.25)",
     cursor: "pointer",
-    padding: `${layout.space.xxs}px ${layout.space.sm}px`,
+    padding: "4px 10px",
     color: colors.danger,
     fontFamily: typography.mono,
     fontSize: 11,
     fontWeight: 600,
     borderRadius: 4,
+    whiteSpace: "nowrap",
+  },
+  loginBtn: {
+    background: colors.primary,
+    border: "none",
+    cursor: "pointer",
+    padding: "6px 14px",
+    color: "#000",
+    fontFamily: typography.mono,
+    fontSize: 12,
+    fontWeight: 700,
+    borderRadius: 4,
+    whiteSpace: "nowrap",
   },
 };

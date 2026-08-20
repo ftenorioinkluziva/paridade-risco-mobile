@@ -22,12 +22,25 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: UserProfile | null;
+  sessionToken: string | null;
   signIn: (input: LoginInput) => Promise<void>;
   signOut: () => Promise<void>;
   refetchUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function formatDateIso(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") return value;
+  try {
+    const d = new Date(value as any);
+    return isNaN(d.getTime()) ? String(value) : d.toISOString();
+  } catch {
+    return String(value);
+  }
+}
 
 function mapUser(user: any): UserProfile {
   return {
@@ -38,7 +51,7 @@ function mapUser(user: any): UserProfile {
     telegramChatId: user.telegramChatId || null,
     image: user.image || null,
     role: (user.role as "ADMIN" | "USER") || "USER",
-    birthDate: user.birthDate || null,
+    birthDate: formatDateIso(user.birthDate),
     activeBasketName: user.selectedBasketName || "Sem cesta ativa",
   };
 }
@@ -108,7 +121,8 @@ export const api = {
       password: input.password,
     });
     if (result.error) throw new Error(result.error.message);
-    return { token: undefined, user: result.data?.user as any };
+    const sessionToken = (result.data as any)?.session?.token ?? (result.data as any)?.token;
+    return { token: sessionToken, user: result.data?.user as any };
   },
   signOut: async () => {
     await authClient.signOut();
@@ -145,6 +159,7 @@ export const api = {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const restoreSession = useCallback(async () => {
@@ -152,6 +167,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authClient.getSession();
       if (result.data?.user) {
         setUser(mapUser(result.data.user));
+      }
+      if ((result.data as any)?.session?.token) {
+        setSessionToken((result.data as any).session.token);
       }
     } catch {
       // Session invalid or expired
@@ -166,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: Boolean(user),
     isLoading,
     user,
+    sessionToken,
     async signIn(input) {
       const result = await api.signIn(input);
       if (result.user) {
@@ -174,10 +193,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           activeBasketName: "Sem cesta ativa",
         });
       }
+      if (result.token) {
+        setSessionToken(result.token);
+      } else {
+        const sessionRes = await authClient.getSession();
+        if ((sessionRes.data as any)?.session?.token) {
+          setSessionToken((sessionRes.data as any).session.token);
+        }
+      }
     },
     async signOut() {
       try { await api.signOut(); } catch { /* ignore */ }
       setUser(null);
+      setSessionToken(null);
     },
     async refetchUser() {
       try {
@@ -185,9 +213,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (result.data?.user) {
           setUser(mapUser(result.data.user));
         }
+        if ((result.data as any)?.session?.token) {
+          setSessionToken((result.data as any).session.token);
+        }
       } catch { /* ignore */ }
     },
-  }), [isLoading, user, restoreSession]);
+  }), [isLoading, sessionToken, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

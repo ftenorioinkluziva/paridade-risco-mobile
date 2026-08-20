@@ -5,13 +5,17 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
+COPY apps/remote-mcp/package.json ./apps/remote-mcp/package.json
+COPY packages/cli/package.json ./packages/cli/package.json
+COPY packages/local-mcp/package.json ./packages/local-mcp/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/telegram-bot/package.json ./packages/telegram-bot/package.json
 RUN npm ci
 
 FROM base AS builder
 ARG DATABASE_URL
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app ./
 COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -38,6 +42,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/api/src/scripts ./apps/api/s
 COPY --from=builder --chown=nextjs:nodejs /app/packages/shared ./packages/shared
 
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nextjs:nodejs /app/apps/api/node_modules ./apps/api/node_modules
 
 USER nextjs
 EXPOSE 3000

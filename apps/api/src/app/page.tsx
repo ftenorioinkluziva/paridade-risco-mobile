@@ -28,11 +28,17 @@ function formatMonthLabel(month: string | undefined) {
 
 export default function OverviewPage() {
   const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return null;
+  if (!isAuthenticated) return <LandingPage />;
+
+  return <OverviewContent />;
+}
+
+function OverviewContent() {
   const portfolio = usePortfolioSummary();
   const health = usePluggyFinancialHealth();
   const rebalance = usePluggyRebalancePreview();
-
-  if (!isLoading && !isAuthenticated) return <LandingPage />;
 
   const summary = portfolio.data;
   const healthData = health.data;

@@ -7,7 +7,7 @@
  * Provides tools for querying the Paridade de Risco API via stdio transport.
  */
 
-import { apiGet } from "@paridade-risco/shared/http-client";
+import { apiRequestWithContext } from "@paridade-risco/shared/http-client";
 import { executeMcpReadOperation, mcpErrorResult, operationCatalog, operationToMcpTool } from "@paridade-risco/shared/contracts";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -23,7 +23,13 @@ const server = new Server(
   { capabilities: { tools: {} } },
 );
 
-export async function executeLocalMcpTool(name, args, request = apiGet) {
+function defaultLocalRequest(path, operation, body) {
+  const contract = operationCatalog[operation];
+  const method = contract?.method ?? "GET";
+  return apiRequestWithContext(method, path, operation, body);
+}
+
+export async function executeLocalMcpTool(name, args, request = defaultLocalRequest) {
   if (!operationCatalog[name]) {
     return mcpErrorResult({ code: "UNKNOWN_OPERATION", category: "validation", message: `Unknown tool: ${name}`, retryable: false });
   }

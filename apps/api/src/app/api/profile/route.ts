@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const userId = await resolveUserId(request);
 
   if (!userId) {
-    return NextResponse.json({ error: "No user available" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const user = await db.query.users.findFirst({

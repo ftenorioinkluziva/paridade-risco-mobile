@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 
 export type PricesAuthDependencies = {
   resolveIdentity: (request: Request) => Promise<string | null>;
-  findUser: (userId: string) => Promise<{ role: string } | null | undefined>;
+  findUser: (userId: string) => Promise<{ role?: string | null } | null | undefined>;
   cronSecret?: string;
 };
 

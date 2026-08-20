@@ -1,18 +1,19 @@
 import { getPortfolioDualRead } from "@/lib/portfolio-dual-read";
 import { buildMigrationReadiness } from "./migration-rules";
-import { readPluggyConfig } from "./config";
 import { getPortfolioSourceMode, setPortfolioSourceMode } from "@/lib/portfolio-source";
+
+const isEnabled = (value: string | undefined): boolean => value?.trim().toLowerCase() === "true";
 
 export async function getPluggyMigrationReadiness(userId: string) {
   const dualRead = await getPortfolioDualRead(userId);
-  const config = readPluggyConfig();
+  const ignoreManualReconciliation = isEnabled(process.env.PLUGGY_IGNORE_MANUAL_RECONCILIATION);
   const currentMode = await getPortfolioSourceMode(userId);
   return buildMigrationReadiness({
     manual: dualRead.manual,
     pluggy: dualRead.pluggy,
     comparison: dualRead.comparison,
     currentMode,
-    ignoreManualReconciliation: config.ignoreManualReconciliation,
+    ignoreManualReconciliation,
   });
 }
 
