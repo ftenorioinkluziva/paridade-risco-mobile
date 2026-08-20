@@ -7,7 +7,9 @@
  * All output is JSON for machine consumption (agents, scripts).
  *
  * Usage:
- *   pr login --email <email> --password <password>     Authenticate
+ *   PARIDADE_API_KEY=... pr auth configure             Configure API key
+ *   pr auth status                                     Validate configured key
+ *   pr auth clear                                      Remove local credentials
  *   pr portfolio                                        Portfolio summary
  *   pr prices status                                    Price update status
  *   pr rebalance                                        Rebalance preview
@@ -21,7 +23,7 @@
  *   pr config show                                      Show config (no secrets)
  */
 
-import { loadOrInitConfig, saveConfig, apiRequestWithContext } from "@paridade-risco/shared/http-client";
+import { legacyCliSessionEnabled, loadConfig, loadOrInitConfig, saveConfig, apiRequestWithContext } from "@paridade-risco/shared/http-client";
 import { errorEnvelope, executeCliReadOperation, operationCatalog, toOperationError } from "@paridade-risco/shared/contracts";
 import { Command } from "commander";
 import { pathToFileURL } from "node:url";
@@ -36,23 +38,70 @@ function printError(message, details) {
   process.exit(1);
 }
 
-async function cmdLogin(email, password) {
-  const result = await apiRequestWithContext("POST", "/api/auth/login", "login", { email, password });
-  if (!result.ok || !result.data) {
-    printError("Login failed", result);
-    return;
+export async function readApiKeyInput(stdin = process.stdin, env = process.env) {
+  const fromEnv = env.PARIDADE_API_KEY?.trim();
+  if (fromEnv) return fromEnv;
+  if (stdin.isTTY) {
+    throw Object.assign(new Error("API key is missing. Set PARIDADE_API_KEY or pipe the key through stdin."), {
+      operationError: { code: "API_KEY_MISSING", category: "authorization", message: "API key is missing", retryable: false },
+    });
   }
+  stdin.setEncoding("utf8");
+  let value = "";
+  for await (const chunk of stdin) value += chunk;
+  const key = value.trim();
+  if (!key) return readApiKeyInput({ isTTY: true }, {});
+  return key;
+}
 
-  const config = loadOrInitConfig();
-  config.sessionToken = result.data.token;
-  config.userId = result.data.user.id;
-  saveConfig(config);
-
-  printJson({
-    success: true,
-    message: `Authenticated as ${email}`,
-    userId: result.data.user.id,
+function authRequest(apiUrl, apiKey, permission, request = apiRequestWithContext) {
+  return request("GET", `/api/auth/mcp-token/validate?permission=${permission}`, undefined, undefined, {
+    apiUrl, apiKey, consumer: "cli",
   });
+}
+
+export function classifyStoredKeyFailure(result, config, now = Date.now()) {
+  const expiresAt = config.apiKeyExpiresAt ? Date.parse(config.apiKeyExpiresAt) : Number.NaN;
+  if (Number.isFinite(expiresAt) && expiresAt <= now) {
+    return { ...result, operationError: { code: "API_KEY_EXPIRED", category: "authorization", message: "API key is expired", retryable: false } };
+  }
+  if (config.apiKeyVerifiedAt && result.operationError?.code === "API_KEY_INVALID") {
+    return { ...result, operationError: { code: "API_KEY_REVOKED", category: "authorization", message: "API key is revoked or no longer available", retryable: false } };
+  }
+  return result;
+}
+
+export async function configureApiKey({ key, config = loadOrInitConfig(), request = apiRequestWithContext, save = saveConfig } = {}) {
+  if (!key) throw new Error("API key is required");
+  for (const permission of ["read", "sync"]) {
+    const result = await authRequest(config.apiUrl, key, permission, request);
+    if (!result.ok) throw Object.assign(new Error(result.error || "API key validation failed"), result);
+    if (permission === "read") {
+      config.apiKeyId = result.data.keyId;
+      config.apiKeyExpiresAt = result.data.expiresAt;
+    }
+  }
+  config.apiKey = key;
+  config.apiKeyVerifiedAt = new Date().toISOString();
+  delete config.sessionToken;
+  delete config.userId;
+  save(config);
+  return { success: true, keyId: config.apiKeyId, expiresAt: config.apiKeyExpiresAt, permissions: ["read", "sync"] };
+}
+
+export async function apiKeyStatus({ config = loadConfig(), request = apiRequestWithContext } = {}) {
+  if (!config.apiKey) {
+    return { ok: false, status: 401, operationError: { code: "API_KEY_MISSING", category: "authorization", message: "API key is missing", retryable: false } };
+  }
+  const result = await authRequest(config.apiUrl, config.apiKey, "read", request);
+  if (!result.ok) return classifyStoredKeyFailure(result, config);
+  return { ok: true, data: { configured: true, keyId: result.data.keyId, expiresAt: result.data.expiresAt, permissions: result.data.permissions } };
+}
+
+export function clearCredentials(config = loadOrInitConfig(), save = saveConfig) {
+  for (const field of ["apiKey", "apiKeyId", "apiKeyExpiresAt", "apiKeyVerifiedAt", "sessionToken", "userId"]) delete config[field];
+  save(config);
+  return { success: true, message: "Local credentials removed" };
 }
 
 async function cmdPortfolio() {
@@ -105,7 +154,7 @@ async function cmdSyncPluggy() {
 function defaultCliRequest(path, operation, body) {
   const contract = operationCatalog[operation];
   const method = contract?.method ?? "GET";
-  return apiRequestWithContext(method, path, operation, body);
+  return apiRequestWithContext(method, path, operation, body, { consumer: "cli" });
 }
 
 export async function executeCliOperation(name, input = {}, request = defaultCliRequest) {
@@ -119,15 +168,26 @@ program
   .description("Paridade de Risco CLI — query portfolio, prices, and rebalance")
   .version("0.1.0");
 
-program
-  .command("login")
-  .description("Authenticate with the API")
-  .requiredOption("--email <email>", "Account email")
-  .requiredOption("--password <password>", "Account password")
-  .action(async (options) => {
-    try { await cmdLogin(options.email, options.password); }
-    catch (error) { printError("Login failed", error); }
+const authCmd = program.command("auth").description("Configure and validate scoped API-key authentication");
+
+authCmd.command("configure")
+  .description("Validate and store an API key from PARIDADE_API_KEY or stdin")
+  .action(async () => {
+    try { printJson(await configureApiKey({ key: await readApiKeyInput() })); }
+    catch (error) { printError("API key configuration failed", error); }
   });
+
+authCmd.command("status")
+  .description("Validate the configured API key without displaying it")
+  .action(async () => {
+    const result = await apiKeyStatus();
+    if (!result.ok) return printError("API key validation failed", result);
+    printJson(result.data);
+  });
+
+authCmd.command("clear")
+  .description("Remove locally stored API key and legacy session")
+  .action(() => printJson(clearCredentials()));
 
 program
   .command("portfolio")
@@ -253,8 +313,11 @@ configCmd
     const config = loadOrInitConfig();
     printJson({
       apiUrl: config.apiUrl,
-      hasSessionToken: !!config.sessionToken,
-      hasUserId: !!config.userId,
+      hasApiKey: !!config.apiKey,
+      apiKeyId: config.apiKeyId ?? null,
+      apiKeyExpiresAt: config.apiKeyExpiresAt ?? null,
+      hasLegacySession: !!config.sessionToken,
+      legacySessionEnabled: legacyCliSessionEnabled(),
     });
   });
 

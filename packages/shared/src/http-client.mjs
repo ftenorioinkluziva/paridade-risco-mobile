@@ -5,15 +5,15 @@
  * Uses env vars first, file config as fallback.
  *
  * Config priority:
- *   1. PARIDADE_API_URL / PARIDADE_SESSION_TOKEN env vars
- *   2. ~/.config/paridade-risco/config.json (written by CLI `login`)
+ *   1. PARIDADE_API_URL / PARIDADE_API_KEY env vars
+ *   2. ~/.config/paridade-risco/config.json (written by CLI `auth configure`)
  *
  * Both CLI and MCP adapters share the same config file and endpoint helpers.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { ZodError } from "zod";
 import { errorEnvelopeSchema, operationErrorSchema, operationFailure, responseSchemaCatalog, toOperationError } from "./contracts.mjs";
 
@@ -30,23 +30,30 @@ const DEFAULT_API_URL = "https://paridaderisco.blackboxinovacao.com.br";
  * Read-only — never writes. Suitable for all 3 adapters.
  */
 export function loadConfig() {
-  const apiUrl = process.env.PARIDADE_API_URL || DEFAULT_API_URL;
-  const sessionToken = process.env.PARIDADE_SESSION_TOKEN;
+  const envApiUrl = process.env.PARIDADE_API_URL;
+  const apiUrl = envApiUrl || DEFAULT_API_URL;
+  const apiKey = process.env.PARIDADE_API_KEY;
+  const sessionToken = legacyCliSessionEnabled() ? process.env.PARIDADE_SESSION_TOKEN : undefined;
+  const path = configPath();
 
   // File config as fallback when env vars are not set
-  if (!sessionToken && existsSync(CONFIG_PATH)) {
+  if ((!apiKey || !sessionToken) && existsSync(path)) {
     try {
-      const fileConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+      const fileConfig = JSON.parse(readFileSync(path, "utf-8"));
       return {
-        apiUrl: fileConfig.apiUrl || apiUrl,
-        sessionToken: fileConfig.sessionToken,
+        apiUrl: envApiUrl || fileConfig.apiUrl || DEFAULT_API_URL,
+        apiKey: apiKey || fileConfig.apiKey,
+        sessionToken: sessionToken || (legacyCliSessionEnabled() ? fileConfig.sessionToken : undefined),
+        apiKeyId: fileConfig.apiKeyId,
+        apiKeyExpiresAt: fileConfig.apiKeyExpiresAt,
+        apiKeyVerifiedAt: fileConfig.apiKeyVerifiedAt,
       };
     } catch {
       // Corrupt file — ignore and return env/defaults
     }
   }
 
-  return { apiUrl, sessionToken };
+  return { apiUrl, apiKey, sessionToken };
 }
 
 /**
@@ -54,11 +61,13 @@ export function loadConfig() {
  * CLI-only — creates dir + file with 0o600 permissions.
  */
 export function saveConfig(config) {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
+  const dir = configDir();
+  const path = configPath();
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
   }
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8");
-  chmodSync(CONFIG_PATH, 0o600);
+  writeFileSync(path, JSON.stringify(config, null, 2), { encoding: "utf-8", mode: 0o600 });
+  chmodSync(path, 0o600);
 }
 
 /**
@@ -66,15 +75,17 @@ export function saveConfig(config) {
  * Creates default config file if missing, or if parse fails.
  */
 export function loadOrInitConfig() {
-  if (!existsSync(CONFIG_PATH)) {
-    const defaults = { apiUrl: DEFAULT_API_URL };
+  const path = configPath();
+  if (!existsSync(path)) {
+    const defaults = { apiUrl: process.env.PARIDADE_API_URL || DEFAULT_API_URL };
     saveConfig(defaults);
     return defaults;
   }
   try {
-    return JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+    const fileConfig = JSON.parse(readFileSync(path, "utf-8"));
+    return { ...fileConfig, apiUrl: process.env.PARIDADE_API_URL || fileConfig.apiUrl || DEFAULT_API_URL };
   } catch {
-    const defaults = { apiUrl: DEFAULT_API_URL };
+    const defaults = { apiUrl: process.env.PARIDADE_API_URL || DEFAULT_API_URL };
     saveConfig(defaults);
     return defaults;
   }
@@ -87,10 +98,12 @@ function buildUrl(path) {
   return `${config.apiUrl.replace(/\/+$/, "")}${path}`;
 }
 
-function buildHeaders() {
+function buildHeaders(context = {}) {
   const config = loadConfig();
   const headers = { "Content-Type": "application/json" };
-  if (config.sessionToken) headers["Authorization"] = `Bearer ${config.sessionToken}`;
+  const credential = context.apiKey || context.sessionToken || config.apiKey || config.sessionToken;
+  if (credential) headers["Authorization"] = `Bearer ${credential}`;
+  if (context.consumer) headers["x-paridade-consumer"] = context.consumer;
   return headers;
 }
 
@@ -121,7 +134,7 @@ export async function apiPostWithContext(path, body, operation, context = {}) {
 export async function apiRequestWithContext(method, path, operation, body, context = {}) {
   try {
     const url = context.apiUrl ? `${context.apiUrl.replace(/\/+$/, "")}${path}` : buildUrl(path);
-    const headers = context.sessionToken ? { "Content-Type": "application/json", Authorization: `Bearer ${context.sessionToken}` } : buildHeaders();
+    const headers = buildHeaders(context);
 
     const response = await fetch(url, {
       method,
@@ -204,4 +217,15 @@ function statusCategory(status) {
 
 function statusCode(status) {
   return ({ 400: "INVALID_INPUT", 401: "UNAUTHORIZED", 403: "FORBIDDEN", 404: "NOT_FOUND", 409: "CONFLICT", 429: "RATE_LIMITED" })[status] ?? (status >= 500 ? "UPSTREAM_ERROR" : "HTTP_ERROR");
+}
+export function configPath() {
+  return process.env.PARIDADE_CONFIG_PATH || CONFIG_PATH;
+}
+
+function configDir() {
+  return dirname(configPath());
+}
+
+export function legacyCliSessionEnabled(env = process.env) {
+  return env.PARIDADE_CLI_LEGACY_SESSION_ENABLED !== "false";
 }

@@ -1,0 +1,42 @@
+schema: 1
+story: '5.4'
+story_title: 'CLI autenticada por chave de API com escopo'
+gate: PASS
+status_reason: 'A CLI não recebe senha, exige chave read+sync, diferencia falhas, não expõe segredo e passou emissão, uso, negação, revogação e rotação no Docker E2E.'
+reviewer: 'Aria (Architect)'
+reviewed_revision: 'd8f6a32'
+updated: '2026-08-20T17:31:23-03:00'
+
+top_issues: []
+
+waiver: { active: false }
+
+quality_score: 98
+expires: '2026-09-03T18:30:00-03:00'
+
+evidence:
+  tests_reviewed: { count: 124 }
+  risks_identified: { count: 2 }
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Segredo fora de argv, saída, erros e telemetria; armazenamento 0600; escopos mínimos e validação no-store.'
+  performance:
+    status: PASS
+    notes: 'Validação ocorre na configuração/status; comandos mantêm uma verificação de chave no fluxo autenticado existente.'
+  reliability:
+    status: PASS
+    notes: 'E2E isolado cobre rotação/revogação e a precedência de configuração recebeu teste de regressão.'
+  maintainability:
+    status: PASS
+    notes: 'Contrato centralizado no shared client, policy flags explícitas e remoção final vinculada à Story 5.5.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Após a Story 5.5 e uma janela sem telemetria legada, remover sessionToken do formato de configuração e o fallback compartilhado.'
+      refs: ['docs/cli-api-key-auth.md', 'docs/stories/5.5.telegram-autenticacao-segura.story.md']

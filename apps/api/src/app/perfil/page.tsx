@@ -88,23 +88,29 @@ function PerfilContent() {
     }).catch(() => {});
   }
 
-  async function generateMcpToken() {
+  async function generateMcpToken(kind: "mcp" | "cli") {
     setMcpBusy(true);
     setMcpError(null);
     try {
-      const result = await authClient.apiKey.create({
-        configId: "mcp",
-        name: "MCP principal",
+      const response = await fetch("/api/auth/mcp-token", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: kind === "cli" ? "CLI principal" : "MCP principal",
+          permissions: kind === "cli" ? ["read", "sync"] : ["read", "sync", "mapping"],
+        }),
       });
-      if (result.error || !result.data?.key) {
-        throw new Error(result.error?.message ?? "Não foi possível gerar o token MCP");
+      const created = await response.json();
+      if (!response.ok || !created?.key) {
+        throw new Error(created?.error?.message ?? created?.error ?? "Não foi possível gerar o token MCP");
       }
 
       const previousKeys = mcpKeys;
-      setMcpToken(result.data.key);
-      setMcpKeys([result.data, ...previousKeys] as typeof mcpKeys);
+      setMcpToken(created.key);
+      setMcpKeys([created, ...previousKeys] as typeof mcpKeys);
       await Promise.all(previousKeys.map((key) => authClient.apiKey.delete({ configId: "mcp", keyId: key.id })));
-      setMcpKeys([result.data] as typeof mcpKeys);
+      setMcpKeys([created] as typeof mcpKeys);
     } catch (error) {
       setMcpError(error instanceof Error ? error.message : "Não foi possível gerar o token MCP");
     } finally {
@@ -478,7 +484,7 @@ function PerfilContent() {
       <div style={{ ...styles.section, marginTop: layout.space.xl }}>
         <div style={styles.sectionLabel}>// MCP_TOKEN</div>
         <p style={{ color: colors.textMuted, fontFamily: typography.mono, fontSize: 12, margin: 0, lineHeight: 1.5 }}>
-          Credencial exclusiva do MCP, com permissões limitadas, expiração em 90 dias e revogação independente da sua sessão.
+          Credencial revogável para MCP ou CLI, com permissões limitadas, expiração em 90 dias e revogação independente da sua sessão.
         </p>
         {mcpToken ? (
           <>
@@ -508,12 +514,16 @@ function PerfilContent() {
               Token ativo: {mcpKeys[0]?.start ?? "pr_mcp_..."} · expira em {mcpKeys[0]?.expiresAt ? new Date(mcpKeys[0].expiresAt).toLocaleDateString("pt-BR") : "data não informada"}
             </p>
             <div style={{ display: "flex", gap: layout.space.sm, flexWrap: "wrap" }}>
-              <PrimaryButton label={mcpBusy ? "Gerando..." : "Gerar novo token"} onPress={generateMcpToken} disabled={mcpBusy} />
+              <PrimaryButton label={mcpBusy ? "Gerando..." : "Gerar nova chave CLI"} onPress={() => generateMcpToken("cli")} disabled={mcpBusy} />
+              <PrimaryButton label={mcpBusy ? "Gerando..." : "Gerar novo token MCP"} onPress={() => generateMcpToken("mcp")} disabled={mcpBusy} tone="neutral" />
               <PrimaryButton label="Revogar" onPress={revokeMcpTokens} tone="danger" disabled={mcpBusy} />
             </div>
           </>
         ) : (
-          <PrimaryButton label={mcpBusy ? "Gerando..." : "Gerar token MCP"} onPress={generateMcpToken} disabled={mcpBusy} />
+          <div style={{ display: "flex", gap: layout.space.sm, flexWrap: "wrap" }}>
+            <PrimaryButton label={mcpBusy ? "Gerando..." : "Gerar chave CLI"} onPress={() => generateMcpToken("cli")} disabled={mcpBusy} />
+            <PrimaryButton label={mcpBusy ? "Gerando..." : "Gerar token MCP"} onPress={() => generateMcpToken("mcp")} disabled={mcpBusy} tone="neutral" />
+          </div>
         )}
         {mcpError ? <InlineAlert title="Erro no token MCP" tone="danger" message={mcpError} /> : null}
       </div>

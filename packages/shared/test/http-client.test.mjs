@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { apiGet, apiGetWithContext, apiPost } from "../src/http-client.mjs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { apiGet, apiGetWithContext, apiPost, legacyCliSessionEnabled, loadOrInitConfig } from "../src/http-client.mjs";
 import { executeMcpReadOperation } from "../src/contracts.mjs";
 
 test("HTTP client preserves a canonical API error", async (t) => {
@@ -91,4 +94,36 @@ test("local and remote MCP read flow reject incompatible HTTP 200 output", async
   const remote = await executeMcpReadOperation("list_assets", {}, (path, operation) => apiGetWithContext(path, operation, { apiUrl: "https://api.example", sessionToken: "private" }));
   assert.equal(JSON.parse(local.content[0].text).error.code, "UPSTREAM_SCHEMA_INVALID");
   assert.equal(JSON.parse(remote.content[0].text).error.code, "UPSTREAM_SCHEMA_INVALID");
+});
+
+test("API key takes precedence and consumer telemetry header contains no secret", async (t) => {
+  const original = globalThis.fetch;
+  t.after(() => { globalThis.fetch = original; });
+  globalThis.fetch = async (_url, options) => {
+    assert.equal(options.headers.Authorization, "Bearer pr_mcp_private");
+    assert.equal(options.headers["x-paridade-consumer"], "cli");
+    assert.equal(JSON.stringify(options.headers).includes("legacy-private"), false);
+    return new Response(JSON.stringify({ valid: true }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  const result = await apiGetWithContext("/validate", undefined, { apiKey: "pr_mcp_private", sessionToken: "legacy-private", consumer: "cli" });
+  assert.equal(result.ok, true);
+});
+
+test("legacy CLI session fallback can be disabled explicitly", () => {
+  assert.equal(legacyCliSessionEnabled({}), true);
+  assert.equal(legacyCliSessionEnabled({ PARIDADE_CLI_LEGACY_SESSION_ENABLED: "false" }), false);
+});
+
+test("CLI initialization honors an environment API URL in an isolated config", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "paridade-shared-test-"));
+  const previousPath = process.env.PARIDADE_CONFIG_PATH;
+  const previousUrl = process.env.PARIDADE_API_URL;
+  t.after(() => {
+    if (previousPath === undefined) delete process.env.PARIDADE_CONFIG_PATH; else process.env.PARIDADE_CONFIG_PATH = previousPath;
+    if (previousUrl === undefined) delete process.env.PARIDADE_API_URL; else process.env.PARIDADE_API_URL = previousUrl;
+    rmSync(directory, { recursive: true, force: true });
+  });
+  process.env.PARIDADE_CONFIG_PATH = join(directory, "config.json");
+  process.env.PARIDADE_API_URL = "http://127.0.0.1:3999";
+  assert.equal(loadOrInitConfig().apiUrl, "http://127.0.0.1:3999");
 });
