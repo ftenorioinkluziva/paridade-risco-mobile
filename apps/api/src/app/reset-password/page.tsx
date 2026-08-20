@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <Screen title="Recuperar Senha" subtitle="Informe seu email para receber o link de recuperação.">
+    <Screen width="narrow" title="Recuperar Senha" subtitle="Informe seu email para receber o link de recuperação.">
       <form onSubmit={handleWebSubmit} style={styles.form}>
         <div style={styles.section}>
           <div style={styles.sectionLabel}>// RECUPERAR SENHA</div>

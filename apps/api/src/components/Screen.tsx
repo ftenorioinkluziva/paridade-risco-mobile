@@ -12,13 +12,14 @@ type ScreenProps = {
   action?: ReactNode;
   children: ReactNode;
   hideNav?: boolean;
+  width?: keyof typeof layout.contentWidths;
 };
 
-export function Screen({ title, subtitle, action, children, hideNav }: ScreenProps) {
+export function Screen({ title, subtitle, action, children, hideNav, width = "standard" }: ScreenProps) {
   return (
     <div className="app-shell" style={styles.outer}>
       {!hideNav ? <NavBar /> : null}
-      <div className="screen-inner" style={styles.inner}>
+      <main className={`screen-inner screen-inner--${width}`} style={{ ...styles.inner, maxWidth: layout.contentWidths[width] }}>
         <div className="screen-header" style={styles.header}>
           <div className="screen-title-block" style={styles.titleBlock}>
             <div style={styles.kicker}>// PARIDADE_RISCO</div>
@@ -28,7 +29,7 @@ export function Screen({ title, subtitle, action, children, hideNav }: ScreenPro
           {action ? <div className="screen-action">{action}</div> : null}
         </div>
         {children}
-      </div>
+      </main>
     </div>
   );
 }
@@ -45,7 +46,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: layout.space.lg,
-    maxWidth: layout.contentMaxWidth,
     padding: `${layout.space.xl}px ${layout.space.xl}px 0`,
     width: "100%",
   },

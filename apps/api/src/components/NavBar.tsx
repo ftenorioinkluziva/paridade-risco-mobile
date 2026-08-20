@@ -56,6 +56,8 @@ export function NavBar() {
         {/* Left Section: Brand + Links */}
         <div style={styles.leftGroup}>
           <button
+            type="button"
+            className="app-nav-control"
             onClick={() => navigate("/")}
             style={styles.brand}
             title="Paridade de Risco"
@@ -70,6 +72,8 @@ export function NavBar() {
               const isActive = pathname === link.path;
               return (
                 <button
+                  type="button"
+                  className="app-nav-control"
                   key={link.path}
                   onClick={() => navigate(link.path)}
                   style={{
@@ -100,6 +104,8 @@ export function NavBar() {
           {isAuthenticated && user ? (
             <>
               <button
+                type="button"
+                className="app-nav-control"
                 onClick={() => navigate("/perfil")}
                 style={{
                   ...styles.link,
@@ -108,12 +114,14 @@ export function NavBar() {
               >
                 Perfil
               </button>
-              <button onClick={handleSignOut} style={styles.signOut}>
+              <button type="button" className="app-nav-control" onClick={handleSignOut} style={styles.signOut}>
                 Sair
               </button>
             </>
           ) : (
             <button
+              type="button"
+              className="app-nav-control"
               onClick={() => navigate("/login")}
               style={styles.loginBtn}
             >
@@ -182,7 +190,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: layout.space.md,
-    maxWidth: 1280,
+    maxWidth: layout.contentWidths.wide,
     margin: "0 auto",
     padding: "0 24px",
     height: 52,
@@ -201,7 +209,8 @@ const styles: Record<string, React.CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    padding: "4px 0",
+    minHeight: layout.touch.minimum,
+    padding: "4px 8px",
     flexShrink: 0,
     color: colors.text,
   },
@@ -230,6 +239,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "none",
     border: "none",
     cursor: "pointer",
+    minHeight: layout.touch.minimum,
     padding: "6px 12px",
     color: colors.textMuted,
     fontFamily: typography.mono,
@@ -255,8 +265,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: "rgba(239, 68, 68, 0.08)",
     border: "1px solid rgba(239, 68, 68, 0.25)",
     cursor: "pointer",
-    padding: "4px 10px",
-    color: colors.danger,
+    minHeight: layout.touch.minimum,
+    padding: "4px 12px",
+    color: "#F87171",
     fontFamily: typography.mono,
     fontSize: 11,
     fontWeight: 600,
@@ -267,6 +278,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: colors.primary,
     border: "none",
     cursor: "pointer",
+    minHeight: layout.touch.minimum,
     padding: "6px 14px",
     color: "#000",
     fontFamily: typography.mono,
