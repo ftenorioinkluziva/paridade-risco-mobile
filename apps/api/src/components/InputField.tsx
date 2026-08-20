@@ -4,11 +4,22 @@ import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
 
-type Props = { value: string; onChange: (v: string) => void; type?: string; placeholder?: string };
+type Props = {
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+  id?: string;
+  name?: string;
+  autoComplete?: string;
+};
 
-export function InputField({ value, onChange, type = "text", placeholder }: Props) {
+export function InputField({ value, onChange, type = "text", placeholder, id, name, autoComplete }: Props) {
   return (
     <input
+      id={id}
+      name={name}
+      autoComplete={autoComplete}
       style={styles.input}
       type={type}
       value={value}

@@ -1,0 +1,115 @@
+name: E2E Smoke
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - "tests/e2e/**"
+      - "docker-compose.e2e.yml"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/e2e-smoke.yml"
+  push:
+    branches: [master]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - "tests/e2e/**"
+      - "docker-compose.e2e.yml"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/e2e-smoke.yml"
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      run_optional:
+        description: "Run WebKit mobile and artifact policy checks"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Chromium desktop + mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e:install
+      - run: npx --prefix tests/e2e playwright install --with-deps chromium
+      - run: npm run e2e:smoke
+      - name: Preserve sanitized failure artifacts
+        if: ${{ failure() && !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-smoke-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  webkit-mobile:
+    name: Optional WebKit mobile
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_optional) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e:install
+      - run: npx --prefix tests/e2e playwright install --with-deps webkit
+      - run: npm run e2e:webkit
+      - name: Preserve sanitized failure screenshots
+        if: ${{ failure() && !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-webkit-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  artifact-policy:
+    name: Failure artifact policy
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_optional) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e:install
+      - run: npx --prefix tests/e2e playwright install --with-deps chromium
+      - run: npm run e2e:artifact-check
+      - uses: actions/upload-artifact@v5
+        with:
+          name: e2e-artifact-policy-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: error
+          retention-days: 7

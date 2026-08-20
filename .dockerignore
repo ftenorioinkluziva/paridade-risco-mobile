@@ -19,6 +19,10 @@ dist/
 **/dist/
 coverage/
 **/coverage/
+tests/e2e/
+playwright-report/
+test-results/
+docker-compose.e2e.yml
 scripts/
 docs/
 skills/

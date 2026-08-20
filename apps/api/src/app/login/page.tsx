@@ -67,8 +67,11 @@ export default function LoginPage() {
           ) : null}
 
           <div style={styles.fieldWrap}>
-            <label style={styles.fieldLabel}>Email</label>
+            <label htmlFor="login-email" style={styles.fieldLabel}>Email</label>
             <InputField
+              id="login-email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={setEmail}
               type="email"
@@ -77,8 +80,11 @@ export default function LoginPage() {
           </div>
 
           <div style={styles.fieldWrap}>
-            <label style={styles.fieldLabel}>Senha</label>
+            <label htmlFor="login-password" style={styles.fieldLabel}>Senha</label>
             <InputField
+              id="login-password"
+              name="password"
+              autoComplete="current-password"
               value={password}
               onChange={setPassword}
               type="password"

@@ -84,6 +84,9 @@ coverage/
 .cache/
 .turbo/
 .nyc_output/
+playwright-report/
+test-results/
+.playwright/
 
 # Temporários do projeto
 tmp/

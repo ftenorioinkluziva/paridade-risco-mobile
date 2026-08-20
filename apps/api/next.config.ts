@@ -15,6 +15,11 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@paridade-risco/shared"],
+  experimental: {
+    // Keep containerized and CI builds within the memory available to Docker Desktop.
+    cpus: 2,
+    webpackMemoryOptimizations: true,
+  },
 };
 
 export default withSerwist(nextConfig);
