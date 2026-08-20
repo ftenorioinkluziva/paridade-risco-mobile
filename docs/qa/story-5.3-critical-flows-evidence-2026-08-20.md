@@ -4,7 +4,7 @@
 
 **Branch:** `codex/epic-5-story-5-3`
 
-**Quality gate arquitetural:** candidato a PASS
+**Quality gate arquitetural:** PASS
 
 ## Cobertura por critério
 
@@ -51,6 +51,6 @@
 - Tokens MCP são usados somente em memória, não entram em trace/vídeo e são revogados pelo teste.
 - O `finally` limpa os dados, executa `verify-clean` e remove containers, rede e volume do projeto Compose.
 
-## Parecer preliminar do @architect
+## Parecer do @architect
 
-PASS proposto. Os fluxos críticos estão ligados aos critérios, usam fronteiras determinísticas, respeitam o rate limit real e falham com diagnóstico de URL/status sem expor segredos. A decisão formal deve referenciar o commit candidato revisado.
+PASS. Os fluxos críticos estão ligados aos critérios, usam fronteiras determinísticas, respeitam o rate limit real e falham com diagnóstico de URL/status sem expor segredos. A emissão MCP foi endurecida durante a revisão e o gate voltou a passar no commit candidato `4787489893a0cd9215bac91b73dbeff060fe5b0e`.
