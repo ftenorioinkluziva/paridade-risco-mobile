@@ -2,9 +2,9 @@ schema: 1
 story: '1.17'
 story_title: 'Login com Better Auth'
 gate: PASS
-status_reason: 'Audit P0-P2 re-review passed: fail-closed auth, server-validated proxy, scoped MCP keys, profile role hardening and greenfield flow are release-ready.'
+status_reason: 'Audit P0-P2 and clean Docker deploy build passed; runtime image contains no build placeholder and the release is ready.'
 reviewer: 'Quinn (Test Architect)'
-reviewed_revision: '88886b8'
+reviewed_revision: '428fc3c'
 updated: '2026-08-20T00:00:00.000Z'
 
 top_issues: []
@@ -34,7 +34,7 @@ nfr_validation:
     notes: 'Web PWA uses Better Auth cookies; MCP uses dedicated scoped keys; greenfield flow no longer depends on user migration.'
   maintainability:
     status: PASS
-    notes: 'authClient unified. mapUser helper extracted. setTimeout replaced with useEffect cleanup.'
+    notes: 'Auth helpers are isolated and tested; the Docker builder supplies a non-persistent build-only placeholder while runtime remains fail-closed.'
 
 recommendations:
   immediate: []
