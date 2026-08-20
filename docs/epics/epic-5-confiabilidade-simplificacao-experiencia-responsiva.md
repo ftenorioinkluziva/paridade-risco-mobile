@@ -52,7 +52,7 @@ baseline auditada
 
 | ID | Título | Prioridade | Status | Depende de |
 |---|---|---|---|---|
-| [5.1](../stories/5.1.integrar-baseline-auditada.story.md) | Integrar e fixar a baseline auditada | Critical | Ready | - |
+| [5.1](../stories/5.1.integrar-baseline-auditada.story.md) | Integrar e fixar a baseline auditada | Critical | Done | - |
 | [5.2](../stories/5.2.infraestrutura-e2e-isolada.story.md) | Infraestrutura E2E reproduzível e isolada | Critical | Ready | 5.1 |
 | [5.3](../stories/5.3.cobertura-e2e-fluxos-criticos.story.md) | Cobertura E2E dos fluxos críticos | Critical | Ready | 5.2 |
 | [5.4](../stories/5.4.cli-chave-api-escopo.story.md) | CLI autenticada por chave de API com escopo | High | Ready | 5.3 |
@@ -122,3 +122,4 @@ baseline auditada
 
 - 2026-08-20: Epic criado por @pm para o ciclo de confiabilidade, simplificação e responsividade.
 - 2026-08-20: Stories 5.1–5.9 validadas GO por @po; dependência 5.5 → 5.4 explicitada.
+- 2026-08-20: Story 5.1 encerrada administrativamente; próxima elegível: 5.2. [closure-key: 5.1:commit:d61cede4fe3dbaa77dfc079b719a49f615fe8e86]
