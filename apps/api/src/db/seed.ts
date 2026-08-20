@@ -1,6 +1,9 @@
 import bcrypt from "bcryptjs";
+import { createLocalAccountIssuer } from "better-auth";
+import { hashPassword } from "better-auth/crypto";
+import { randomUUID } from "node:crypto";
 import { db } from "@/db/client";
-import { users, assets, baskets, basketAllocations, investmentFunds, historicalPrices, portfolios, transactions } from "@/db/schema";
+import { users, accounts, assets, baskets, basketAllocations, investmentFunds, historicalPrices, portfolios, transactions } from "@/db/schema";
 import { sql } from "drizzle-orm";
 
 async function seed() {
@@ -26,6 +29,37 @@ async function seed() {
     console.log("User already exists:", userId.id);
   }
   const uid = userId.id;
+
+  // Better Auth validates email/password credentials through the accounts table.
+  // Keep the local test seed idempotent and independent from legacy user migration.
+  const credentialIssuer = createLocalAccountIssuer("credential");
+  const credentialAccount = await db.query.accounts.findFirst({
+    where: (account, { and, eq }) => and(
+      eq(account.userId, uid),
+      eq(account.providerId, "credential"),
+      eq(account.issuer, credentialIssuer),
+      eq(account.accountId, uid),
+    ),
+    columns: { id: true },
+  });
+  const credentialPassword = await hashPassword("password123");
+
+  if (credentialAccount) {
+    await db.update(accounts)
+      .set({ password: credentialPassword })
+      .where(sql`id = ${credentialAccount.id}`);
+    console.log("Better Auth credential refreshed for local test user");
+  } else {
+    await db.insert(accounts).values({
+      id: randomUUID(),
+      issuer: credentialIssuer,
+      accountId: uid,
+      providerId: "credential",
+      userId: uid,
+      password: credentialPassword,
+    });
+    console.log("Better Auth credential created for local test user");
+  }
 
   // ── Assets ──────────────────────────────────────────────────────────────
   const assetData = [
@@ -266,7 +300,7 @@ async function seed() {
   }
 
   console.log("\n✅ Seed completed successfully!");
-  console.log(`   User: test@paridaderisco.com / password123`);
+  console.log("   Local test user credential is configured");
 }
 
 seed().catch((e) => {
