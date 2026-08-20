@@ -1,0 +1,42 @@
+schema: 1
+story: '5.7'
+story_title: 'Remediar vulnerabilidades moderadas do toolchain Drizzle'
+gate: PASS
+status_reason: 'As quatro moderadas foram removidas sem downgrade ou RC; instalação limpa, generate sem drift, migrations/restore em PostgreSQL descartável e todos os gates passaram.'
+reviewer: 'Dex (Full Stack Developer)'
+reviewed_revision: '188b2cfb98cd4d742b654ce0a5b8a2e770324d2d'
+updated: '2026-08-20T16:57:29.0930542-03:00'
+
+top_issues: []
+
+waiver: { active: false }
+
+quality_score: 100
+expires: '2026-09-03T16:57:29.0930542-03:00'
+
+evidence:
+  tests_reviewed: { count: 110 }
+  risks_identified: { count: 1 }
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'npm audit completo e com omit=dev reportam zero vulnerabilidades; o esbuild vulnerável não existe na árvore reproduzida por npm ci.'
+  performance:
+    status: PASS
+    notes: 'A mudança não altera queries nem schema; o build Docker e os smokes desktop/mobile concluíram normalmente.'
+  reliability:
+    status: PASS
+    notes: 'Histórico completo aplicou do zero, o migrate repetido preservou o schema e o backup restaurou 24 tabelas e 20 migrations.'
+  maintainability:
+    status: PASS
+    notes: 'Versão estável foi mantida, metadata gap foi reconciliado e o runbook registra upgrade, backup, restore e remoção futura do override.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Remover o override quando uma release estável do Drizzle retirar a cadeia @esbuild-kit; tratar a migração v1 em story própria.'
+      refs: ['docs/qa/story-5.7-drizzle-toolchain-evidence-2026-08-20.md']
