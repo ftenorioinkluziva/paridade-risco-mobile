@@ -1,4 +1,5 @@
 import { expect, test, type APIResponse, type TestInfo } from "@playwright/test";
+import { createHmac, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -30,6 +31,22 @@ function projectSlug(testInfo: TestInfo) {
 
 function expectStatus(response: APIResponse, status: number) {
   expect(response.status(), `${response.url()} returned ${response.status()}`).toBe(status);
+}
+
+function telegramHeaders(pathname: string, chatId: string, options: { scope?: string; nonce?: string; secret?: string } = {}) {
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const nonce = options.nonce ?? randomBytes(18).toString("base64url");
+  const scope = options.scope ?? "profile:read";
+  const secret = options.secret ?? requiredEnvironment("E2E_TELEGRAM_S2S_SECRET");
+  const payload = ["GET", pathname, chatId, timestamp, nonce, scope].join("\n");
+  return {
+    "x-paridade-consumer": "telegram",
+    "x-telegram-chat-id": chatId,
+    "x-telegram-timestamp": timestamp,
+    "x-telegram-nonce": nonce,
+    "x-telegram-scope": scope,
+    "x-telegram-signature": `v1=${createHmac("sha256", secret).update(payload).digest("hex")}`,
+  };
 }
 
 test("anonymous redirect, invalid and valid login, then logout", async ({ page }, testInfo) => {
@@ -370,4 +387,36 @@ test("CLI key is provisioned, enforces scope, rotates and becomes invalid after 
     }
     rmSync(cliConfigDir, { recursive: true, force: true });
   }
+});
+
+test("Telegram uses signed scoped requests without issuing a durable web session", async ({ request }, testInfo) => {
+  const chatId = testInfo.project.name.includes("mobile") ? "900000002" : "900000001";
+  const originalProfileResponse = await request.get("/api/profile");
+  expectStatus(originalProfileResponse, 200);
+  const originalProfile = await originalProfileResponse.json();
+  const mutableProfile = {
+    birthDate: originalProfile.birthDate,
+    image: originalProfile.image,
+    phone: originalProfile.phone,
+  };
+  expectStatus(await request.put("/api/profile", { data: { ...mutableProfile, telegramChatId: chatId } }), 200);
+
+  const legacy = await request.get(`/api/auth/token-by-telegram?chat_id=${chatId}`);
+  expectStatus(legacy, 410);
+  expect(await legacy.json()).not.toHaveProperty("token");
+
+  const validHeaders = telegramHeaders("/api/profile", chatId);
+  expectStatus(await request.get("/api/profile", { headers: validHeaders }), 200);
+  expectStatus(await request.get("/api/profile", { headers: validHeaders }), 401);
+  expectStatus(await request.get("/api/profile", {
+    headers: telegramHeaders("/api/profile", chatId, { secret: "invalid-telegram-s2s-secret-with-32-characters" }),
+  }), 401);
+  expectStatus(await request.get("/api/profile", {
+    headers: telegramHeaders("/api/profile", chatId, { scope: "portfolio:read" }),
+  }), 401);
+  expectStatus(await request.get("/api/profile", {
+    headers: telegramHeaders("/api/profile", "999999999"),
+  }), 401);
+
+  expectStatus(await request.put("/api/profile", { data: { ...mutableProfile, telegramChatId: originalProfile.telegramChatId } }), 200);
 });

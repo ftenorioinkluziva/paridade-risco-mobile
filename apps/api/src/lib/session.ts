@@ -4,6 +4,7 @@ import { auth, MCP_API_KEY_CONFIG_ID } from "@/lib/auth";
 import { db } from "@/db/client";
 import { sessions, users } from "@/db/schema";
 import { defaultMcpPermission, extractBearerToken, isMcpToken, type McpPermission } from "@/lib/mcp-auth-rules";
+import { resolveTelegramUserId } from "@/lib/telegram-s2s-auth";
 
 export type McpApiKeyFailureReason = "missing" | "invalid" | "expired" | "revoked" | "insufficient_scope";
 
@@ -55,6 +56,7 @@ type LegacyConsumer = "cli" | "telegram" | "local-mcp" | "remote-mcp" | "unknown
 type LegacySessionEnv = {
   LEGACY_SESSION_AUTH_ENABLED?: string;
   LEGACY_SESSION_AUTH_CLI_ENABLED?: string;
+  TELEGRAM_LEGACY_SESSION_ROLLBACK_ENABLED?: string;
 };
 
 export function legacyConsumer(request: Request): LegacyConsumer {
@@ -69,8 +71,9 @@ export function legacySessionEnabled(
   consumer: LegacyConsumer,
   env: LegacySessionEnv = process.env as LegacySessionEnv,
 ): boolean {
-  if (env.LEGACY_SESSION_AUTH_ENABLED === "false") return false;
-  if (consumer === "cli" && env.LEGACY_SESSION_AUTH_CLI_ENABLED === "false") return false;
+  if (consumer === "unknown" || env.LEGACY_SESSION_AUTH_ENABLED !== "true") return false;
+  if (consumer === "cli" && env.LEGACY_SESSION_AUTH_CLI_ENABLED !== "true") return false;
+  if (consumer === "telegram" && env.TELEGRAM_LEGACY_SESSION_ROLLBACK_ENABLED !== "true") return false;
   return true;
 }
 
@@ -81,6 +84,13 @@ function logLegacySession(consumer: LegacyConsumer, outcome: "accepted" | "rejec
 export async function resolveUserId(request: Request, options: { mcpPermission?: McpPermission } = {}) {
   const bearerToken = extractBearerToken(request);
   const mcpPermission = options.mcpPermission ?? defaultMcpPermission(request.method);
+  const consumer = legacyConsumer(request);
+
+  if (consumer === "telegram") {
+    const telegramUserId = await resolveTelegramUserId(request);
+    if (telegramUserId) return telegramUserId;
+    if (!legacySessionEnabled("telegram")) return null;
+  }
 
   if (isMcpToken(bearerToken)) {
     return mcpPermission ? resolveMcpApiKeyUserId(bearerToken, mcpPermission) : null;
@@ -90,7 +100,6 @@ export async function resolveUserId(request: Request, options: { mcpPermission?:
   const sessionToken = bearerToken ?? request.headers.get("x-session-token");
 
   if (sessionToken) {
-    const consumer = legacyConsumer(request);
     if (!legacySessionEnabled(consumer)) {
       logLegacySession(consumer, "disabled");
     } else {
