@@ -44,6 +44,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderWidth: 1,
     borderStyle: "solid",
     minHeight: layout.touch.minimum,
+    minWidth: layout.touch.minimum,
     padding: `${layout.space.xxs}px ${layout.space.sm}px`,
     fontFamily: typography.mono,
     fontSize: 12,

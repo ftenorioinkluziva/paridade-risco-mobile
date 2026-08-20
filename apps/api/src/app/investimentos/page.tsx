@@ -107,6 +107,7 @@ export default function InvestimentosPage() {
   return (
     <AuthGuard>
       <Screen
+        width="wide"
         title="Investimentos"
         subtitle="Veja a carteira observada e o próximo passo da Paridade de Risco."
         action={<PrimaryButton label="Revisar dados sincronizados" tone="neutral" onPress={() => router.push("/pluggy")} />}

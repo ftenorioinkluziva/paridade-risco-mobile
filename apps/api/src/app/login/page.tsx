@@ -53,7 +53,7 @@ export default function LoginPage() {
   }
 
   return (
-    <Screen title="Acesso" subtitle="Entre para ver somente a sua carteira.">
+    <Screen width="narrow" title="Acesso" subtitle="Entre para ver somente a sua carteira.">
       <form onSubmit={handleWebSubmit} style={styles.form}>
         <div style={styles.section}>
           <div style={styles.sectionLabel}>// ACESSO</div>

@@ -58,6 +58,7 @@ export default function CestasPage() {
   return (
     <AuthGuard>
       <Screen
+        width="standard"
         title="Cestas"
         subtitle="Defina o alvo da carteira e compare com a posicao atual."
         action={

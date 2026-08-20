@@ -7,7 +7,7 @@
   --border: #2A2B30;
   --text: #FFFFFF;
   --text-muted: #A1A1AA;
-  --text-soft: #71717A;
+  --text-soft: #8B8B95;
   --primary: #22C55E;
   --primary-strong: #16A34A;
   --success: #22C55E;
@@ -36,6 +36,30 @@ html, body {
 body {
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"]) {
+  touch-action: manipulation;
+}
+
+button, input, select, textarea {
+  min-height: 44px;
+}
+
+.app-shell a[href] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a[href]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 3px;
 }
 
 .mono {
@@ -103,6 +127,69 @@ a:hover {
 .mobile-grid-4,
 .mobile-columns-2 { min-width: 0; }
 
+.responsive-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.responsive-card,
+.content-state {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+}
+
+.content-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.content-state strong { color: var(--text); }
+.content-state p { margin: 0; line-height: 1.5; }
+.content-state--danger { border-color: var(--danger); }
+.content-state-action { margin-top: 4px; }
+.content-state-skeleton {
+  width: min(100%, 320px);
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--surface-alt), var(--border), var(--surface-alt));
+  background-size: 200% 100%;
+  animation: responsive-skeleton 1.2s linear infinite;
+}
+
+.responsive-table-region {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.responsive-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.responsive-table th,
+.responsive-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+@keyframes responsive-skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
 @media (max-width: 1023px) {
   .app-nav-inner,
   .screen-inner {
@@ -129,7 +216,8 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
     margin-left: auto;
     padding: 0 12px;
     border: 1px solid var(--border);
@@ -208,6 +296,26 @@ a:hover {
   .mobile-grid-4,
   .mobile-columns-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .investment-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 681px) {
+  .responsive-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .responsive-grid--3,
+  .responsive-grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .responsive-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 ::selection {

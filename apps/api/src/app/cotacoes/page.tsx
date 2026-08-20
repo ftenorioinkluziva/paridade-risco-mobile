@@ -112,7 +112,7 @@ export default function CotacoesPage() {
 
   return (
     <AuthGuard>
-      <Screen title="Cotações" subtitle="ETFs estratégicos acompanhados por consulta automática e fonte alternativa.">
+      <Screen width="wide" title="Cotações" subtitle="ETFs estratégicos acompanhados por consulta automática e fonte alternativa.">
         <section style={styles.operationalPanel} aria-live="polite">
           <div style={styles.operationalHeader}>
             <div style={styles.liveStatusCopy}>

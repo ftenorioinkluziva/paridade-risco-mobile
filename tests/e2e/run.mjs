@@ -158,20 +158,27 @@ try {
 
   const projectArgs = mode === "webkit"
     ? ["--project=webkit-mobile"]
+    : mode === "responsive"
+      ? ["--project=responsive-foundation"]
     : mode === "artifact-check"
       ? ["--project=artifact-probe"]
-      : ["--project=chromium-desktop", "--project=chromium-mobile"];
+      : mode === "gate"
+        ? ["--project=chromium-desktop", "--project=chromium-mobile", "--project=responsive-foundation"]
+        : ["--project=chromium-desktop", "--project=chromium-mobile"];
 
   const testFiles = mode === "artifact-check"
     ? ["artifact-probe.spec.ts"]
+    : mode === "responsive"
+      ? ["responsive-foundation.spec.ts"]
     : mode === "critical"
       ? ["critical-flows.spec.ts"]
       : mode === "gate"
-        ? ["smoke.spec.ts", "critical-flows.spec.ts"]
+        ? ["smoke.spec.ts", "critical-flows.spec.ts", "responsive-foundation.spec.ts"]
         : ["smoke.spec.ts"];
   const testEnv = mode === "artifact-check" ? { ...env, E2E_ARTIFACT_PROBE: "1" } : env;
   const testArgs = ["test", ...testFiles, "--config", "tests/e2e/playwright.config.ts", ...projectArgs];
   if (repeat > 1) testArgs.push(`--repeat-each=${repeat}`);
+  if (process.env.E2E_UPDATE_SNAPSHOTS === "1") testArgs.push("--update-snapshots");
   const testStatus = run(process.execPath, [playwrightCli, ...testArgs], testEnv);
 
   if (mode === "artifact-check") {

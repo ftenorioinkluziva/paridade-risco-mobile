@@ -67,7 +67,7 @@ function ResetPasswordConfirmContent() {
 
   if (!token) {
     return (
-      <Screen title="Token Inválido" subtitle="O link de recuperação é inválido ou expirou.">
+      <Screen width="narrow" title="Token Inválido" subtitle="O link de recuperação é inválido ou expirou.">
         <div style={styles.section}>
           <InlineAlert
             title="Link inválido"
@@ -83,7 +83,7 @@ function ResetPasswordConfirmContent() {
   }
 
   return (
-    <Screen title="Redefinir Senha" subtitle="Informe sua nova senha.">
+    <Screen width="narrow" title="Redefinir Senha" subtitle="Informe sua nova senha.">
       <form onSubmit={handleWebSubmit} style={styles.form}>
         <div style={styles.section}>
           <div style={styles.sectionLabel}>// REDEFINIR SENHA</div>

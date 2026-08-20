@@ -71,7 +71,7 @@ export default function SignupPage() {
   }
 
   return (
-    <Screen title="Criar Conta" subtitle="Preencha seus dados para começar.">
+    <Screen width="narrow" title="Criar Conta" subtitle="Preencha seus dados para começar.">
       <form onSubmit={handleWebSubmit} style={styles.form}>
         <div style={styles.section}>
           <div style={styles.sectionLabel}>// CADASTRO</div>

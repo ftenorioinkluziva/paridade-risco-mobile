@@ -18,6 +18,7 @@ const authenticatedUse = {
 export default defineConfig({
   testDir: __dirname,
   outputDir: path.join(rootDir, "test-results"),
+  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
@@ -71,6 +72,16 @@ export default defineConfig({
         viewport: { width: 390, height: 844 },
         hasTouch: true,
         isMobile: true,
+      },
+    },
+    {
+      name: "responsive-foundation",
+      testMatch: /responsive-foundation\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...authenticatedUse,
+        browserName: "chromium",
+        viewport: { width: 1440, height: 900 },
       },
     },
     {
