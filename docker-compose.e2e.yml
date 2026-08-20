@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: e2e
+      POSTGRES_PASSWORD: ${E2E_DB_PASSWORD:?E2E_DB_PASSWORD is required}
+      POSTGRES_DB: paridade_e2e
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e2e -d paridade_e2e"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks:
+      - e2e
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        # Build-time validation only; runtime receives the isolated random password below.
+        DATABASE_URL: postgresql://e2e:build-only@postgres:5432/paridade_e2e
+    environment:
+      DATABASE_URL: postgresql://e2e:${E2E_DB_PASSWORD}@postgres:5432/paridade_e2e
+      BETTER_AUTH_SECRET: ${E2E_AUTH_SECRET:?E2E_AUTH_SECRET is required}
+      BETTER_AUTH_URL: http://127.0.0.1:${E2E_API_PORT:?E2E_API_PORT is required}
+      BETTER_AUTH_TRUSTED_ORIGINS: http://127.0.0.1:${E2E_API_PORT}
+      E2E_NAMESPACE: ${E2E_NAMESPACE:?E2E_NAMESPACE is required}
+      E2E_USER_EMAIL: ${E2E_USER_EMAIL:?E2E_USER_EMAIL is required}
+      E2E_USER_PASSWORD: ${E2E_USER_PASSWORD:?E2E_USER_PASSWORD is required}
+      PLUGGY_ENVIRONMENT: sandbox
+      PLUGGY_ENABLE_PRODUCTION: "false"
+      PLUGGY_CLIENT_ID: ""
+      PLUGGY_CLIENT_SECRET: ""
+      BRAPI_API_TOKEN: ""
+      NODE_ENV: production
+      npm_config_cache: /tmp/npm-cache
+    user: root
+    working_dir: /app/apps/api
+    command: sh -c "npx tsx src/db/migrate.ts && node server.js"
+    ports:
+      - "127.0.0.1:${E2E_API_PORT}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 45
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - e2e
+
+networks:
+  e2e:
+    driver: bridge
