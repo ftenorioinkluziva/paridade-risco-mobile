@@ -37,6 +37,16 @@ function run(command, args, env, options = {}) {
   return result.status ?? 1;
 }
 
+function capture(command, args, env) {
+  return spawnSync(command, args, {
+    cwd: rootDir,
+    env,
+    encoding: "utf-8",
+    maxBuffer: 10 * 1024 * 1024,
+    shell: false,
+  });
+}
+
 function getFreePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -78,6 +88,20 @@ function validateFailureArtifacts(secrets) {
     }
   }
   console.log(`[e2e] sanitized failure artifacts verified: ${JSON.stringify(required)}`);
+}
+
+function validatePasswordResetLog(env, compose) {
+  const result = capture("docker", [...compose, "logs", "--no-color", "api"], env);
+  if (result.status !== 0) throw new Error("Unable to inspect the API log for password reset delivery");
+
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (!output.includes(`Password reset for ${env.E2E_USER_EMAIL}:`)) {
+    throw new Error("Password reset log delivery marker was not found");
+  }
+  for (const secret of [env.E2E_USER_PASSWORD, env.E2E_AUTH_SECRET, env.E2E_DB_PASSWORD]) {
+    if (secret && output.includes(secret)) throw new Error("Sensitive E2E value found in API logs");
+  }
+  console.log("[e2e] password reset log delivery verified");
 }
 
 const port = await getFreePort();
@@ -138,8 +162,15 @@ try {
       ? ["--project=artifact-probe"]
       : ["--project=chromium-desktop", "--project=chromium-mobile"];
 
+  const testFiles = mode === "artifact-check"
+    ? ["artifact-probe.spec.ts"]
+    : mode === "critical"
+      ? ["critical-flows.spec.ts"]
+      : mode === "gate"
+        ? ["smoke.spec.ts", "critical-flows.spec.ts"]
+        : ["smoke.spec.ts"];
   const testEnv = mode === "artifact-check" ? { ...env, E2E_ARTIFACT_PROBE: "1" } : env;
-  const testArgs = ["test", "--config", "tests/e2e/playwright.config.ts", ...projectArgs];
+  const testArgs = ["test", ...testFiles, "--config", "tests/e2e/playwright.config.ts", ...projectArgs];
   if (repeat > 1) testArgs.push(`--repeat-each=${repeat}`);
   const testStatus = run(process.execPath, [playwrightCli, ...testArgs], testEnv);
 
@@ -149,13 +180,18 @@ try {
     exitCode = 0;
   } else {
     exitCode = testStatus;
+    if (testStatus === 0 && (mode === "critical" || mode === "gate")) {
+      validatePasswordResetLog(env, compose);
+    }
   }
 } catch (error) {
   console.error("[e2e]", error instanceof Error ? error.message : "unknown failure");
   exitCode = 1;
 } finally {
   if (environmentStarted) {
-    run("docker", [...compose, "exec", "-T", "api", "npm", "run", "e2e:fixture", "--", "cleanup"], env);
+    const cleanupStatus = run("docker", [...compose, "exec", "-T", "api", "npm", "run", "e2e:fixture", "--", "cleanup"], env);
+    const verificationStatus = run("docker", [...compose, "exec", "-T", "api", "npm", "run", "e2e:fixture", "--", "verify-clean"], env);
+    if (cleanupStatus !== 0 || verificationStatus !== 0) exitCode = 1;
   }
   run("docker", [...compose, "down", "-v", "--remove-orphans", "--timeout", "10"], env);
   removeRuntimePath(authStatePath);

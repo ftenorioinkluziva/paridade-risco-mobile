@@ -1,6 +1,6 @@
 # E2E isolado
 
-O smoke E2E usa Playwright contra um Compose exclusivo com PostgreSQL efêmero e somente a API. Cada execução gera namespace, porta, senha do banco, segredo Better Auth e credencial de usuário próprios; nenhum valor é persistido em arquivo versionado.
+O E2E usa Playwright contra um Compose exclusivo com PostgreSQL efêmero, API e um mock Pluggy determinístico. Cada execução gera namespace, porta, senha do banco, segredo Better Auth e credencial de usuário próprios; nenhum valor é persistido em arquivo versionado.
 
 ## Preparação
 
@@ -14,12 +14,18 @@ npx --prefix tests/e2e playwright install chromium
 ```bash
 npm run e2e:smoke
 npm run e2e:smoke:repeat
+npm run e2e:critical
+npm run e2e:critical:repeat
+npm run e2e:gate
 npm run e2e:webkit
 npm run e2e:artifact-check
 ```
 
 - `e2e:smoke`: Chromium desktop `1440x900` e mobile `390x844`.
 - `e2e:smoke:repeat`: repete ambos os projetos três vezes para detectar flakiness.
+- `e2e:critical`: autenticação, recuperação em log, perfil/cesta, CRUD temporário, 11 ETFs, Pluggy mockado e lifecycle MCP em desktop/mobile.
+- `e2e:critical:repeat`: repete os fluxos críticos três vezes para detectar flakiness e resíduos entre execuções.
+- `e2e:gate`: executa smoke e fluxos críticos no mesmo ambiente efêmero; é o comando usado em pull requests e pushes.
 - `e2e:webkit`: projeto mobile opcional, usado no agendamento ou sob demanda.
 - `e2e:artifact-check`: provoca uma falha apenas em página pública, exige trace, screenshot e vídeo e verifica que nenhum segredo efêmero aparece nos artefatos.
 
@@ -27,10 +33,10 @@ npm run e2e:artifact-check
 
 ## Isolamento e limpeza
 
-- O Compose não sobe schedulers, Telegram, remote MCP ou integrações externas.
+- O Compose não sobe schedulers, Telegram, remote MCP ou integrações externas reais; o único serviço adicional é o mock Pluggy local.
 - O banco usa `tmpfs` e um projeto Compose único por execução.
 - A factory cria usuário `e2e+<namespace>@paridaderisco.invalid`, perfil, carteira ativa, alocações e portfólio.
-- Setup começa por cleanup e o bloco `finally` repete cleanup e `docker compose down -v`, inclusive em falha.
+- Setup começa por cleanup e o bloco `finally` repete cleanup, verifica a ausência de usuários/ativos namespaced e executa `docker compose down -v`, inclusive em falha.
 - O estado autenticado fica em `.playwright/auth/` somente durante o processo e é removido no final.
 
 ## Política de artefatos
@@ -39,6 +45,6 @@ Testes autenticados preservam screenshot em falha, mas desativam trace e vídeo 
 
 ## CI
 
-O workflow `.github/workflows/e2e-smoke.yml` executa Chromium desktop e mobile em PRs e pushes para `master`. WebKit mobile e o probe de artefatos rodam às segundas-feiras ou por `workflow_dispatch` com `run_optional=true`.
+O workflow `.github/workflows/e2e-smoke.yml` executa smoke e fluxos críticos em Chromium desktop/mobile nos PRs e pushes para `master`. WebKit mobile e o probe de artefatos rodam às segundas-feiras ou por `workflow_dispatch` com `run_optional=true`.
 
 Não use a conta compartilhada de produção nesta suíte. Se o healthcheck falhar, consulte `docker compose -f docker-compose.e2e.yml -p <projeto> logs`; o runner sempre informa a falha sem imprimir credenciais.
