@@ -18,7 +18,7 @@ const authenticatedUse = {
 export default defineConfig({
   testDir: __dirname,
   outputDir: path.join(rootDir, "test-results"),
-  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
+  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}-{platform}{ext}",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
