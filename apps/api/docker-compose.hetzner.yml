@@ -9,6 +9,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
+      LEGACY_SESSION_AUTH_ENABLED: ${LEGACY_SESSION_AUTH_ENABLED:-true}
+      LEGACY_SESSION_AUTH_CLI_ENABLED: ${LEGACY_SESSION_AUTH_CLI_ENABLED:-true}
       NODE_ENV: production
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]

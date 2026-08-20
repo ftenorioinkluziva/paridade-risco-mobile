@@ -1,4 +1,8 @@
 import { expect, test, type APIResponse, type TestInfo } from "@playwright/test";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 const strategicTickers = [
   "B5P211",
@@ -242,9 +246,26 @@ test("Pluggy source activation moves from blocked to ready using the determinist
   }
 });
 
-test("MCP key supports read scope, rejects sync scope and becomes invalid after revocation", async ({ request }) => {
+test("CLI key is provisioned, enforces scope, rotates and becomes invalid after revocation", async ({ request }) => {
   let keyId: string | undefined;
   const origin = requiredEnvironment("E2E_BASE_URL");
+  const cliConfigDir = mkdtempSync(path.join(tmpdir(), "paridade-cli-e2e-"));
+  const cliConfigPath = path.join(cliConfigDir, "config.json");
+
+  function cli(args: string[], apiKey?: string) {
+    return spawnSync(process.execPath, [path.resolve("packages/cli/src/index.mjs"), ...args], {
+      cwd: path.resolve("."),
+      env: {
+        ...process.env,
+        PARIDADE_API_URL: origin,
+        PARIDADE_CONFIG_PATH: cliConfigPath,
+        PARIDADE_CLI_LEGACY_SESSION_ENABLED: "false",
+        ...(apiKey ? { PARIDADE_API_KEY: apiKey } : {}),
+      },
+      encoding: "utf8",
+      shell: false,
+    });
+  }
 
   try {
     const crossOriginResponse = await request.post("/api/auth/mcp-token", {
@@ -256,8 +277,8 @@ test("MCP key supports read scope, rejects sync scope and becomes invalid after 
     const createResponse = await request.post("/api/auth/mcp-token", {
       headers: { origin },
       data: {
-        name: "E2E read-only",
-        permissions: ["read"],
+        name: "E2E CLI",
+        permissions: ["read", "sync"],
       },
     });
     expectStatus(createResponse, 200);
@@ -266,15 +287,25 @@ test("MCP key supports read scope, rejects sync scope and becomes invalid after 
     const token = created.key as string;
     expect(token.startsWith("pr_mcp_")).toBe(true);
 
+    const configured = cli(["auth", "configure"], token);
+    expect(configured.status, configured.stderr).toBe(0);
+    expect(configured.stdout).not.toContain(token);
+
+    const cliRead = cli(["list-assets"]);
+    expect(cliRead.status, cliRead.stderr).toBe(0);
+    expect(cliRead.stdout).toContain("BOVA11");
+    expect(cliRead.stdout).not.toContain(token);
+
     const readResponse = await request.get("/api/profile", {
       headers: { authorization: `Bearer ${token}` },
     });
     expectStatus(readResponse, 200);
 
-    const outOfScopeResponse = await request.post("/api/integrations/pluggy/sync", {
+    const outOfScopeResponse = await request.get("/api/auth/mcp-token/validate?permission=mapping", {
       headers: { authorization: `Bearer ${token}` },
     });
-    expectStatus(outOfScopeResponse, 401);
+    expectStatus(outOfScopeResponse, 403);
+    expect(await outOfScopeResponse.json()).toMatchObject({ error: { code: "API_KEY_INSUFFICIENT_SCOPE" } });
 
     const revokeResponse = await request.post("/api/auth/api-key/delete", {
       headers: { origin },
@@ -287,6 +318,24 @@ test("MCP key supports read scope, rejects sync scope and becomes invalid after 
       headers: { authorization: `Bearer ${token}` },
     });
     expectStatus(revokedResponse, 401);
+
+    const revokedStatus = cli(["auth", "status"]);
+    expect(revokedStatus.status).toBe(1);
+    expect(revokedStatus.stderr).toContain("API_KEY_REVOKED");
+    expect(revokedStatus.stderr).not.toContain(token);
+
+    const replacementResponse = await request.post("/api/auth/mcp-token", {
+      headers: { origin },
+      data: { name: "E2E CLI rotated", permissions: ["read", "sync"] },
+    });
+    expectStatus(replacementResponse, 200);
+    const replacement = await replacementResponse.json();
+    keyId = replacement.id;
+    const reconfigured = cli(["auth", "configure"], replacement.key);
+    expect(reconfigured.status, reconfigured.stderr).toBe(0);
+    const validStatus = cli(["auth", "status"]);
+    expect(validStatus.status, validStatus.stderr).toBe(0);
+    expect(validStatus.stdout).toContain('"configured": true');
   } finally {
     if (keyId) {
       await request.post("/api/auth/api-key/delete", {
@@ -294,5 +343,6 @@ test("MCP key supports read scope, rejects sync scope and becomes invalid after 
         data: { configId: "mcp", keyId },
       });
     }
+    rmSync(cliConfigDir, { recursive: true, force: true });
   }
 });

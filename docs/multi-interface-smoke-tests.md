@@ -20,7 +20,9 @@ Operações de atualização de preços por CLI/MCP, como `update_prices_all`, `
 
 ## Autenticação
 
-CLI e MCP local usam `Authorization: Bearer <token>` quando `PARIDADE_SESSION_TOKEN` ou o token salvo pelo comando `pr login` está disponível. O MCP remoto aceita somente:
+CLI e MCP local usam `Authorization: Bearer <token>` com `PARIDADE_API_KEY` ou a chave salva por `pr auth configure`. A CLI exige os escopos `read` e `sync`; não recebe senha e não chama `/api/auth/login`. Consulte [Autenticação da CLI por chave de API](./cli-api-key-auth.md).
+
+O MCP remoto aceita somente:
 
 ```http
 POST /mcp
@@ -61,6 +63,7 @@ Execute da raiz do monorepo:
 
 ```bash
 npm test --workspace @paridade-risco/shared
+npm test --workspace @paridade-risco/cli
 npm test --workspace @paridade-risco/remote-mcp
 npm test --workspace @paridade-risco/api
 npm run test:integration --workspace @paridade-risco/api
@@ -90,11 +93,10 @@ npm run build:api
 CLI:
 
 ```bash
-node packages/cli/src/index.mjs transactions --limit 20
-node packages/cli/src/index.mjs transactions --limit 0
+PARIDADE_API_KEY=<secret-manager> node packages/cli/src/index.mjs auth configure
+node packages/cli/src/index.mjs auth status
+node packages/cli/src/index.mjs list-assets
 ```
-
-O segundo comando deve sair com código não zero e JSON com `error.code` igual a `INVALID_INPUT`.
 
 MCP remoto:
 
