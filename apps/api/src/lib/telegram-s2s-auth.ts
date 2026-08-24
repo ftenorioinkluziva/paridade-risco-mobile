@@ -15,8 +15,13 @@ function telegramReference(chatId: string) {
   return createHash("sha256").update(chatId).digest("hex").slice(0, 12);
 }
 
-function audit(outcome: string, details: Record<string, string | undefined> = {}) {
-  console.info(`[auth-telemetry] ${JSON.stringify({ event: "telegram_s2s_auth", outcome, ...details })}`);
+function audit(request: Request, outcome: string, details: Record<string, string | undefined> = {}) {
+  console.info(`[auth-telemetry] ${JSON.stringify({
+    event: "telegram_s2s_auth",
+    outcome,
+    path: new URL(request.url).pathname,
+    ...details,
+  })}`);
 }
 
 export async function resolveTelegramUserId(request: Request, env: TelegramEnv = process.env as TelegramEnv) {
@@ -26,7 +31,7 @@ export async function resolveTelegramUserId(request: Request, env: TelegramEnv =
     previousSecret: env.TELEGRAM_S2S_PREVIOUS_SECRET,
   });
   if (!result.valid) {
-    audit(result.reason, { path: new URL(request.url).pathname });
+    audit(request, result.reason);
     return null;
   }
 
@@ -35,9 +40,9 @@ export async function resolveTelegramUserId(request: Request, env: TelegramEnv =
     columns: { id: true },
   });
   if (!user) {
-    audit("link_missing", { chatRef: telegramReference(result.chatId), scope: result.scope });
+    audit(request, "link_missing", { chatRef: telegramReference(result.chatId), scope: result.scope });
     return null;
   }
-  audit("accepted", { chatRef: telegramReference(result.chatId), scope: result.scope, keyVersion: result.keyVersion });
+  audit(request, "accepted", { chatRef: telegramReference(result.chatId), scope: result.scope, keyVersion: result.keyVersion });
   return user.id;
 }

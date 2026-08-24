@@ -77,8 +77,13 @@ export function legacySessionEnabled(
   return true;
 }
 
-function logLegacySession(consumer: LegacyConsumer, outcome: "accepted" | "rejected" | "disabled") {
-  console.info(`[auth-telemetry] ${JSON.stringify({ event: "legacy_session_auth", consumer, outcome })}`);
+function logLegacySession(request: Request, consumer: LegacyConsumer, outcome: "accepted" | "rejected" | "disabled") {
+  console.info(`[auth-telemetry] ${JSON.stringify({
+    event: "legacy_session_auth",
+    consumer,
+    outcome,
+    path: new URL(request.url).pathname,
+  })}`);
 }
 
 export async function resolveUserId(request: Request, options: { mcpPermission?: McpPermission } = {}) {
@@ -101,7 +106,7 @@ export async function resolveUserId(request: Request, options: { mcpPermission?:
 
   if (sessionToken) {
     if (!legacySessionEnabled(consumer)) {
-      logLegacySession(consumer, "disabled");
+      logLegacySession(request, consumer, "disabled");
     } else {
       const session = await db.query.sessions.findFirst({
         where: and(eq(sessions.token, sessionToken), gt(sessions.expiresAt, new Date())),
@@ -109,10 +114,10 @@ export async function resolveUserId(request: Request, options: { mcpPermission?:
       });
 
       if (session) {
-        logLegacySession(consumer, "accepted");
+        logLegacySession(request, consumer, "accepted");
         return session.userId;
       }
-      logLegacySession(consumer, "rejected");
+      logLegacySession(request, consumer, "rejected");
     }
   }
 

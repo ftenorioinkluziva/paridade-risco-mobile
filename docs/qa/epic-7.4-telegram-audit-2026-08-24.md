@@ -17,7 +17,7 @@ Não foi inferido uso zero. O Compose local está saudável, mas não possui his
 | MCP | `apps/remote-mcp/src/index.mjs` e testes de paridade | Preservar para usuários |
 | Telegram S2S | `apps/api/src/lib/telegram-s2s-auth.ts`, `packages/telegram-bot/src/auth.mjs` | Compatibilidade atual preservada |
 | Sessão Telegram legada | `apps/api/src/lib/session.ts` e endpoint `/api/auth/token-by-telegram` | Não reativar; endpoint de emissão permanece `410` |
-| Telemetria | eventos `telegram_s2s_auth`, `legacy_session_auth` e `telegram_legacy_token_endpoint` | Sanitizada, sem token/chat ID bruto |
+| Telemetria | eventos `telegram_s2s_auth`, `legacy_session_auth` e `telegram_legacy_token_endpoint` | Sanitizada, com rota/evento/resultado e sem token/chat ID bruto |
 
 ## Evidência de execução
 
@@ -30,4 +30,4 @@ Não foi inferido uso zero. O Compose local está saudável, mas não possui his
 
 ## Próxima coleta
 
-Manter a telemetria existente e coletar uma janela contínua de 30 dias, agregada por `consumer`, rota/evento e `outcome`. O comando `npm run audit:telegram < logs-telegram.txt > audit-telegram.json` sanitiza e agrega somente os eventos permitidos, omitindo tokens, chat IDs e payloads. Qualquer uso Telegram, consumidor não identificado, lacuna de dados ou falha de smoke mantém a remoção bloqueada.
+Manter a telemetria existente e coletar uma janela contínua de 30 dias, agregada por `consumer`, rota/evento e `outcome`. Os eventos agora carregam a rota sanitizada para sucessos, falhas e sessões legadas. O comando `npm run audit:telegram < logs-telegram.txt > audit-telegram.json` sanitiza e agrega somente os eventos permitidos, omitindo tokens, chat IDs e payloads. Qualquer uso Telegram, consumidor não identificado, lacuna de dados ou falha de smoke mantém a remoção bloqueada.
