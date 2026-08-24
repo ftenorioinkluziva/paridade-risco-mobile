@@ -23,7 +23,7 @@ npm run e2e:artifact-check
 
 - `e2e:smoke`: Chromium desktop `1440x900` e mobile `390x844`.
 - `e2e:smoke:repeat`: repete ambos os projetos três vezes para detectar flakiness.
-- `e2e:critical`: autenticação, recuperação em log, perfil/cesta, CRUD temporário, 11 ETFs, Pluggy mockado e lifecycle MCP em desktop/mobile.
+- `e2e:critical`: autenticação, recuperação em log, perfil/cesta, leitura técnica de transações, 9 ETFs, Pluggy mockado e lifecycle MCP em desktop/mobile.
 - `e2e:critical:repeat`: repete os fluxos críticos três vezes para detectar flakiness e resíduos entre execuções.
 - `e2e:gate`: executa smoke e fluxos críticos no mesmo ambiente efêmero; é o comando usado em pull requests e pushes.
 - `e2e:webkit`: projeto mobile opcional, usado no agendamento ou sob demanda.

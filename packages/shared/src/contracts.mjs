@@ -174,7 +174,7 @@ export const loginOutputSchema = z.object({
 const definitions = [
   ["portfolio_summary", "Current portfolio snapshot: total value, positions, allocation, drift, funds, cash.", "/api/portfolio/summary", "GET", emptyInputSchema, portfolioOutputSchema],
   ["prices_status", "Price update status for all strategy assets: last update date, stale days per ticker.", "/api/admin/prices", "GET", emptyInputSchema, pricesStatusOutputSchema],
-  ["list_assets", "List the 11 official strategy assets with ticker and name.", "/api/assets", "GET", emptyInputSchema, assetsOutputSchema],
+  ["list_assets", "List the 9 official strategy assets with ticker and name.", "/api/assets", "GET", emptyInputSchema, assetsOutputSchema],
   ["asset_prices", "Current prices for official strategy assets: ticker, name, price, price date, calculation type.", "/api/assets/prices", "GET", emptyInputSchema, assetPricesOutputSchema],
   ["list_baskets", "List all baskets: name, status (ATIVA/RASCUNHO), asset count.", "/api/baskets", "GET", emptyInputSchema, basketsOutputSchema],
   ["get_active_basket", "Get current user active basket: id, name, description and target allocations.", "/api/baskets/active", "GET", emptyInputSchema, activeBasketOutputSchema],
