@@ -7,12 +7,10 @@ export const STRATEGIC_ETF_TICKERS = [
   "IMAB11",
   "IRFM11",
   "LFTS11",
-  "SMAL11",
-  "SPXI11",
   "XFIX11",
 ] as const;
 
-export const STRATEGIC_EQUITY_ETF_TICKERS = ["BOVA11", "SMAL11", "SPXI11"] as const;
+export const STRATEGIC_EQUITY_ETF_TICKERS = ["BOVA11"] as const;
 export const STRATEGIC_FIXED_INCOME_ETF_TICKERS = STRATEGIC_ETF_TICKERS.filter(
   (ticker) => !STRATEGIC_EQUITY_ETF_TICKERS.includes(ticker as (typeof STRATEGIC_EQUITY_ETF_TICKERS)[number]),
 );
@@ -99,9 +97,20 @@ export function classifyMarketQuoteFreshness(observedAt: Date | null, now = new 
 export function monthlyCallEstimate({
   tickers = STRATEGIC_ETF_TICKERS.length,
   tradingDays = 22,
-  intervalMinutes = 8,
-}: { tickers?: number; tradingDays?: number; intervalMinutes?: number } = {}): number {
-  const sessionMinutes = 7 * 60;
-  const callsPerAsset = Math.ceil(sessionMinutes / intervalMinutes);
-  return tickers * callsPerAsset * tradingDays;
+  intervalMinutes = 7,
+  includeFinalCapture = true,
+}: { tickers?: number; tradingDays?: number; intervalMinutes?: number; includeFinalCapture?: boolean } = {}): number {
+  if (!Number.isInteger(intervalMinutes) || intervalMinutes <= 0) {
+    throw new Error("intervalMinutes must be a positive integer");
+  }
+
+  // Mirrors the cron window `*/N 10-16` and the one final capture at 17:30.
+  let sessionCycles = 0;
+  for (let hour = 10; hour <= 16; hour += 1) {
+    for (let minute = 0; minute < 60; minute += intervalMinutes) {
+      if (hour * 60 + minute <= 16 * 60 + 55) sessionCycles += 1;
+    }
+  }
+  const cyclesPerDay = sessionCycles + (includeFinalCapture ? 1 : 0);
+  return tickers * cyclesPerDay * tradingDays;
 }

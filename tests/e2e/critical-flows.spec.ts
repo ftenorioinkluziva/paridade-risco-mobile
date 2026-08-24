@@ -14,8 +14,6 @@ const strategicTickers = [
   "IMAB11",
   "IRFM11",
   "LFTS11",
-  "SMAL11",
-  "SPXI11",
   "XFIX11",
 ];
 
@@ -205,7 +203,7 @@ test("temporary fund and transaction APIs support create, read, update and clean
   }
 });
 
-test("investments, quotes and rebalance use exactly the 11 strategic ETFs", async ({ page, request }) => {
+test("investments, quotes and rebalance use exactly the 9 strategic ETFs", async ({ page, request }) => {
   await page.goto("/investimentos");
   await expect(page.getByRole("heading", { name: "Investimentos" })).toBeVisible();
 
@@ -218,14 +216,14 @@ test("investments, quotes and rebalance use exactly the 11 strategic ETFs", asyn
 
   await page.goto("/cotacoes");
   await expect(page.getByRole("heading", { name: "Cotações" })).toBeVisible();
-  await expect(page.getByText("8 min · fechamento 17:30", { exact: true })).toBeVisible();
+  await expect(page.getByText("7 min · fechamento 17:30", { exact: true })).toBeVisible();
   await expect(page.getByText("BOVV11", { exact: true })).toHaveCount(0);
 
   const rebalanceResponse = await request.get("/api/rebalance/preview");
   expectStatus(rebalanceResponse, 200);
   const rebalance = await rebalanceResponse.json();
   expect(rebalance.eligibleForRebalance).toBe(true);
-  expect(rebalance.actions).toHaveLength(11);
+  expect(rebalance.actions).toHaveLength(9);
 });
 
 test("Pluggy source activation moves from blocked to ready using the deterministic mock", async ({ request }) => {

@@ -30,8 +30,6 @@ const fixtureAssets = [
   { ticker: "IMAB11", sourceTicker: "IMAB11.SA", name: "ETF IMA-B" },
   { ticker: "IRFM11", sourceTicker: "IRFM11.SA", name: "ETF IRF-M" },
   { ticker: "LFTS11", sourceTicker: "LFTS11.SA", name: "ETF Tesouro Selic" },
-  { ticker: "SMAL11", sourceTicker: "SMAL11.SA", name: "ETF Small Caps" },
-  { ticker: "SPXI11", sourceTicker: "SPXI11.SA", name: "ETF S&P 500" },
   { ticker: "XFIX11", sourceTicker: "XFIX11.SA", name: "ETF Fundos Imobiliários" },
 ];
 
