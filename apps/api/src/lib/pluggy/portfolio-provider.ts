@@ -1,11 +1,12 @@
 import { desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { liveQuotes, pluggyAccounts, pluggyInvestments } from "@/db/schema";
+import { liveQuotes, pluggyAccounts, pluggyConnections, pluggyInvestments } from "@/db/schema";
 import { toNumber } from "@/lib/number";
 
 import type { PortfolioProvider, PortfolioProviderSnapshot } from "@/lib/portfolio-provider";
 import { isPluggyCreditCard } from "./projection-rules";
+import { buildPluggyFreshness } from "./freshness-rules";
 
 function numericOrNull(value: string | null) {
   return value === null ? null : toNumber(value);
@@ -23,7 +24,7 @@ function latestDate(dates: Array<Date | null>) {
 }
 
 export async function getPluggyPortfolioSnapshot(userId: string): Promise<PortfolioProviderSnapshot> {
-  const [investments, accounts] = await Promise.all([
+  const [investments, accounts, connections] = await Promise.all([
     db.query.pluggyInvestments.findMany({
       where: eq(pluggyInvestments.userId, userId),
       with: {
@@ -40,6 +41,10 @@ export async function getPluggyPortfolioSnapshot(userId: string): Promise<Portfo
     db.query.pluggyAccounts.findMany({
       where: eq(pluggyAccounts.userId, userId),
       columns: { type: true, subtype: true, balance: true, observedAt: true },
+    }),
+    db.query.pluggyConnections.findMany({
+      where: eq(pluggyConnections.userId, userId),
+      columns: { lastSyncAt: true, lastSyncStatus: true },
     }),
   ]);
   const latestLiveQuotes = await db.query.liveQuotes.findMany({
@@ -99,6 +104,12 @@ export async function getPluggyPortfolioSnapshot(userId: string): Promise<Portfo
     warnings.push("Nenhum investimento Pluggy sincronizado");
   }
 
+  const latestConnection = connections.reduce<typeof connections[number] | null>((latest, connection) => {
+    if (!latest || (connection.lastSyncAt && (!latest.lastSyncAt || connection.lastSyncAt > latest.lastSyncAt))) return connection;
+    return latest;
+  }, null);
+  const latestSyncAt = latestConnection?.lastSyncAt ?? null;
+  const latestSyncStatus = latestConnection?.lastSyncStatus ?? null;
   return {
     source: "PLUGGY",
     observedAt: latestDate([
@@ -115,6 +126,7 @@ export async function getPluggyPortfolioSnapshot(userId: string): Promise<Portfo
     positions,
     livePricesByTicker,
     warnings,
+    freshness: buildPluggyFreshness({ latestObservedAt: latestDate([...investments.map((investment) => investment.observedAt), ...accounts.map((account) => account.observedAt)]), latestSyncAt, latestSyncStatus, staleAfterMinutes: 30 }),
   };
 }
 

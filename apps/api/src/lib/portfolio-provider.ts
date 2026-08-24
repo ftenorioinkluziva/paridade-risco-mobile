@@ -27,6 +27,7 @@ export interface PortfolioProviderSnapshot {
   positions: PortfolioProviderPosition[];
   livePricesByTicker?: Record<string, number>;
   warnings: string[];
+  freshness?: { status: "FRESH" | "STALE" | "UNAVAILABLE"; latestObservedAt: string | null; latestSyncAt: string | null; ageMinutes: number | null };
 }
 
 /**
