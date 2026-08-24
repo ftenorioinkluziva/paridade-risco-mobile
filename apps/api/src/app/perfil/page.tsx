@@ -331,6 +331,8 @@ function PerfilContent() {
 
   return (
     <Screen
+      pageId="perfil"
+      width="wide"
       title="Perfil"
       subtitle="Suas informações de cadastro e integrações."
       action={

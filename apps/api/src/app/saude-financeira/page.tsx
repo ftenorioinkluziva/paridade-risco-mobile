@@ -93,6 +93,8 @@ export default function FinancialHealthPage() {
   return (
     <AuthGuard>
       <Screen
+        pageId="saude-financeira"
+        width="wide"
         title="Saúde financeira"
         subtitle="Entenda caixa, crédito, obrigações e dívidas observados na sua conta."
         action={<PrimaryButton label={refreshing ? "Atualizando..." : "Atualizar dados"} disabled={refreshing} onPress={refresh} tone="neutral" />}

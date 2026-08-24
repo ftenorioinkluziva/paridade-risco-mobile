@@ -107,6 +107,7 @@ export default function InvestimentosPage() {
   return (
     <AuthGuard>
       <Screen
+        pageId="investimentos"
         width="wide"
         title="Investimentos"
         subtitle="Veja a carteira observada e o próximo passo da Paridade de Risco."

@@ -136,6 +136,8 @@ export default function PluggyPage() {
   return (
     <AuthGuard>
       <Screen
+        pageId="pluggy"
+        width="wide"
         title="Pluggy"
         subtitle="Revise os investimentos observados antes de ativar a fonte Pluggy."
       >

@@ -13,11 +13,12 @@ type ScreenProps = {
   children: ReactNode;
   hideNav?: boolean;
   width?: keyof typeof layout.contentWidths;
+  pageId?: string;
 };
 
-export function Screen({ title, subtitle, action, children, hideNav, width = "standard" }: ScreenProps) {
+export function Screen({ title, subtitle, action, children, hideNav, width = "standard", pageId }: ScreenProps) {
   return (
-    <div className="app-shell" style={styles.outer}>
+    <div className={`app-shell${pageId ? ` critical-screen page-${pageId}` : ""}`} data-page={pageId} style={styles.outer}>
       {!hideNav ? <NavBar /> : null}
       <main className={`screen-inner screen-inner--${width}`} style={{ ...styles.inner, maxWidth: layout.contentWidths[width] }}>
         <div className="screen-header" style={styles.header}>
