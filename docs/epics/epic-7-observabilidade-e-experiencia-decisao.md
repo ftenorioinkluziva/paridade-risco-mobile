@@ -18,7 +18,7 @@ O produto já opera com 9 ETFs, scheduler de 7 minutos, Pluggy como fonte operac
 1. Expandir E2E dos fluxos Pluggy/rebalanceamento para estados de sucesso, sem ação, stale, erro e recuperação.
 2. Expor observabilidade operacional de quota, scheduler, frescor, webhook, fallback, skip e falha sem registrar dados sensíveis.
 3. Polir hierarquia, densidade, espaçamento e estados de loading/empty/error nas telas críticas para desktop e mobile.
-4. Avaliar e, se aprovado, retirar compatibilidade remanescente do Telegram somente após evidência de uso e com rollback documental; preservar o CLI de desenvolvimento e o MCP de uso final.
+4. Avaliar e, se aprovado, retirar compatibilidade remanescente do Telegram somente após evidência de uso zero e com rollback documental; preservar o CLI de desenvolvimento e o MCP de uso final.
 
 ## Fora de escopo
 
@@ -32,7 +32,7 @@ O produto já opera com 9 ETFs, scheduler de 7 minutos, Pluggy como fonte operac
 - Fluxos críticos Pluggy/rebalanceamento possuem E2E determinístico para estados positivos e de bloqueio.
 - O time consegue identificar quota mensal, ciclos do scheduler, idade por fonte e falhas de webhook/fallback a partir de logs/métricas sanitizados.
 - Telas críticas mantêm decisão acionável visível em resoluções desktop e mobile sem overflow horizontal.
-- Compatibilidade legada do Telegram só é removida após decisão explícita, evidência de uso, smoke de não regressão e rollback; CLI de desenvolvimento e MCP permanecem suportados.
+- Compatibilidade legada do Telegram só é removida após decisão explícita, evidência de uso zero, smoke de não regressão e rollback; CLI de desenvolvimento e MCP permanecem suportados.
 - `npm run lint`, `npm run typecheck`, `npm test` e gates E2E permanecem aprovados.
 
 ## Stories propostas
@@ -59,4 +59,4 @@ Para a Story 7.4, o período de avaliação é uma janela contínua de 30 dias i
 ## Change Log
 
 - 2026-08-24: Epic criado pelo @pm após o fechamento do Epic 6.
-- 2026-08-24: @po validou 7.1–7.3 condicionalmente; 7.4 ficou bloqueada até evidência de uso zero por 30 dias e rollback validado.
+- 2026-08-24: @po revalidou 7.4: CLI de desenvolvimento e MCP permanecem preservados; somente a compatibilidade legada do Telegram pode ser avaliada, condicionada a evidência de uso zero por 30 dias e rollback validado.

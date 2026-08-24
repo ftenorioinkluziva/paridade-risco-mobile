@@ -9,7 +9,7 @@
 
 O Epic 7 está coerente com a direção de produto e pode permanecer no backlog priorizado. O Epic 6 foi encerrado como `Done` antes desta consolidação; portanto, 7.1–7.3 podem avançar respeitando seus gates, enquanto 7.4 continua bloqueada por evidência de uso.
 
-Além disso, a Story 7.4 não remove o CLI de desenvolvimento nem o MCP de uso final. Ela só pode desativar compatibilidade legada do Telegram após decisão explícita e evidência objetiva de uso na janela aprovada.
+Além disso, a Story 7.4 não remove o CLI de desenvolvimento nem o MCP de uso final. Ela só pode desativar compatibilidade legada do Telegram após decisão explícita e evidência objetiva de uso zero na janela aprovada.
 
 ## Decisões ratificadas
 
