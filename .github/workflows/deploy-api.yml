@@ -38,7 +38,10 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build:api
+      - name: Build API with ephemeral build secret
+        env:
+          BETTER_AUTH_SECRET: build-stage-placeholder-never-used-at-runtime
+        run: npm run build:api
 
   deploy:
     name: Build & Deploy
