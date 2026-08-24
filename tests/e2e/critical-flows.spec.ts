@@ -139,10 +139,9 @@ test("profile, active basket and role escalation protection", async ({ request }
   expect(tickers).not.toContain("BOVV11");
 });
 
-test("temporary fund and transaction APIs support create, read, update and cleanup", async ({ request }, testInfo) => {
+test("temporary fund APIs remain available while manual transaction writes are disabled", async ({ request }, testInfo) => {
   const slug = `${projectSlug(testInfo)}-repeat${testInfo.repeatEachIndex}`;
   let fundId: string | undefined;
-  let transactionId: string | undefined;
 
   try {
     const fundResponse = await request.post("/api/funds", {
@@ -167,34 +166,19 @@ test("temporary fund and transaction APIs support create, read, update and clean
     expectStatus(fundUpdate, 200);
     expect(await fundUpdate.json()).toMatchObject({ id: fundId, currentValue: 1200 });
 
-    const transactionResponse = await request.post("/api/transactions", {
-      headers: { "idempotency-key": `e2e-${slug}-transaction` },
-      data: {
-        assetTicker: "BOVA11",
-        type: "COMPRA",
-        shares: 2,
-        pricePerShare: 100,
-        tradedAt: "2026-08-20T13:00:00.000Z",
-      },
-    });
-    expectStatus(transactionResponse, 200);
-    transactionId = (await transactionResponse.json()).id;
-
-    const transactionRead = await request.get(`/api/transactions/${transactionId}`);
-    expectStatus(transactionRead, 200);
-    expect(await transactionRead.json()).toMatchObject({ id: transactionId, assetTicker: "BOVA11", shares: 2 });
-
-    const transactionUpdate = await request.put(`/api/transactions/${transactionId}`, {
-      data: { assetTicker: "IMAB11", pricePerShare: 105, shares: 3 },
-    });
-    expectStatus(transactionUpdate, 200);
-    expect(await transactionUpdate.json()).toMatchObject({ id: transactionId, assetTicker: "IMAB11", shares: 3 });
-  } finally {
-    if (transactionId) {
-      const deleted = await request.delete(`/api/transactions/${transactionId}`);
-      expectStatus(deleted, 200);
-      transactionId = undefined;
+    const transactionWrites = [
+      request.post("/api/transactions", { data: { assetTicker: "BOVA11", type: "COMPRA", shares: 2, pricePerShare: 100, tradedAt: "2026-08-20T13:00:00.000Z" } }),
+      request.put("/api/transactions/not-a-manual-write", { data: { shares: 3 } }),
+      request.delete("/api/transactions/not-a-manual-write"),
+    ];
+    for (const response of await Promise.all(transactionWrites)) {
+      expectStatus(response, 410);
+      await expect(response.json()).resolves.toMatchObject({ code: "MANUAL_TRANSACTIONS_DISABLED", source: "PLUGGY" });
     }
+
+    const transactionRead = await request.get("/api/transactions");
+    expectStatus(transactionRead, 200);
+  } finally {
     if (fundId) {
       const deleted = await request.delete(`/api/funds/${fundId}`);
       expectStatus(deleted, 200);

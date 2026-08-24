@@ -102,8 +102,6 @@ export const api = {
     const params = filters ? "?" + new URLSearchParams(filters).toString() : "";
     return apiFetch<any[]>(`/api/transactions${params}`);
   },
-  createTransaction: (data: any) =>
-    apiFetch<any>("/api/transactions", { method: "POST", body: JSON.stringify(data) }),
   updateBasket: (id: string, data: any) =>
     apiFetch<any>(`/api/baskets/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   createBasket: (data: any) =>

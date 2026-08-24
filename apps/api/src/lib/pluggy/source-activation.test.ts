@@ -38,7 +38,7 @@ test("blocks source activation while dual-read is divergent or positions are unm
   assert.equal(result.canActivatePluggy, false);
   assert.equal(result.canSwitchToPluggy, result.canActivatePluggy);
   assert.equal(result.currentMode, "MANUAL");
-  assert.equal(result.manualCrudStatus, "ACTIVE");
+  assert.equal(result.manualCrudStatus, "DISABLED");
   assert.ok(result.blockers.some((blocker) => blocker.includes("Dual-read divergente")));
   assert.ok(result.blockers.some((blocker) => blocker.includes("sem mapeamento")));
 });
@@ -53,7 +53,7 @@ test("allows a reviewed activation only when both populated sources reconcile", 
 
   assert.equal(result.status, "READY");
   assert.equal(result.canActivatePluggy, true);
-  assert.equal(result.manualCrud.transactions, "ACTIVE");
+  assert.equal(result.manualCrud.transactions, "DISABLED");
   assert.match(result.nextAction, /ativação/);
 });
 

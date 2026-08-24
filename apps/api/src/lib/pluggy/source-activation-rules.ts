@@ -61,13 +61,11 @@ export function buildSourceActivationReadiness(input: SourceActivationReadinessI
     canActivatePluggy,
     // External compatibility field. Remove only after the documented API sunset.
     canSwitchToPluggy: canActivatePluggy,
-    manualCrudStatus: "ACTIVE" as const,
+    manualCrudStatus: "DISABLED" as const,
     manualCrud: {
-      transactions: "ACTIVE" as const,
-      funds: "ACTIVE" as const,
-      reason: canActivatePluggy
-        ? "O CRUD manual permanece disponível durante o período de compatibilidade"
-        : "O CRUD manual permanece disponível enquanto a ativação estiver bloqueada",
+      transactions: "DISABLED" as const,
+      funds: "DISABLED" as const,
+      reason: "Escritas manuais desativadas; Pluggy é a fonte operacional",
     },
     reconciliation: {
       status: input.comparison.status,
