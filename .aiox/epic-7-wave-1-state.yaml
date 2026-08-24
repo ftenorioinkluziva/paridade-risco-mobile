@@ -1,0 +1,28 @@
+workflow: story-development-cycle
+instance_id: epic-7-wave-1-story-7-1
+mode: guided
+status: active
+started_at: 2026-08-24
+target:
+  epic: 7
+  story: "7.1"
+current_step: implement
+steps:
+  - id: create
+    agent: sm
+    status: completed
+    artifact: docs/stories/7.1.e2e-pluggy-rebalanceamento-recuperacao.story.md
+  - id: validate
+    agent: po
+    status: completed
+    result: GO_conditional_dependencies_satisfied
+  - id: implement
+    agent: dev
+    status: in_progress
+  - id: review
+    agent: qa
+    status: pending
+decisions:
+  - story_7_4_removal_excluded_until_30_day_evidence
+  - cli_and_mcp_preserved
+next_action: implement_story_7_1

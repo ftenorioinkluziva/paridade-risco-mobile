@@ -48,6 +48,8 @@ O produto já opera com 9 ETFs, scheduler de 7 minutos, Pluggy como fonte operac
 
 O @sm transformou as fatias em stories completas e o @po validou critérios, dependências, riscos e ausência de invenção. A implementação segue condicionada aos gates indicados em cada story.
 
+O desenvolvimento será executado em ondas pelo workflow `story-development-cycle`, conforme `docs/operations/epic-7-development-waves.md`. A Onda 1 iniciou pela Story 7.1; 7.4 permanece limitada à coleta de telemetria.
+
 ## PO Validation
 
 **Verdict:** NO-GO para execução imediata; GO condicional de backlog — 2026-08-24.
@@ -60,3 +62,4 @@ Para a Story 7.4, o período de avaliação é uma janela contínua de 30 dias i
 
 - 2026-08-24: Epic criado pelo @pm após o fechamento do Epic 6.
 - 2026-08-24: @po revalidou 7.4: CLI de desenvolvimento e MCP permanecem preservados; somente a compatibilidade legada do Telegram pode ser avaliada, condicionada a evidência de uso zero por 30 dias e rollback validado.
+- 2026-08-24: Workflow AIOX em ondas iniciado pela Story 7.1.
