@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { closeDb, db } from "../db/client";
 import { PluggyClient } from "../lib/pluggy/client";
 import { getUserPluggyConfig, readPluggyConfig, type PluggyConfig } from "../lib/pluggy/config";
+import { listPluggyConnectionsForFallback } from "../lib/pluggy/repository";
+import { isPluggyFallbackDue } from "../lib/pluggy/fallback-policy";
 import { PluggySyncInProgressError, syncConfiguredPluggyItem } from "../lib/pluggy/sync";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -69,7 +71,18 @@ async function runSync(trigger: "startup" | "schedule") {
     return;
   }
 
+  const connections = await listPluggyConnectionsForFallback(db);
+  let executed = 0;
+  let skipped = 0;
+  let succeeded = 0;
+  let failed = 0;
   for (const { userId, config } of userConfigs) {
+    const connection = connections.find((candidate) => candidate.userId === userId && candidate.itemId === config.sandboxItemId);
+    if (trigger === "schedule" && connection && !isPluggyFallbackDue({ lastSyncAt: connection.lastSyncAt, lastSyncStatus: connection.lastSyncStatus, now: new Date() })) {
+      skipped += 1;
+      continue;
+    }
+    executed += 1;
     try {
       const summary = await syncConfiguredPluggyItem({
         client: new PluggyClient(config),
@@ -77,15 +90,19 @@ async function runSync(trigger: "startup" | "schedule") {
         userId,
         config,
       });
-      console.log(`[pluggy-scheduler] ${trigger} sync succeeded for user ${userId}: run=${summary.syncRunId} investments=${summary.investments} accounts=${summary.accounts} transactions=${summary.transactions}`);
+      succeeded += 1;
+      console.log(`[pluggy-scheduler] ${trigger} sync succeeded: user=${userId.slice(0, 8)} run=${summary.syncRunId} investments=${summary.investments} accounts=${summary.accounts} transactions=${summary.transactions} loans=${summary.loans}`);
     } catch (error) {
       if (error instanceof PluggySyncInProgressError) {
-        console.log(`[pluggy-scheduler] ${trigger} sync skipped for user ${userId}: another run is active (${error.syncRunId})`);
+        skipped += 1;
+        console.log(`[pluggy-scheduler] ${trigger} sync skipped: user=${userId.slice(0, 8)} reason=already_running`);
         continue;
       }
-      console.error(`[pluggy-scheduler] ${trigger} sync failed for user ${userId}:`, error instanceof Error ? error.message : error);
+      failed += 1;
+      console.error(`[pluggy-scheduler] ${trigger} sync failed: user=${userId.slice(0, 8)} reason=${error instanceof Error ? error.message.slice(0, 120) : "unknown"}`);
     }
   }
+  console.log(`[pluggy-scheduler] ${trigger} summary: planned=${userConfigs.length} executed=${executed} skipped=${skipped} succeeded=${succeeded} failed=${failed} concurrency=1`);
 }
 
 async function main() {

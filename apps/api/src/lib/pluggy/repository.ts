@@ -260,6 +260,16 @@ export async function findConnectionByItemId(database: PluggyDatabase, itemId: s
   return connection ?? null;
 }
 
+export async function listPluggyConnectionsForFallback(database: PluggyDatabase) {
+  return database.select({
+    id: pluggyConnections.id,
+    userId: pluggyConnections.userId,
+    itemId: pluggyConnections.itemId,
+    lastSyncAt: pluggyConnections.lastSyncAt,
+    lastSyncStatus: pluggyConnections.lastSyncStatus,
+  }).from(pluggyConnections);
+}
+
 export async function recordPluggyWebhookEvent(database: PluggyDatabase, input: {
   eventId: string;
   event: string;
