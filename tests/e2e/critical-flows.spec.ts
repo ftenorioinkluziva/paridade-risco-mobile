@@ -31,6 +31,24 @@ function expectStatus(response: APIResponse, status: number) {
   expect(response.status(), `${response.url()} returned ${response.status()}`).toBe(status);
 }
 
+function loadPluggyScenario(scenario: "buy" | "sell" | "balanced" | "stale" | "unavailable" | "pending") {
+  const projectName = requiredEnvironment("E2E_COMPOSE_PROJECT_NAME");
+  const result = spawnSync("docker", [
+    "compose", "-f", "docker-compose.e2e.yml", "-p", projectName,
+    "exec", "-T", "api", "npm", "run", "e2e:fixture", "--", "scenario", scenario,
+  ], {
+    cwd: path.resolve("."),
+    env: process.env,
+    encoding: "utf8",
+    shell: false,
+  });
+  expect(result.status, result.stderr || result.stdout).toBe(0);
+}
+
+async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+}
+
 function telegramHeaders(pathname: string, chatId: string, options: { scope?: string; nonce?: string; secret?: string } = {}) {
   const timestamp = String(Math.floor(Date.now() / 1000));
   const nonce = options.nonce ?? randomBytes(18).toString("base64url");
@@ -267,6 +285,76 @@ test("Pluggy source activation moves from blocked to ready using the determinist
   } finally {
     const deleted = await request.delete("/api/profile/pluggy");
     expectStatus(deleted, 200);
+  }
+});
+
+test("Pluggy rebalance covers buy, sell, adjusted, blocked and responsive decision states", async ({ page, request }, testInfo) => {
+  const isDesktop = testInfo.project.name.includes("desktop");
+  if (isDesktop) {
+    const scenarios = [
+      { name: "buy", freshness: "FRESH", action: "APORTAR", executionReady: true },
+      { name: "sell", freshness: "FRESH", action: "REDUZIR", executionReady: true },
+      { name: "balanced", freshness: "FRESH", action: null, executionReady: true },
+      { name: "stale", freshness: "STALE", action: null, executionReady: false },
+      { name: "unavailable", freshness: "UNAVAILABLE", action: null, executionReady: false },
+      { name: "pending", freshness: "FRESH", action: null, executionReady: false },
+    ] as const;
+
+    for (const scenario of scenarios) {
+      loadPluggyScenario(scenario.name);
+      const response = await request.get("/api/integrations/pluggy/rebalance/preview");
+      expectStatus(response, 200);
+      const preview = await response.json();
+      expect(preview.freshness).toBe(scenario.freshness);
+      expect(preview.executionReady).toBe(scenario.executionReady);
+      if (scenario.action) expect(preview.actions.some((action: { action: string }) => action.action === scenario.action)).toBe(true);
+      else expect(preview.actions).toHaveLength(0);
+      if (scenario.name === "pending") {
+        expect(preview).toMatchObject({ analysisStatus: "PARCIAL", unresolvedCount: 1 });
+      }
+    }
+  }
+
+  loadPluggyScenario("buy");
+  await page.goto("/investimentos");
+  await expect(page.getByText("Decisão do motor e plano de ajuste", { exact: true })).toBeVisible();
+  await expect(page.getByText("Comprar", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Revisar dados sincronizados" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
+
+test("recoverable Pluggy fallback refreshes the UI and webhook delivery is idempotent", async ({ page, request }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("desktop"), "Recovery mutation runs once in the isolated E2E namespace");
+  loadPluggyScenario("stale");
+
+  try {
+    const configured = await request.put("/api/profile/pluggy", {
+      data: { clientId: "e2e-client", clientSecret: "e2e-client-secret", itemId: "e2e-recoverable" },
+    });
+    expectStatus(configured, 200);
+
+    const failedSync = await request.post("/api/integrations/pluggy/sync");
+    expectStatus(failedSync, 502);
+    const recoveredSync = await request.post("/api/integrations/pluggy/sync");
+    expectStatus(recoveredSync, 200);
+    expect(await recoveredSync.json()).toMatchObject({ source: "PLUGGY", freshness: { status: "FRESH" } });
+
+    await page.goto("/investimentos");
+    await expect(page.getByText("Dados atualizados", { exact: true })).toBeVisible();
+
+    const eventId = `${requiredEnvironment("E2E_NAMESPACE")}-recovery-event`;
+    const webhook = () => request.post("/api/integrations/pluggy/webhook", {
+      headers: { "x-pluggy-webhook-secret": requiredEnvironment("E2E_PLUGGY_WEBHOOK_SECRET") },
+      data: { eventId, event: "item/updated", itemId: "e2e-recoverable" },
+    });
+    const accepted = await webhook();
+    expectStatus(accepted, 202);
+    expect(await accepted.json()).toMatchObject({ accepted: true, duplicate: false });
+    const duplicate = await webhook();
+    expectStatus(duplicate, 202);
+    expect(await duplicate.json()).toMatchObject({ accepted: true, duplicate: true });
+  } finally {
+    expectStatus(await request.delete("/api/profile/pluggy"), 200);
   }
 });
 

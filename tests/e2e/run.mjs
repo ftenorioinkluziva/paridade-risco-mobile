@@ -113,6 +113,7 @@ const password = randomBytes(24).toString("base64url");
 const authSecret = randomBytes(32).toString("hex");
 const dbPassword = randomBytes(24).toString("hex");
 const telegramS2sSecret = randomBytes(32).toString("hex");
+const pluggyWebhookSecret = randomBytes(32).toString("hex");
 const authStatePath = path.join(authDir, `${namespace}.json`);
 const env = {
   ...process.env,
@@ -122,6 +123,8 @@ const env = {
   E2E_AUTH_SECRET: authSecret,
   E2E_DB_PASSWORD: dbPassword,
   E2E_TELEGRAM_S2S_SECRET: telegramS2sSecret,
+  E2E_PLUGGY_WEBHOOK_SECRET: pluggyWebhookSecret,
+  E2E_COMPOSE_PROJECT_NAME: projectName,
   E2E_API_PORT: String(port),
   E2E_BASE_URL: `http://127.0.0.1:${port}`,
   E2E_AUTH_STATE_PATH: authStatePath,
