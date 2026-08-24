@@ -1,6 +1,6 @@
 # EPIC-6: Decisão acionável e operação de release
 
-**Status:** Ready for Development  
+**Status:** Done  
 **Owner:** Product / Architecture  
 **Created:** 2026-08-24  
 **Depends on:** Epic 5 (Done)
@@ -99,8 +99,17 @@ Os IDs e limites acima são uma proposta de planejamento; nenhum arquivo de stor
 
 O escopo está coerente para decomposição e implementação: nove ETFs canônicos, scheduler de 7 minutos, orçamento de 12.474 chamadas em 22 pregões e 14.175 em 25 pregões antes de retries, Pluggy como fonte operacional para contas/posições/transações/empréstimos, webhook imediato com fallback de 30 minutos, limite inicial de 20 conexões simultâneas e CRUD manual completamente desativado. As cinco stories foram validadas individualmente e estão `Ready for Development`.
 
+## Release Closure
+
+- Stories 6.1–6.5 concluídas e promovidas para `master`.
+- E2E crítico pós-merge aprovado: workflow run `32773598591`.
+- Deploy controlado pós-merge aprovado: workflow run `32773867035`, incluindo quality gate, build, migrations, health checks e smoke pós-deploy.
+- O quality gate de deploy passou a fornecer `BETTER_AUTH_SECRET` efêmero apenas no build; nenhum segredo de runtime foi registrado.
+- Evidências detalhadas: `docs/qa/epic-6-release-evidence-2026-08-24.md`.
+
 ## Change Log
 
 - 2026-08-24: Epic criado por @pm a partir do roadmap 61–90 dias e dos resultados validados do Epic 5.
 - 2026-08-24: Escopo ajustado: 9 ETFs, scheduler de 7 minutos, Pluggy como fonte única operacional, webhook + fallback de 30 minutos, CRUD manual desativado e limite inicial de 20 usuários.
 - 2026-08-24: @po ratificou a lista canônica de 9 ETFs e aprovou as stories 6.1–6.5 para desenvolvimento.
+- 2026-08-24: Epic encerrado como `Done` após E2E crítico e deploy controlado pós-merge aprovados.
