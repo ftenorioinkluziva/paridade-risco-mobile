@@ -134,8 +134,8 @@ const pluggyRebalancePreviewSchema = z.object({
 }).passthrough();
 
 const pluggySourceActivationReadinessSchema = z.object({
-  source: z.literal("PLUGGY"), generatedAt: isoDate, currentMode: z.enum(["MANUAL", "PLUGGY", "DUAL_READ"]), candidateMode: z.literal("PLUGGY"), status: z.enum(["READY", "BLOCKED"]), canActivatePluggy: z.boolean(), canSwitchToPluggy: z.boolean(), manualCrudStatus: z.literal("ACTIVE"),
-  manualCrud: z.object({ transactions: z.literal("ACTIVE"), funds: z.literal("ACTIVE"), reason: id }).strict(),
+  source: z.literal("PLUGGY"), generatedAt: isoDate, currentMode: z.enum(["MANUAL", "PLUGGY", "DUAL_READ"]), candidateMode: z.literal("PLUGGY"), status: z.enum(["READY", "BLOCKED"]), canActivatePluggy: z.boolean(), canSwitchToPluggy: z.boolean(), manualCrudStatus: z.literal("DISABLED"),
+  manualCrud: z.object({ transactions: z.literal("DISABLED"), funds: z.literal("DISABLED"), reason: id }).strict(),
   reconciliation: z.object({ status: z.enum(["ALINHADO", "DIVERGENTE"]), considered: z.boolean(), baseline: z.enum(["PLUGGY_ONLY_SANDBOX", "PLUGGY_ONLY_NEW_ACCOUNT", "MANUAL_AND_PLUGGY"]) }).strict(),
   comparison: z.object({ status: z.enum(["ALINHADO", "DIVERGENTE"]), totalValueDelta: finite, investedValueDelta: finite, cashBalanceDelta: finite, positionValueDelta: finite, byTicker: z.array(z.object({ ticker: id, manualValue: finite, pluggyValue: finite, delta: finite, status: z.enum(["ALINHADO", "DIVERGENTE"]) }).strict()) }).strict(),
   blockers: z.array(z.string()), warnings: z.array(z.string()), nextAction: id,
