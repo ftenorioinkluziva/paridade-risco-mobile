@@ -30,4 +30,4 @@ Não foi inferido uso zero. O Compose local está saudável, mas não possui his
 
 ## Próxima coleta
 
-Manter a telemetria existente e coletar uma janela contínua de 30 dias, agregada por `consumer`, rota/evento e `outcome`. Qualquer uso Telegram, consumidor não identificado, lacuna de dados ou falha de smoke mantém a remoção bloqueada.
+Manter a telemetria existente e coletar uma janela contínua de 30 dias, agregada por `consumer`, rota/evento e `outcome`. O comando `npm run audit:telegram < logs-telegram.txt > audit-telegram.json` sanitiza e agrega somente os eventos permitidos, omitindo tokens, chat IDs e payloads. Qualquer uso Telegram, consumidor não identificado, lacuna de dados ou falha de smoke mantém a remoção bloqueada.

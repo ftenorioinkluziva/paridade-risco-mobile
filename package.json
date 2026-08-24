@@ -13,6 +13,7 @@
     "validate:structure": "node .aiox-core/infrastructure/scripts/validate-paths.js",
     "validate:agents": "node .aiox-core/infrastructure/scripts/validate-agents.js",
     "validate:pluggy-naming": "node scripts/validate-pluggy-source-activation-naming.mjs",
+    "audit:telegram": "node scripts/audit-telegram-usage.mjs",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
