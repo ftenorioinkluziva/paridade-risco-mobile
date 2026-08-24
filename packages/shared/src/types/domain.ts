@@ -84,6 +84,7 @@ export interface RebalanceAction {
   estimatedQuantity: number | null;
   currentPercentage: number;
   targetPercentage: number;
+  reason: string;
 }
 
 export interface RebalancePreview {

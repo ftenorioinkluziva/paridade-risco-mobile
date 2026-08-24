@@ -35,15 +35,19 @@ export function buildRebalancePreview(args: {
       const diffValue = targetValue - currentValue;
       const currentPrice = currentPricesByTicker[allocation.asset.ticker] ?? position?.currentPrice ?? 0;
 
+      const action = diffValue >= 0 ? "APORTAR" as const : "REDUZIR" as const;
       return {
         id: `${args.basket!.id}-${index}`,
         ticker: allocation.asset.ticker,
-        action: diffValue >= 0 ? "APORTAR" as const : "REDUZIR" as const,
+        action,
         amount: Math.abs(diffValue),
         currentPrice,
         estimatedQuantity: currentPrice > 0 ? Math.round((Math.abs(diffValue) / currentPrice) * 100) / 100 : null,
         currentPercentage,
         targetPercentage,
+        reason: action === "APORTAR"
+          ? `Aumentar ${allocation.asset.ticker} de ${currentPercentage.toFixed(2)}% para ${targetPercentage.toFixed(2)}%`
+          : `Reduzir ${allocation.asset.ticker} de ${currentPercentage.toFixed(2)}% para ${targetPercentage.toFixed(2)}%`,
       };
     })
     .filter((action) => action.amount > 0.01)

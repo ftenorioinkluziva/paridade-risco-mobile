@@ -49,6 +49,7 @@ export function toRawPositions(provider: PortfolioProviderSnapshot): RawPosition
 
 export function buildPluggyRebalancePreview(input: PluggyRebalanceRulesInput) {
   const positions = toRawPositions(input.provider);
+  const freshness = input.provider.freshness?.status ?? "FRESH";
   const maximumCashForOrders = Math.max(0, input.provider.cashBalance);
   const requestedCashForOrders = Number.isFinite(input.cashForOrders) ? input.cashForOrders as number : maximumCashForOrders;
   const cashForOrders = Math.round(Math.min(maximumCashForOrders, Math.max(0, requestedCashForOrders)) * 100) / 100;
@@ -60,7 +61,7 @@ export function buildPluggyRebalancePreview(input: PluggyRebalanceRulesInput) {
     totalValue: calculationBaseValue,
     currentPricesByTicker: input.provider.livePricesByTicker,
   });
-  const eligibleActions = input.eligibleForRebalance ? preview.actions : [];
+  const eligibleActions = input.eligibleForRebalance && freshness === "FRESH" ? preview.actions : [];
   const buyRequired = eligibleActions
     .filter((action) => action.action === "APORTAR")
     .reduce((sum, action) => sum + action.amount, 0);
@@ -85,6 +86,7 @@ export function buildPluggyRebalancePreview(input: PluggyRebalanceRulesInput) {
   if (!input.basket) warnings.push("Nenhuma cesta ativa selecionada");
   if (positions.length === 0) warnings.push("Nenhuma posição Pluggy mapeada para a cesta");
   if (!input.eligibleForRebalance) warnings.push("Perfil incompleto para rebalanceamento");
+  if (freshness !== "FRESH") warnings.push(`Dados Pluggy ${freshness}: atualize a sincronização antes de agir`);
   if (liquidityStatus === "INSUFICIENTE") warnings.push("O caixa destinado às ordens não cobre os aportes calculados");
 
   return {
@@ -104,6 +106,7 @@ export function buildPluggyRebalancePreview(input: PluggyRebalanceRulesInput) {
     liquidityStatus,
     executionReady: Boolean(
       input.eligibleForRebalance &&
+      freshness === "FRESH" &&
       input.basket &&
       positions.length > 0 &&
       !hasUnresolvedPositions &&
@@ -119,5 +122,6 @@ export function buildPluggyRebalancePreview(input: PluggyRebalanceRulesInput) {
     mappingCoveragePercentage,
     warnings,
     actions: eligibleActions,
+    freshness,
   };
 }

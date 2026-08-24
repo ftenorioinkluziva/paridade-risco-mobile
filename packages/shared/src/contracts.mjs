@@ -130,7 +130,7 @@ const pluggyProjectionSchema = z.object({
 
 const pluggyRebalancePreviewSchema = z.object({
   source: z.literal("PLUGGY"), portfolioValue: finite, investedValue: finite, cashAvailable: finite, cashForOrders: finite, cashHeldInReserve: finite, calculationBaseValue: finite, rebalanceCost: finite, buyRequired: finite, sellProceeds: finite, postRebalanceCash: finite, includeCash: z.boolean(), liquidityStatus: z.enum(["SUFICIENTE", "INSUFICIENTE", "NAO_CALCULADA"]), executionReady: z.boolean(), eligibleForRebalance: z.boolean(), missingProfileFields: z.array(z.string()), analysisStatus: z.enum(["COMPLETA", "PARCIAL"]), observedInvestedValue: finite, outsideStrategyValue: finite, unresolvedValue: finite, unresolvedCount: z.number().int().nonnegative(), mappingCoveragePercentage: nullableFinite, warnings: z.array(z.string()), driftPercentage: finite, targetBasketName: id,
-  actions: z.array(z.object({ id, ticker: id, action: z.enum(["APORTAR", "REDUZIR"]), amount: finite, currentPrice: finite, currentPercentage: finite, targetPercentage: finite }).strict()),
+  actions: z.array(z.object({ id, ticker: id, action: z.enum(["APORTAR", "REDUZIR"]), amount: finite, currentPrice: finite, currentPercentage: finite, targetPercentage: finite, reason: id }).strict()),
 }).passthrough();
 
 const pluggySourceActivationReadinessSchema = z.object({

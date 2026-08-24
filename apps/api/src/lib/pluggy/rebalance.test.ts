@@ -141,3 +141,34 @@ test("keeps outside-strategy value visible without using it in basket orders", (
   assert.equal(result.executionReady, true);
   assert.ok(result.warnings.some((warning) => warning.includes("fora da estratégia")));
 });
+
+test("blocks actionable orders when Pluggy freshness is stale", () => {
+  const result = buildPluggyRebalancePreview({
+    provider: provider({
+      freshness: { status: "STALE", latestObservedAt: new Date().toISOString(), latestSyncAt: new Date(0).toISOString(), ageMinutes: 180 },
+      positions: [{ providerPositionId: "p1", assetId: "a1", ticker: "BOVA11", name: "BOVA11", type: "ETF", quantity: 1, currentValue: 100, costBasis: 100, observedAt: new Date() }],
+      cashBalance: 100,
+    }),
+    basket,
+    eligibleForRebalance: true,
+    missingProfileFields: [],
+  });
+
+  assert.equal(result.actions.length, 0);
+  assert.equal(result.executionReady, false);
+  assert.ok(result.warnings.some((warning) => warning.includes("Dados Pluggy STALE")));
+});
+
+test("exposes a readable reason for every actionable order", () => {
+  const result = buildPluggyRebalancePreview({
+    provider: provider({
+      positions: [{ providerPositionId: "p1", assetId: "a1", ticker: "BOVA11", name: "BOVA11", type: "ETF", quantity: 1, currentValue: 200, costBasis: 200, observedAt: new Date() }],
+      cashBalance: 100,
+    }),
+    basket,
+    eligibleForRebalance: true,
+    missingProfileFields: [],
+  });
+
+  assert.ok(result.actions.every((action) => action.reason.length > 10));
+});
