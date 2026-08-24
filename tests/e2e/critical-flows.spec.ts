@@ -14,8 +14,6 @@ const strategicTickers = [
   "IMAB11",
   "IRFM11",
   "LFTS11",
-  "SMAL11",
-  "SPXI11",
   "XFIX11",
 ];
 

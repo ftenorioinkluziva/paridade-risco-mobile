@@ -6,7 +6,7 @@ import cron from "node-cron";
 import { getFinancialDataFetcher } from "../lib/financialDataFetcher";
 import { getStrategicEtfTickersForSchedule, isB3FinalCaptureWindow, isB3TradingSession, monthlyCallEstimate, STRATEGIC_ETF_TICKERS } from "../lib/market-data";
 
-const CRON_QUOTES = process.env.PRICE_SCHEDULER_CRON_QUOTES ?? "*/8 10-16 * * 1-5";
+const CRON_QUOTES = process.env.PRICE_SCHEDULER_CRON_QUOTES ?? "*/7 10-16 * * 1-5";
 const CRON_FINAL_CAPTURE = process.env.PRICE_SCHEDULER_CRON_FINAL_CAPTURE ?? "30 17 * * 1-5";
 const TIMEZONE = process.env.PRICE_SCHEDULER_TIMEZONE ?? "America/Sao_Paulo";
 
@@ -32,11 +32,12 @@ async function executeStrategicUpdate(
   isJobRunning = true;
   const startedAt = Date.now();
   try {
-    console.log(`[scheduler] Starting strategic quote update (${reason}) at ${new Date().toISOString()}`);
+    console.log(`[scheduler] Starting strategic quote update (${reason}) at ${new Date().toISOString()} planned=${tickers.length}`);
     const fetcher = await getFinancialDataFetcher();
     const result = await fetcher.updateStrategicQuotes(new Date(), tickers);
     const successful = result.results.filter((row) => row.success).length;
-    console.log(`[scheduler] Strategic quote update finished. assets=${result.results.length}, successful=${successful}, failed=${result.results.length - successful}, durationMs=${Date.now() - startedAt}`);
+    const fallbacks = result.results.filter((row) => row.source === "YAHOO_FINANCE").length;
+    console.log(`[scheduler] Strategic quote update finished. planned=${tickers.length}, executed=${result.results.length}, successful=${successful}, failed=${result.results.length - successful}, fallbacks=${fallbacks}, retries=0, durationMs=${Date.now() - startedAt}`);
   } catch {
     console.error("[scheduler] Strategic quote update failed.");
   } finally {
@@ -61,7 +62,10 @@ function scheduleJobs(): void {
   console.log(`[scheduler] session cron: ${CRON_QUOTES}`);
   console.log(`[scheduler] final capture cron: ${CRON_FINAL_CAPTURE}`);
   console.log(`[scheduler] timezone: ${TIMEZONE}`);
-  console.log(`[scheduler] estimated monthly calls (22 sessions): ${monthlyCallEstimate()}`);
+  const quota = Number(process.env.PRICE_SCHEDULER_MONTHLY_QUOTA ?? 15_000);
+  const estimate22 = monthlyCallEstimate();
+  const estimate25 = monthlyCallEstimate({ tradingDays: 25 });
+  console.log(`[scheduler] monthly quote budget: quota=${quota}, planned22=${estimate22}, planned25=${estimate25}, margin25=${quota - estimate25}, intervalMinutes=7, retries=0`);
 }
 
 function registerShutdownHandlers(): void {

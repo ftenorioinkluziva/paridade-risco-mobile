@@ -71,8 +71,6 @@ async function seed() {
     { ticker: "IMAB11", sourceTicker: "IMAB11.SA", name: "ETF IMA-B", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
     { ticker: "IRFM11", sourceTicker: "IRFM11.SA", name: "IT NOW IRF-M P2 ETF", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
     { ticker: "LFTS11", sourceTicker: "LFTS11.SA", name: "INVESTO TEVA TESOURO SELIC ETF", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
-    { ticker: "SMAL11", sourceTicker: "SMAL11.SA", name: "ETF Small Caps", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
-    { ticker: "SPXI11", sourceTicker: "SPXI11.SA", name: "ETF S&P 500", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
     { ticker: "XFIX11", sourceTicker: "XFIX11.SA", name: "Trend Ifix", type: "ETF" as const, calculationType: "PRECO" as const, isActive: true },
   ];
 
@@ -90,6 +88,7 @@ async function seed() {
       await db.update(assets).set({ sourceTicker: a.sourceTicker ?? null, isActive: true }).where(sql`ticker = ${a.ticker}`);
     }
   }
+  await db.update(assets).set({ isActive: false }).where(sql`ticker IN ('SMAL11', 'SPXI11', 'BOVV11')`);
   if (newAssets.length > 0) console.log("Assets created:", newAssets.map(a => a.ticker).join(", "));
   else console.log("All assets already exist");
 
@@ -99,8 +98,7 @@ async function seed() {
       name: "Carteira Equilibrada",
       description: "60% Renda Variável / 40% Renda Fixa — crescimento com estabilidade",
       allocations: [
-        { ticker: "BOVA11", pct: 25 }, { ticker: "SPXI11", pct: 20 },
-        { ticker: "SMAL11", pct: 10 }, { ticker: "IMAB11", pct: 15 },
+        { ticker: "BOVA11", pct: 55 }, { ticker: "IMAB11", pct: 15 },
         { ticker: "CDB_POS", pct: 15 }, { ticker: "TESOURO_SELIC", pct: 10 },
         { ticker: "OURO", pct: 5 },
       ],
@@ -109,7 +107,7 @@ async function seed() {
       name: "Carteira Conservadora",
       description: "Maior exposição à renda fixa para preservação de capital",
       allocations: [
-        { ticker: "BOVA11", pct: 10 }, { ticker: "SPXI11", pct: 10 },
+        { ticker: "BOVA11", pct: 20 },
         { ticker: "IMAB11", pct: 20 }, { ticker: "CDB_POS", pct: 30 },
         { ticker: "TESOURO_SELIC", pct: 25 }, { ticker: "OURO", pct: 5 },
       ],
@@ -118,8 +116,7 @@ async function seed() {
       name: "Carteira Agressiva",
       description: "Alta exposição a risco para maximizar retorno no longo prazo",
       allocations: [
-        { ticker: "BOVA11", pct: 30 }, { ticker: "SPXI11", pct: 25 },
-        { ticker: "SMAL11", pct: 15 }, { ticker: "BTC", pct: 10 },
+        { ticker: "BOVA11", pct: 70 }, { ticker: "BTC", pct: 10 },
         { ticker: "ETH", pct: 5 }, { ticker: "IMAB11", pct: 10 },
         { ticker: "TESOURO_SELIC", pct: 5 },
       ],
@@ -128,7 +125,7 @@ async function seed() {
       name: "Carteira de Hedge",
       description: "Proteção contra inflação e crises com ativos reais e internacionais",
       allocations: [
-        { ticker: "SPXI11", pct: 25 }, { ticker: "OURO", pct: 20 },
+        { ticker: "BOVA11", pct: 25 }, { ticker: "OURO", pct: 20 },
         { ticker: "BTC", pct: 15 }, { ticker: "IMAB11", pct: 20 },
         { ticker: "CDB_POS", pct: 10 }, { ticker: "TESOURO_SELIC", pct: 10 },
       ],
@@ -201,13 +198,13 @@ async function seed() {
   }
 
   // ── Historical Prices ───────────────────────────────────────────────────
-  const priceAssets = ["BOVA11", "SPXI11", "IMAB11", "SMAL11", "BTC", "ETH", "OURO"];
+  const priceAssets = ["BOVA11", "IMAB11", "BTC", "ETH", "OURO"];
   const currentPrices: Record<string, string> = {
-    BOVA11: "128.50", SPXI11: "95.30", IMAB11: "85.20", SMAL11: "72.40",
+    BOVA11: "128.50", IMAB11: "85.20",
     BTC: "385000.00", ETH: "21000.00", OURO: "450.00",
   };
   const dailyVolatility: Record<string, number> = {
-    BOVA11: 0.015, SPXI11: 0.012, IMAB11: 0.005, SMAL11: 0.02,
+    BOVA11: 0.015, IMAB11: 0.005,
     BTC: 0.035, ETH: 0.04, OURO: 0.008,
   };
 
@@ -263,9 +260,7 @@ async function seed() {
   if (!existingTx) {
     const txData = [
       { ticker: "BOVA11", type: "COMPRA" as const, shares: "50", price: "125.30", daysAgo: 20 },
-      { ticker: "SPXI11", type: "COMPRA" as const, shares: "30", price: "92.10", daysAgo: 18 },
       { ticker: "IMAB11", type: "COMPRA" as const, shares: "40", price: "84.50", daysAgo: 15 },
-      { ticker: "SMAL11", type: "COMPRA" as const, shares: "20", price: "70.80", daysAgo: 12 },
       { ticker: "BTC", type: "COMPRA" as const, shares: "0.05", price: "380000.00", daysAgo: 10 },
       { ticker: "BOVA11", type: "COMPRA" as const, shares: "25", price: "127.00", daysAgo: 5 },
     ];
