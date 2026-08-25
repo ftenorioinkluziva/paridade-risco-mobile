@@ -1,0 +1,30 @@
+workflow: story-development-cycle
+instance_id: epic-7-wave-2-story-7-2
+mode: guided
+status: completed
+started_at: 2026-08-24
+target:
+  epic: 7
+  story: "7.2"
+current_step: review
+steps:
+  - id: create
+    agent: sm
+    status: completed
+    artifact: docs/stories/7.2.observabilidade-quota-scheduler-frescor.story.md
+  - id: validate
+    agent: po
+    status: completed
+    result: GO_conditional_dependencies_satisfied
+  - id: implement
+    agent: devops
+    status: completed
+  - id: review
+    agent: architect
+    status: completed
+    result: PASS
+decisions:
+  - story_7_4_removal_excluded_until_30_day_evidence
+  - cli_and_mcp_preserved
+  - ci_remote_confirmation_required_before_release_promotion
+next_action: start_story_7_3

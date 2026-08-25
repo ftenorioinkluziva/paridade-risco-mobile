@@ -1,0 +1,50 @@
+schema: 1
+story: '7.2'
+story_title: 'Observar quota, scheduler e frescor Pluggy'
+gate: PASS
+status_reason: 'Os seis critérios foram rastreados e aprovados por testes, revisão arquitetural e inspeção de contratos. A implementação preserva 9 ETFs, cadência de 7 minutos, fallback Pluggy de 30 minutos, limite de 15.000 chamadas, correlação hash e sanitização sem schema, broker, fila ou superfície legada nova.'
+reviewer: 'Aria (Architect)'
+reviewed_revision: 'commit:ef6db8c + architecture-fix: explicit Pluggy freshness event'
+updated: '2026-08-25T01:15:00-03:00'
+
+top_issues: []
+waiver:
+  active: false
+
+quality_score: 100
+expires: '2026-09-08T01:15:00-03:00'
+
+evidence:
+  tests_reviewed:
+    api: 87
+    remote_mcp: 8
+    cli: 5
+    shared: 22
+    telegram: 2
+    total: 124
+  risks_identified:
+    count: 1
+    notes: 'Compose local estava com imagens criadas antes do commit revisado e seus logs históricos não foram aceitos como evidência do candidato; rebuild/recreate é pré-condição de promoção.'
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Campos sensíveis são redacted por chave, IDs de correlação são hashes curtos e nenhum segredo, payload ou identificador bruto é emitido pelos caminhos revisados. A inspeção não encontrou alteração em CLI, MCP ou Telegram.'
+  performance:
+    status: PASS
+    notes: 'Observabilidade é síncrona e local, não cria chamadas adicionais ao provedor, mantém fallback Pluggy serial (concurrency=1) e não adiciona broker, fila ou schema.'
+  reliability:
+    status: PASS
+    notes: 'Fixtures confirmam 12.474/14.175 chamadas estimadas e margem 825; os ciclos preservam */7 10-16, captura 30 17 e fallback de 30 minutos. Frescor FRESH/STALE/UNAVAILABLE passou a ser emitido explicitamente.'
+  maintainability:
+    status: PASS
+    notes: 'Eventos estão tipados, centralizados em operational-observability, documentados no runbook e cobertos por sanitização, quota, correlação e classificação.'
+
+recommendations:
+  immediate:
+    - action: 'Rebuild/recreate os schedulers com o commit aprovado e extrair somente as linhas [observability] antes da promoção.'
+      refs: ['docs/operations/release-runbook.md', 'docker-compose.yml']
+  future: []

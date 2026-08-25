@@ -8,7 +8,15 @@ import { PluggyClient } from "../lib/pluggy/client";
 import { getUserPluggyConfig, readPluggyConfig, type PluggyConfig } from "../lib/pluggy/config";
 import { listPluggyConnectionsForFallback } from "../lib/pluggy/repository";
 import { isPluggyFallbackDue } from "../lib/pluggy/fallback-policy";
+import { buildPluggyFreshness } from "../lib/pluggy/freshness-rules";
 import { PluggySyncInProgressError, syncConfiguredPluggyItem } from "../lib/pluggy/sync";
+import {
+  classifyPluggyOperationalError,
+  getErrorCode,
+  getErrorStatus,
+  logOperationalEvent,
+  operationalCorrelationId,
+} from "../lib/operational-observability";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(scriptDirectory, "../../../../.env") });
@@ -32,7 +40,7 @@ async function resolveUserConfigs(): Promise<Array<{ userId: string; config: Plu
         results.push({ userId: specifiedUserId, config });
         return results;
       } catch {
-        console.warn(`[pluggy-scheduler] No credentials found for specified user ${specifiedUserId}`);
+        console.warn("[pluggy-scheduler] No credentials found for specified user");
         return results;
       }
     }
@@ -44,8 +52,14 @@ async function resolveUserConfigs(): Promise<Array<{ userId: string; config: Plu
     try {
       const config = await getUserPluggyConfig(cred.userId, db);
       results.push({ userId: cred.userId, config });
-    } catch (err) {
-      console.warn(`[pluggy-scheduler] Skipping user ${cred.userId}: invalid credentials`, err instanceof Error ? err.message : err);
+    } catch {
+      console.warn("[pluggy-scheduler] Skipping user with invalid credentials");
+      logOperationalEvent("pluggy_sync_failed", {
+        trigger: "configuration",
+        correlationId: operationalCorrelationId(cred.userId),
+        category: "UNAVAILABLE",
+        code: "INVALID_CREDENTIALS",
+      });
     }
   }
 
@@ -68,18 +82,62 @@ async function runSync(trigger: "startup" | "schedule") {
   const userConfigs = await resolveUserConfigs();
   if (userConfigs.length === 0) {
     console.log(`[pluggy-scheduler] ${trigger} skipped: no users with configured Pluggy credentials found.`);
+    logOperationalEvent("pluggy_scheduler_cycle_finished", {
+      scheduler: "pluggy-fallback",
+      trigger,
+      planned: 0,
+      executed: 0,
+      skipped: 0,
+      succeeded: 0,
+      failed: 0,
+      concurrency: 1,
+      fallbackIntervalMinutes: 30,
+      reason: "NO_CONFIGURED_USERS",
+    });
     return;
   }
 
   const connections = await listPluggyConnectionsForFallback(db);
+  logOperationalEvent("pluggy_scheduler_cycle_started", {
+    scheduler: "pluggy-fallback",
+    trigger,
+    planned: userConfigs.length,
+    configuredConnections: connections.length,
+    fallbackIntervalMinutes: 30,
+    concurrency: 1,
+  });
   let executed = 0;
   let skipped = 0;
   let succeeded = 0;
   let failed = 0;
   for (const { userId, config } of userConfigs) {
     const connection = connections.find((candidate) => candidate.userId === userId && candidate.itemId === config.sandboxItemId);
+    const freshness = buildPluggyFreshness({
+      latestObservedAt: null,
+      latestSyncAt: connection?.lastSyncAt ?? null,
+      latestSyncStatus: connection?.lastSyncStatus ?? null,
+      staleAfterMinutes: 30,
+    });
+    logOperationalEvent("pluggy_freshness_observed", {
+      scheduler: "pluggy-fallback",
+      trigger,
+      correlationId: operationalCorrelationId(userId, config.sandboxItemId),
+      status: freshness.status,
+      ageMinutes: freshness.ageMinutes,
+      staleAfterMinutes: freshness.staleAfterMinutes,
+      lastSyncStatus: freshness.latestSyncStatus,
+      fallbackIntervalMinutes: 30,
+    });
     if (trigger === "schedule" && connection && !isPluggyFallbackDue({ lastSyncAt: connection.lastSyncAt, lastSyncStatus: connection.lastSyncStatus, now: new Date() })) {
       skipped += 1;
+      logOperationalEvent("pluggy_fallback_skipped", {
+        scheduler: "pluggy-fallback",
+        trigger,
+        correlationId: operationalCorrelationId(userId, config.sandboxItemId),
+        reason: "FRESH",
+        lastSyncStatus: connection.lastSyncStatus,
+        fallbackIntervalMinutes: 30,
+      });
       continue;
     }
     executed += 1;
@@ -91,22 +149,69 @@ async function runSync(trigger: "startup" | "schedule") {
         config,
       });
       succeeded += 1;
-      console.log(`[pluggy-scheduler] ${trigger} sync succeeded: user=${userId.slice(0, 8)} run=${summary.syncRunId} investments=${summary.investments} accounts=${summary.accounts} transactions=${summary.transactions} loans=${summary.loans}`);
+      console.log(`[pluggy-scheduler] ${trigger} sync succeeded: correlation=${operationalCorrelationId(userId, config.sandboxItemId)} investments=${summary.investments} accounts=${summary.accounts} transactions=${summary.transactions} loans=${summary.loans}`);
+      logOperationalEvent("pluggy_sync_finished", {
+        scheduler: "pluggy-fallback",
+        trigger,
+        correlationId: operationalCorrelationId(userId, config.sandboxItemId),
+        syncRunCorrelationId: operationalCorrelationId(summary.syncRunId),
+        status: "SUCCEEDED",
+        investments: summary.investments,
+        accounts: summary.accounts,
+        transactions: summary.transactions,
+        loans: summary.loans,
+        loansUnavailable: summary.loansUnavailable,
+      });
     } catch (error) {
       if (error instanceof PluggySyncInProgressError) {
         skipped += 1;
-        console.log(`[pluggy-scheduler] ${trigger} sync skipped: user=${userId.slice(0, 8)} reason=already_running`);
+        console.log(`[pluggy-scheduler] ${trigger} sync skipped: correlation=${operationalCorrelationId(userId, config.sandboxItemId)} reason=already_running`);
+        logOperationalEvent("pluggy_fallback_skipped", {
+          scheduler: "pluggy-fallback",
+          trigger,
+          correlationId: operationalCorrelationId(userId, config.sandboxItemId),
+          reason: "LOCKED",
+          fallbackIntervalMinutes: 30,
+        });
         continue;
       }
       failed += 1;
-      console.error(`[pluggy-scheduler] ${trigger} sync failed: user=${userId.slice(0, 8)} reason=${error instanceof Error ? error.message.slice(0, 120) : "unknown"}`);
+      console.error(`[pluggy-scheduler] ${trigger} sync failed: reason=${getErrorCode(error)}`);
+      const status = getErrorStatus(error);
+      const code = getErrorCode(error);
+      logOperationalEvent("pluggy_sync_failed", {
+        scheduler: "pluggy-fallback",
+        trigger,
+        correlationId: operationalCorrelationId(userId, config.sandboxItemId),
+        category: classifyPluggyOperationalError({ status, code, unavailable: status === 0 || (status !== undefined && status >= 500) || code.includes("UNAVAILABLE") }),
+        code,
+        status: status ?? null,
+      });
     }
   }
   console.log(`[pluggy-scheduler] ${trigger} summary: planned=${userConfigs.length} executed=${executed} skipped=${skipped} succeeded=${succeeded} failed=${failed} concurrency=1`);
+  logOperationalEvent("pluggy_scheduler_cycle_finished", {
+    scheduler: "pluggy-fallback",
+    trigger,
+    planned: userConfigs.length,
+    executed,
+    skipped,
+    succeeded,
+    failed,
+    concurrency: 1,
+    fallbackIntervalMinutes: 30,
+  });
 }
 
 async function main() {
   console.log(`[pluggy-scheduler] starting: cron=${schedule} timezone=${timezone}`);
+  logOperationalEvent("pluggy_scheduler_started", {
+    scheduler: "pluggy-fallback",
+    cron: schedule,
+    timezone,
+    fallbackIntervalMinutes: 30,
+    concurrency: 1,
+  });
   if (runOnStart) await runSync("startup");
   const task = cron.schedule(schedule, () => { void runSync("schedule"); }, { timezone });
   console.log(`[pluggy-scheduler] running and waiting for scheduled triggers.`);

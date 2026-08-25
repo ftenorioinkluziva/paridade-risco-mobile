@@ -7,6 +7,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { InlineAlert } from "@/components/InlineAlert";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { RebalanceDecisionCard } from "@/components/RebalanceDecisionCard";
+import { ContentState } from "@/components/ResponsivePrimitives";
 import { Screen } from "@/components/Screen";
 import { SummaryCard } from "@/components/SummaryCard";
 import {
@@ -65,6 +66,13 @@ export default function InvestimentosPage() {
   const coverage = plan?.mappingCoveragePercentage ?? null;
   const pendingReviewCount = (projectionData?.totals?.pendingCount ?? 0) + (projectionData?.totals?.suggestedCount ?? 0);
   const hasError = portfolio.error || projection.error || rebalance.error || readiness.error;
+  const freshnessStatus = projectionData?.freshness?.status;
+  const freshnessTone = freshnessStatus === "FRESH" ? colors.success : colors.warning;
+  const freshnessSourceLabel = freshnessStatus === "FRESH"
+    ? "DADOS PRONTOS PARA ANÁLISE"
+    : freshnessStatus === "STALE"
+      ? "REVISAR SINCRONIZAÇÃO"
+      : "SINCRONIZAÇÃO NECESSÁRIA";
 
   useEffect(() => {
     if (plan && cashForOrdersDraft === "") {
@@ -119,10 +127,16 @@ export default function InvestimentosPage() {
         {readiness.error ? <InlineAlert title="Erro na validação dos dados" message={readiness.error} tone="danger" /> : null}
 
         {projectionData?.freshness ? (
-          <div style={styles.freshness}>
+          <div
+            style={{ ...styles.freshness, borderColor: freshnessTone }}
+            role="status"
+            aria-live="polite"
+            aria-label={`Estado dos dados: ${freshnessLabel[freshnessStatus] ?? freshnessStatus}`}
+            data-freshness={freshnessStatus}
+          >
             <div>
               <div style={styles.sectionLabel}>// FRESCOR_DA_CARTEIRA</div>
-              <div style={{ ...styles.freshnessTitle, color: projectionData.freshness.status === "FRESH" ? colors.success : colors.warning }}>
+              <div style={{ ...styles.freshnessTitle, color: freshnessTone }}>
                 {freshnessLabel[projectionData.freshness.status] ?? projectionData.freshness.status}
               </div>
             </div>
@@ -130,7 +144,7 @@ export default function InvestimentosPage() {
               <span>Última sincronização: {projectionData.freshness.latestSyncAt ? formatDateTime(projectionData.freshness.latestSyncAt) : "nunca"}</span>
               {projectionData.freshness.ageMinutes !== null ? <span>Idade: {Math.round(projectionData.freshness.ageMinutes)} min</span> : null}
             </div>
-            <span style={styles.sourceBadge}>DADOS SINCRONIZADOS</span>
+            <span style={{ ...styles.sourceBadge, color: freshnessTone }}>{freshnessSourceLabel}</span>
           </div>
         ) : null}
 
@@ -142,10 +156,10 @@ export default function InvestimentosPage() {
         </div>
 
         {plan ? (
-          <section className="investment-cash-planner" style={styles.cashPlanner}>
+          <section className="investment-cash-planner" style={styles.cashPlanner} aria-labelledby="planned-investment-title">
             <div>
               <div style={styles.sectionLabel}>// APORTE_PLANEJADO</div>
-              <div style={styles.sectionTitle}>Quanto você pretende investir agora?</div>
+              <h2 id="planned-investment-title" style={styles.sectionTitle}>Quanto você pretende investir agora?</h2>
               <div style={styles.guideDetail}>O motor recalcula a carteira usando o valor escolhido. Esse valor é apenas uma simulação e não altera o saldo observado.</div>
             </div>
             <div className="investment-cash-controls" style={styles.cashPlannerControls}>
@@ -171,11 +185,11 @@ export default function InvestimentosPage() {
         ) : null}
 
         {plan ? (
-          <section style={styles.section}>
+          <section style={styles.section} aria-labelledby="investment-decision-title">
             <div style={styles.sectionHeader}>
               <div>
                 <div style={styles.sectionLabel}>// DECISÃO_DE_INVESTIMENTO</div>
-                <div style={styles.sectionTitle}>Decisão do motor e plano de ajuste</div>
+                <h2 id="investment-decision-title" style={styles.sectionTitle}>Decisão do motor e plano de ajuste</h2>
               </div>
               <span style={styles.readOnly}>Somente leitura</span>
             </div>
@@ -205,7 +219,11 @@ export default function InvestimentosPage() {
                 ))}
               </div>
             ) : (
-              <div style={styles.emptyState}>A carteira não possui ordens calculadas para a cesta ativa.</div>
+              <ContentState
+                title="Nenhuma ordem calculada"
+                description="A carteira já está alinhada à cesta ativa ou ainda não há uma ação elegível para este recorte."
+                tone="success"
+              />
             )}
           </section>
         ) : null}
@@ -230,16 +248,20 @@ export default function InvestimentosPage() {
           </div>
         ) : null}
 
-        <section style={styles.section}>
+        <section style={styles.section} aria-labelledby="observed-positions-title">
           <div style={styles.sectionHeader}>
             <div>
               <div style={styles.sectionLabel}>// POSIÇÕES_OBSERVADAS</div>
-              <div style={styles.sectionTitle}>O que está vindo das instituições conectadas</div>
+              <h2 id="observed-positions-title" style={styles.sectionTitle}>O que está vindo das instituições conectadas</h2>
             </div>
             <PrimaryButton label="Revisar mapeamentos" tone="neutral" onPress={() => router.push("/pluggy")} />
           </div>
-          {projection.isLoading ? <div style={styles.emptyState}>Carregando investimentos sincronizados...</div> : null}
-          {!projection.isLoading && investments.length === 0 ? <div style={styles.emptyState}>Nenhum investimento sincronizado.</div> : null}
+          {projection.isLoading ? (
+            <ContentState title="Carregando posições" description="Atualizando os dados observados para manter a decisão no contexto mais recente." tone="loading" />
+          ) : null}
+          {!projection.isLoading && investments.length === 0 ? (
+            <ContentState title="Nenhum investimento sincronizado" description="Conecte uma fonte de dados ou atualize a sincronização para consultar posições nesta tela." />
+          ) : null}
           {investments.length > 0 ? (
             <div className="investment-position-list" style={styles.positionList}>
               {investments.map((investment: any) => {
@@ -260,7 +282,9 @@ export default function InvestimentosPage() {
           ) : null}
         </section>
 
-        {!hasError && !projection.isLoading && !plan ? <div style={styles.emptyState}>A carteira ainda está carregando a primeira projeção.</div> : null}
+        {!hasError && !projection.isLoading && !plan ? (
+          <ContentState title="Calculando a primeira projeção" description="A posição observada foi recebida; o plano de ajuste aparecerá assim que o cálculo terminar." tone="loading" />
+        ) : null}
       </Screen>
     </AuthGuard>
   );
@@ -272,7 +296,7 @@ function formatEstimatedQuantity(quantity: number | null) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  metricsGrid: { display: "flex", gap: layout.space.md, flexWrap: "wrap" },
+  metricsGrid: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: layout.space.md },
   cashPlanner: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(260px, 360px)", gap: layout.space.md, alignItems: "end", padding: layout.space.lg, backgroundColor: colors.surfaceAlt, border: `1px solid ${colors.border}`, borderRadius: layout.radius.md },
   cashPlannerControls: { display: "flex", flexDirection: "column", gap: layout.space.sm },
   cashInputLabel: { color: colors.textMuted, fontFamily: typography.mono, fontSize: 11 },

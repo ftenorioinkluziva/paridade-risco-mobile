@@ -11,13 +11,21 @@ import {
   baskets,
   historicalPrices,
   liveQuotes,
+  pluggyAccounts,
+  pluggyConnections,
+  pluggyInvestmentMappings,
+  pluggyInvestments,
+  pluggySyncRuns,
   portfolios,
+  userPluggyCredentials,
   users,
 } from "@/db/schema";
 
-type FixtureCommand = "setup" | "cleanup" | "verify-clean";
+type FixtureCommand = "setup" | "cleanup" | "verify-clean" | "scenario";
+type PluggyScenario = "buy" | "sell" | "balanced" | "stale" | "unavailable" | "pending";
 
 const command = process.argv[2] as FixtureCommand | undefined;
+const scenario = process.argv[3] as PluggyScenario | undefined;
 const namespace = process.env.E2E_NAMESPACE ?? "";
 const email = process.env.E2E_USER_EMAIL ?? "";
 const password = process.env.E2E_USER_PASSWORD ?? "";
@@ -38,8 +46,8 @@ function fixtureAssetId(ticker: string) {
 }
 
 function validateEnvironment() {
-  if (command !== "setup" && command !== "cleanup" && command !== "verify-clean") {
-    throw new Error("Usage: npm run e2e:fixture -- setup|cleanup|verify-clean");
+  if (command !== "setup" && command !== "cleanup" && command !== "verify-clean" && command !== "scenario") {
+    throw new Error("Usage: npm run e2e:fixture -- setup|cleanup|verify-clean|scenario <name>");
   }
   if (!/^[a-z0-9-]{6,48}$/.test(namespace)) {
     throw new Error("E2E_NAMESPACE must be a lowercase, isolated namespace");
@@ -50,6 +58,115 @@ function validateEnvironment() {
   if (password.length < 20) {
     throw new Error("E2E_USER_PASSWORD must contain at least 20 characters");
   }
+  if (command === "scenario" && !["buy", "sell", "balanced", "stale", "unavailable", "pending"].includes(scenario ?? "")) {
+    throw new Error("E2E scenario must be buy, sell, balanced, stale, unavailable or pending");
+  }
+}
+
+async function setupPluggyScenario(selectedScenario: PluggyScenario) {
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, email),
+    columns: { id: true, selectedBasketId: true },
+  });
+  if (!user?.selectedBasketId) throw new Error("E2E user and active basket must exist before loading a Pluggy scenario");
+
+  await db.delete(userPluggyCredentials).where(eq(userPluggyCredentials.userId, user.id));
+  await db.delete(pluggyConnections).where(eq(pluggyConnections.userId, user.id));
+
+  const connectionId = `e2e-pluggy-connection-${namespace}`;
+  const itemId = `e2e-${selectedScenario}`;
+  const now = new Date();
+  const observedAt = selectedScenario === "stale"
+    ? new Date(now.getTime() - 45 * 60_000)
+    : now;
+  await db.insert(pluggyConnections).values({
+    id: connectionId,
+    userId: user.id,
+    itemId,
+    environment: "sandbox",
+    connectorName: "E2E Bank",
+    status: "UPDATED",
+    lastSyncAt: selectedScenario === "unavailable" ? null : observedAt,
+    lastSyncStatus: selectedScenario === "unavailable" ? null : "SUCCEEDED",
+  });
+
+  const allocations = await db.query.basketAllocations.findMany({
+    where: eq(basketAllocations.basketId, user.selectedBasketId),
+    with: { asset: { columns: { id: true, ticker: true, name: true } } },
+  });
+  const totalValue = 10_000;
+  const strategicValue = allocations.reduce((sum, allocation) => sum + Number(allocation.targetPercentage) * 100, 0);
+  const cashBalance = selectedScenario === "balanced" ? totalValue - strategicValue
+    : selectedScenario === "buy" ? 9_900
+      : selectedScenario === "sell" ? 910
+        : 0;
+  await db.insert(pluggyAccounts).values({
+    id: `e2e-pluggy-account-${namespace}`,
+    connectionId,
+    userId: user.id,
+    sourceAccountId: `e2e-account-${selectedScenario}`,
+    type: "BANK",
+    subtype: "CHECKING_ACCOUNT",
+    name: "Conta E2E",
+    balance: cashBalance.toFixed(4),
+    rawData: { fixture: true, scenario: selectedScenario },
+    observedAt,
+  });
+
+  const investmentInputs = selectedScenario === "pending"
+    ? [{ asset: null, ticker: "SEM-MAPA", name: "Posição sem mapeamento", value: 1_000 }]
+    : allocations.map((allocation) => {
+      const price = 100 + fixtureAssets.findIndex((asset) => asset.ticker === allocation.asset.ticker);
+      const value = selectedScenario === "balanced"
+        ? Number(allocation.targetPercentage) * 100
+        : allocation.asset.ticker === "BOVA11"
+          ? selectedScenario === "sell" ? 9_090 : 100
+          : 0;
+      return { asset: allocation.asset, ticker: allocation.asset.ticker, name: allocation.asset.name, value, price };
+    }).filter((investment) => investment.value > 0);
+
+  for (const [index, investment] of investmentInputs.entries()) {
+    const investmentId = `e2e-pluggy-investment-${namespace}-${index}`;
+    const price = "price" in investment ? investment.price : 100;
+    await db.insert(pluggyInvestments).values({
+      id: investmentId,
+      connectionId,
+      userId: user.id,
+      sourceInvestmentId: `${itemId}-investment-${index}`,
+      code: investment.ticker,
+      name: investment.name,
+      type: "EQUITY",
+      quantity: (investment.value / price).toFixed(8),
+      balance: investment.value.toFixed(4),
+      amountOriginal: investment.value.toFixed(4),
+      currencyCode: "BRL",
+      status: "ACTIVE",
+      rawData: { fixture: true, scenario: selectedScenario },
+      observedAt,
+    });
+    if (investment.asset) {
+      await db.insert(pluggyInvestmentMappings).values({
+        id: `e2e-pluggy-mapping-${namespace}-${index}`,
+        userId: user.id,
+        pluggyInvestmentId: investmentId,
+        assetId: investment.asset.id,
+        status: "MAPEADO",
+      });
+    }
+  }
+
+  if (selectedScenario !== "unavailable") {
+    await db.insert(pluggySyncRuns).values({
+      id: `e2e-pluggy-sync-${namespace}`,
+      connectionId,
+      userId: user.id,
+      status: "SUCCEEDED",
+      startedAt: observedAt,
+      finishedAt: observedAt,
+      counts: { fixture: true, scenario: selectedScenario },
+    });
+  }
+  console.log(`[e2e-fixture] Pluggy scenario ${selectedScenario} ready`);
 }
 
 async function cleanup() {
@@ -207,7 +324,8 @@ async function main() {
   validateEnvironment();
   if (command === "setup") await setup();
   else if (command === "cleanup") await cleanup();
-  else await verifyClean();
+  else if (command === "verify-clean") await verifyClean();
+  else await setupPluggyScenario(scenario!);
 }
 
 main()

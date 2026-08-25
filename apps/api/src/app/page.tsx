@@ -68,11 +68,11 @@ function OverviewContent() {
         <SummaryCard eyebrow="INVESTIDO" title={formatCurrency(investedValue)} detail="Carteira considerada pela estratégia" tone={investedValue > 0 ? "success" : "default"} />
       </div>
 
-      <section className="summary-decision" style={styles.section}>
+      <section className="summary-decision" style={styles.section} aria-labelledby="summary-decision-title">
         <div style={styles.sectionHeader}>
           <div>
             <div style={styles.sectionLabel}>// PRÓXIMA_DECISÃO</div>
-            <div style={styles.sectionTitle}>O que fazer com a carteira agora</div>
+            <h2 id="summary-decision-title" style={styles.sectionTitle}>O que fazer com a carteira agora</h2>
           </div>
         </div>
         <Link href="/investimentos" className="decision-card-link" aria-label="Abrir investimentos e ver a carteira completa">
@@ -89,8 +89,8 @@ function OverviewContent() {
       </div>
 
       {alerts.length > 0 ? (
-        <section style={styles.section}>
-          <div style={styles.sectionLabel}>// ALERTAS_QUE_MERECEM_ATENÇÃO</div>
+        <section style={styles.section} aria-labelledby="summary-alerts-title">
+          <h2 id="summary-alerts-title" style={styles.sectionLabel}>// ALERTAS_QUE_MERECEM_ATENÇÃO</h2>
           <div style={styles.alertList}>
             {alerts.slice(0, 4).map((alert: any) => (
               <InlineAlert key={alert.code} title={`${alert.severity === "HIGH" ? "Prioridade alta" : "Atenção"} · ${alert.source}`} message={alert.message} tone={alert.severity === "HIGH" ? "danger" : "warning"} />

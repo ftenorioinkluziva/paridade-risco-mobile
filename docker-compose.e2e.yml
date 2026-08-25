@@ -54,6 +54,7 @@ services:
       PLUGGY_API_BASE_URL: http://pluggy-mock:4010
       PLUGGY_CLIENT_ID: ""
       PLUGGY_CLIENT_SECRET: ""
+      PLUGGY_WEBHOOK_SECRET: ${E2E_PLUGGY_WEBHOOK_SECRET:?E2E_PLUGGY_WEBHOOK_SECRET is required}
       BRAPI_API_TOKEN: ""
       NODE_ENV: production
       npm_config_cache: /tmp/npm-cache

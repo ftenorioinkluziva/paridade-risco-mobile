@@ -1,6 +1,6 @@
 # EPIC-3: Pluggy como fonte financeira do Paridade de Risco
 
-**Status:** In Progress  
+**Status:** In Progress — external activation pending
 **Owner:** Product / Architecture  
 **Created:** 2026-08-04
 
@@ -75,7 +75,7 @@ Pluggy API
 | [3.8](../stories/3.8.pluggy-rebalance-liquidity.story.md) | Rebalanceamento com liquidez real | Critical | Done | 3.7 |
 | [3.9](../stories/3.9.pluggy-card-cashflow-obligations.story.md) | Cartão, fluxo de caixa e obrigações | High | Done | 3.4, 3.7 |
 | [3.10](../stories/3.10.pluggy-loans-health.story.md) | Empréstimos e alertas de saúde financeira | High | Done | 3.9 |
-| [3.11](../stories/3.11.pluggy-migration-readiness.story.md) | Migração e retirada gradual do CRUD manual | Medium | Done | 3.8, 3.10 |
+| [3.11](../stories/3.11.pluggy-migration-readiness.story.md) | Migração e retirada gradual do CRUD manual | Medium | Superseded by 5.6 | 3.8, 3.10 |
 | [3.12](../stories/3.12.pluggy-mapping-review-ui.story.md) | Revisão de mapeamentos Pluggy na interface | High | Done | 3.6, 3.11 |
 | [3.13](../stories/3.13.pluggy-outside-strategy-decision.story.md) | Decisão de investimento fora da estratégia | High | Done | 3.6, 3.11, 3.12 |
 | [3.14](../stories/3.14.pluggy-rebalance-ui-coverage.story.md) | Prévia de rebalanceamento Pluggy com cobertura | High | Done | 3.8, 3.13 |
@@ -84,7 +84,11 @@ Pluggy API
 | [3.17](../stories/3.17.pluggy-financial-health-ui.story.md) | Painel de saúde financeira Pluggy | High | Done | 3.9, 3.10, 3.16 |
 | [3.18](../stories/3.18.pluggy-connection-lifecycle.story.md) | Ciclo de vida e reautorização Pluggy | High | Done | 3.5, 3.17 |
 | [3.19](../stories/3.19.pluggy-webhook-observability.story.md) | Observabilidade e reprocessamento de eventos Pluggy | High | Done | 3.5, 3.18 |
-| [3.20](../stories/3.20.pluggy-public-webhook-activation.story.md) | Ativação operacional do webhook Pluggy | Medium | Pending | 3.5, 3.19 |
+| [3.20](../stories/3.20.pluggy-public-webhook-activation.story.md) | Ativação operacional do webhook Pluggy | Medium | Pending — necessary | 3.5, 3.19 |
+
+## Revalidação AIOX — 2026-08-25
+
+O `@sm` e o `@po` confirmaram que as Stories 3.1 e 3.2 estavam com frontmatter desatualizado; ambas têm gates e smoke aprovados e foram reconciliadas para `Done`. A Story 3.11 permanece como registro histórico, mas o conceito de migração foi supersedido pela Story 5.6 (ativação de fonte). A única pendência necessária do Epic é a Story 3.20: publicar o endpoint HTTPS, cadastrar o webhook no Dashboard Pluggy e validar um evento real do Sandbox.
 
 ## First vertical slice
 
@@ -123,7 +127,7 @@ As stories de integração também terão testes com fetch mockado, fixtures san
 - [ ] Rebalanceamento usa posições reais e política explícita de liquidez.
 - [ ] Cartão, fluxo de caixa e empréstimos não são confundidos com patrimônio.
 - [ ] Webhooks e reconciliação são idempotentes.
-- [ ] CRUD manual foi retirado somente após período de compatibilidade.
+- [x] CRUD manual foi desativado e a terminologia de migração foi substituída por ativação de fonte pelos Epics 5 e 6.
 - [ ] Documentação, stories e runtime refletem o mesmo contrato.
 
 ## Integration references
@@ -138,6 +142,7 @@ As stories de integração também terão testes com fetch mockado, fixtures san
 ## Change Log
 
 - 2026-08-04: Epic criado como plano canônico de implementação Pluggy, com Sandbox como ambiente experimental.
+- 2026-08-25: Revalidação @sm/@po: 3.1 e 3.2 reconciliadas para `Done`, 3.11 supersedida por 5.6 e 3.20 mantida como única pendência necessária de ativação pública.
 - 2026-08-04: Story 3.3 concluída com projeção normalizada somente leitura, classificação por risco, estados de mapeamento, CLI e endpoint autenticado.
 - 2026-08-04: Story 3.6 concluída com vínculos estratégicos persistidos, aprovação idempotente, remoção reversível e contrato inicial de `PortfolioProvider`.
 - 2026-08-04: Story 3.7 concluída com provider Pluggy mapeado, caixa/cartão separados, dual-read por ticker e CLI/endpoint somente leitura.

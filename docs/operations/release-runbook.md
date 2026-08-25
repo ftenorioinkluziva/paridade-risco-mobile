@@ -48,6 +48,22 @@ O orçamento mensal de cotações é 15.000 chamadas. A configuração aprovada 
 
 O log do `price-scheduler` deve ser conferido a cada release. Para até 20 conexões Pluggy, confirmar que o fallback mantém skip por item fresco, coalescência/lock e contadores de `planned`, `executed`, `skipped`, `succeeded` e `failed`. Quota próxima, sync duplicado ou crescimento de stale exige abortar a promoção e abrir incidente.
 
+### Eventos estruturados de observabilidade (Story 7.2)
+
+Os serviços emitem uma linha `[observability]` com JSON sanitizado. Os campos `correlationId` são hashes curtos e permitem correlacionar um item sem expor `userId`, `itemId`, tokens, credenciais ou payloads:
+
+- `quote_scheduler_cycle_started` / `quote_scheduler_cycle_finished` / `quote_scheduler_skipped` / `quote_scheduler_failed`: universo, `planned`, `executed`, `successful`, `failed`, `skipped`, `fallbacks`, `retries`, duração e projeção de quota;
+- `quote_quota_projection`: `monthlyQuota`, `observedCalls`, `estimatedCalls`, `remainingCalls`, `projectedMargin` e `status` (`HEALTHY`, `NEAR_LIMIT` ou `LIMIT_REACHED`);
+- `pluggy_scheduler_cycle_started` / `pluggy_scheduler_cycle_finished`: ciclos de fallback de 30 minutos e contadores de conexões;
+- `pluggy_freshness_observed`: estado `FRESH`, `STALE` ou `UNAVAILABLE`, idade da última sincronização e limite de frescor, correlacionado por item;
+- `pluggy_fallback_skipped`: item fresco (`reason=FRESH`) ou bloqueado por lock (`reason=LOCKED`), sem nova chamada ao provedor;
+- `pluggy_sync_finished` / `pluggy_sync_failed`: resultado por item, categoria (`TRANSIENT_FAILURE`, `STALE`, `UNAVAILABLE` ou `QUOTA_LIMIT`) e contagens de contas, posições, transações e empréstimos;
+- `pluggy_webhook_finished` / `pluggy_webhook_failed`: status, tentativa, retryabilidade e categoria do evento processado.
+
+Para extrair apenas os eventos estruturados durante uma validação local, usar `docker compose logs --no-color --since=15m price-scheduler pluggy-scheduler pluggy-webhook-worker | Select-String '\[observability\]'`. Nunca anexar a saída bruta se ela contiver outra linha não sanitizada; filtrar somente o prefixo e revisar o artefato antes de compartilhar.
+
+Se `quote_quota_projection.status` for `NEAR_LIMIT`, interromper nova promoção e confirmar `remainingCalls` contra o painel do provedor. Se for `LIMIT_REACHED`, suspender o scheduler de preços e abrir incidente. `STALE`/`UNAVAILABLE`, falhas Pluggy e retries crescentes devem ser tratados separadamente da quota; não aumentar a cadência para compensá-los.
+
 ## 5. Janela de observação e incidente
 
 Manter observação por pelo menos 15 minutos após o healthcheck e uma janela completa de fallback/webhook quando houver alteração Pluggy. Comunicar SHA, workflow, sintoma, horário, impacto e ação tomada. Não anexar `.env`, cookies, tokens, payloads de webhook ou dados financeiros identificáveis.
