@@ -5,12 +5,20 @@ import cron from "node-cron";
 
 import { getFinancialDataFetcher } from "../lib/financialDataFetcher";
 import { getStrategicEtfTickersForSchedule, isB3FinalCaptureWindow, isB3TradingSession, monthlyCallEstimate, STRATEGIC_ETF_TICKERS } from "../lib/market-data";
+import {
+  buildQuoteQuotaSnapshot,
+  classifyPluggyOperationalError,
+  getErrorCode,
+  getErrorStatus,
+  logOperationalEvent,
+} from "../lib/operational-observability";
 
 const CRON_QUOTES = process.env.PRICE_SCHEDULER_CRON_QUOTES ?? "*/7 10-16 * * 1-5";
 const CRON_FINAL_CAPTURE = process.env.PRICE_SCHEDULER_CRON_FINAL_CAPTURE ?? "30 17 * * 1-5";
 const TIMEZONE = process.env.PRICE_SCHEDULER_TIMEZONE ?? "America/Sao_Paulo";
 
 let isJobRunning = false;
+let observedQuoteCalls = 0;
 
 function parseArgs() {
   return { runOnStart: process.argv.slice(2).includes("--run-on-start") };
@@ -26,6 +34,7 @@ async function executeStrategicUpdate(
 ): Promise<void> {
   if (isJobRunning) {
     console.log(`[scheduler] Skipping ${reason} update: another update is already running.`);
+    logOperationalEvent("quote_scheduler_skipped", { scheduler: "prices", reason: "LOCKED", trigger: reason });
     return;
   }
 
@@ -33,13 +42,48 @@ async function executeStrategicUpdate(
   const startedAt = Date.now();
   try {
     console.log(`[scheduler] Starting strategic quote update (${reason}) at ${new Date().toISOString()} planned=${tickers.length}`);
+    logOperationalEvent("quote_scheduler_cycle_started", {
+      scheduler: "prices",
+      trigger: reason,
+      universe: tickers,
+      planned: tickers.length,
+      intervalMinutes: 7,
+    });
     const fetcher = await getFinancialDataFetcher();
     const result = await fetcher.updateStrategicQuotes(new Date(), tickers);
     const successful = result.results.filter((row) => row.success).length;
     const fallbacks = result.results.filter((row) => row.source === "YAHOO_FINANCE").length;
+    const skipped = result.results.filter((row) => row.skipped > 0).length;
+    const failed = result.results.length - successful;
+    observedQuoteCalls += result.results.length;
+    const quota = buildQuoteQuotaSnapshot({
+      observedCalls: observedQuoteCalls,
+      monthlyQuota: Number(process.env.PRICE_SCHEDULER_MONTHLY_QUOTA ?? 15_000),
+    });
     console.log(`[scheduler] Strategic quote update finished. planned=${tickers.length}, executed=${result.results.length}, successful=${successful}, failed=${result.results.length - successful}, fallbacks=${fallbacks}, retries=0, durationMs=${Date.now() - startedAt}`);
-  } catch {
+    logOperationalEvent("quote_scheduler_cycle_finished", {
+      scheduler: "prices",
+      trigger: reason,
+      planned: tickers.length,
+      executed: result.results.length,
+      successful,
+      failed,
+      skipped,
+      fallbacks,
+      retries: 0,
+      durationMs: Date.now() - startedAt,
+      quota,
+    });
+  } catch (error) {
     console.error("[scheduler] Strategic quote update failed.");
+    const status = getErrorStatus(error);
+    const code = getErrorCode(error);
+    logOperationalEvent("quote_scheduler_failed", {
+      scheduler: "prices",
+      trigger: reason,
+      category: classifyPluggyOperationalError({ status, code, unavailable: status === 0 || (status !== undefined && status >= 500) || code.includes("UNAVAILABLE") }),
+      code,
+    });
   } finally {
     isJobRunning = false;
   }
@@ -66,6 +110,19 @@ function scheduleJobs(): void {
   const estimate22 = monthlyCallEstimate();
   const estimate25 = monthlyCallEstimate({ tradingDays: 25 });
   console.log(`[scheduler] monthly quote budget: quota=${quota}, planned22=${estimate22}, planned25=${estimate25}, margin25=${quota - estimate25}, intervalMinutes=7, retries=0`);
+  logOperationalEvent("quote_scheduler_started", {
+    scheduler: "prices",
+    sessionCron: CRON_QUOTES,
+    finalCaptureCron: CRON_FINAL_CAPTURE,
+    timezone: TIMEZONE,
+    universe: STRATEGIC_ETF_TICKERS,
+    intervalMinutes: 7,
+  });
+  logOperationalEvent("quote_quota_projection", {
+    scheduler: "prices",
+    quota: buildQuoteQuotaSnapshot({ observedCalls: observedQuoteCalls, monthlyQuota: quota, tradingDays: 22 }),
+    projection25: buildQuoteQuotaSnapshot({ observedCalls: observedQuoteCalls, monthlyQuota: quota }),
+  });
 }
 
 function registerShutdownHandlers(): void {
