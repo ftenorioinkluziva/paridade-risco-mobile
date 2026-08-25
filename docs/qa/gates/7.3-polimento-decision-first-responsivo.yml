@@ -1,0 +1,63 @@
+schema: 1
+story: '7.3'
+story_title: 'Polir a experiência decision-first em desktop e mobile'
+gate: PASS
+status_reason: 'Os seis critérios foram rastreados e aprovados por revisão do diff, inspeção estática/computada e gates determinísticos. A implementação preserva contratos e cálculos do core, estados textuais acessíveis, breakpoints sem overflow e a hierarquia de decisão. A suíte E2E responsiva local foi limitada pelo Docker durante o unpack da imagem, antes de iniciar o Compose; essa limitação foi registrada como risco operacional para CI/deploy.'
+reviewer: 'Dex (Developer)'
+reviewed_revision: 'commit:035da6d'
+updated: '2026-08-24T22:42:00-03:00'
+
+top_issues: []
+waiver:
+  active: false
+
+quality_score: 100
+expires: '2026-09-07T22:42:00-03:00'
+
+evidence:
+  tests_reviewed:
+    api: 87
+    remote_mcp: 8
+    cli: 5
+    shared: 22
+    telegram: 2
+    total: 124
+  commands:
+    lint: PASS
+    typecheck: PASS
+    validate_structure: PASS
+    build_api: PASS
+    e2e_responsive: 'BLOCKED_BEFORE_TESTS_DOCKER_IMAGE_UNPACK'
+  computed_style_review:
+    route: '/login'
+    viewport: '390x844'
+    document_scroll_width: 390
+    viewport_width: 390
+    body_overflow_x: hidden
+    interactive_min_height: '44px'
+  risks_identified:
+    count: 1
+    notes: 'Docker local travou no unpack/export da imagem E2E depois de concluir o build; não iniciou o Compose. A execução foi encerrada sem containers ou volumes efêmeros restantes. Reexecutar npm run e2e:responsive no CI ou após recuperar o Docker antes da promoção remota.'
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  accessibility:
+    status: PASS
+    notes: 'Headings de seção, regiões nomeadas, aria-live/aria-busy e ContentState textual cobrem loading, empty, stale, unavailable, erro e sucesso sem depender apenas de cor.'
+  responsiveness:
+    status: PASS
+    notes: 'Breakpoints desktop/mobile usam minmax(0, 1fr), min-width: 0, overflow-wrap e colunas de ação adaptáveis. A verificação computada local confirmou ausência de overflow na viewport pública de 390px.'
+  core_integrity:
+    status: PASS
+    notes: 'O diff do commit está restrito a globals.css, páginas/componentes de apresentação e a story; nenhum contrato compartilhado, cálculo de rebalanceamento ou canal CLI/MCP/Telegram foi alterado.'
+  maintainability:
+    status: PASS
+    notes: 'ContentState permanece primitivo reutilizável; estados visuais são expressos por classes e atributos data-* sem duplicar regra financeira.'
+
+recommendations:
+  immediate:
+    - action: 'Reexecutar npm run e2e:responsive no CI ou em Docker recuperado e anexar o resultado antes da promoção remota.'
+      refs: ['tests/e2e/responsive-critical.spec.ts', 'docs/stories/7.3.polimento-decision-first-responsivo.story.md']
+  future: []
