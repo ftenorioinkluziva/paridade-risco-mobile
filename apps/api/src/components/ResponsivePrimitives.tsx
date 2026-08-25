@@ -13,7 +13,7 @@ export function ResponsiveGrid({ children, columns = 3, className = "" }: GridPr
 type ContentStateProps = {
   title: string;
   description: string;
-  tone?: "neutral" | "loading" | "danger";
+  tone?: "neutral" | "loading" | "danger" | "warning" | "success";
   action?: ReactNode;
 };
 
@@ -21,6 +21,7 @@ export function ContentState({ title, description, tone = "neutral", action }: C
   return (
     <section
       className={`content-state content-state--${tone}`}
+      role={tone === "danger" ? "alert" : "status"}
       aria-live={tone === "loading" ? "polite" : undefined}
       aria-busy={tone === "loading" || undefined}
     >

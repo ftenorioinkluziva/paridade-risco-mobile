@@ -187,6 +187,9 @@ a:hover {
 .investment-cash-planner { min-width: 0; }
 .investment-action-table { min-width: 0; }
 .investment-action-row { min-width: 0; }
+.investment-action-row > * { min-width: 0; overflow-wrap: anywhere; }
+.decision-card { min-width: 0; }
+.decision-card[data-decision-state="loading"] { cursor: progress; }
 .mobile-grid-2,
 .mobile-grid-3,
 .mobile-grid-4,
@@ -215,11 +218,14 @@ a:hover {
   align-items: flex-start;
   gap: 8px;
   color: var(--text-muted);
+  min-height: 96px;
 }
 
 .content-state strong { color: var(--text); }
 .content-state p { margin: 0; line-height: 1.5; }
 .content-state--danger { border-color: var(--danger); }
+.content-state--warning { border-color: var(--warning); }
+.content-state--success { border-color: var(--primary); }
 .content-state-action { margin-top: 4px; }
 .content-state-skeleton {
   width: min(100%, 320px);
@@ -388,6 +394,14 @@ a:hover {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (min-width: 881px) {
+  .investment-action-row {
+    display: grid !important;
+    grid-template-columns: minmax(58px, 0.7fr) minmax(70px, 0.7fr) minmax(140px, 1fr) minmax(104px, auto) minmax(110px, auto);
+    align-items: center;
   }
 }
 

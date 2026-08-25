@@ -26,11 +26,11 @@ export function RebalanceDecisionCard({
   const needsRebalance = Boolean(data?.eligibleForRebalance && actions.length > 0);
   const isBlocked = Boolean(data && !data.eligibleForRebalance);
   const isPartial = Boolean(data?.analysisStatus === "PARCIAL");
-  const statusLabel = hasError ? "Plano nao calculado"
+  const statusLabel = hasError ? "Plano não calculado"
     : isLoading ? "Calculando plano"
     : isBlocked ? "Dados pendentes"
     : isPartial ? "Análise parcial"
-    : needsRebalance ? "Rebalanceamento necessario"
+    : needsRebalance ? "Rebalanceamento necessário"
     : "Carteira ajustada";
   const statusColor = hasError ? colors.danger
     : isLoading ? colors.textMuted
@@ -40,10 +40,18 @@ export function RebalanceDecisionCard({
     : colors.primary;
 
   return (
-    <div style={{ ...styles.card, borderColor: statusColor }}>
+    <div
+      className="decision-card"
+      role="region"
+      aria-label="Decisão de rebalanceamento"
+      aria-live={isLoading ? "polite" : undefined}
+      aria-busy={isLoading || undefined}
+      data-decision-state={hasError ? "error" : isLoading ? "loading" : isBlocked ? "blocked" : isPartial ? "partial" : needsRebalance ? "action" : "balanced"}
+      style={{ ...styles.card, borderColor: statusColor }}
+    >
       <div style={styles.row}>
         <div style={styles.headerBlock}>
-          <div style={styles.eyebrow}>// DECISAO</div>
+          <div style={styles.eyebrow}>// DECISÃO</div>
           <div style={{ ...styles.statusLabel, color: statusColor }}>{statusLabel}</div>
           {!compact && data?.targetBasketName ? (
             <div style={styles.basketName}>Alvo: {data.targetBasketName}</div>
@@ -93,21 +101,22 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: layout.space.md,
+    minWidth: 0,
     padding: layout.space.lg,
   },
-  row: { display: "flex", justifyContent: "space-between", gap: layout.space.md, flexWrap: "wrap" },
-  headerBlock: { display: "flex", flexDirection: "column", gap: 4 },
+  row: { display: "flex", justifyContent: "space-between", gap: layout.space.md, flexWrap: "wrap", minWidth: 0 },
+  headerBlock: { display: "flex", flexDirection: "column", gap: 4, minWidth: 0 },
   eyebrow: { color: colors.textSoft, fontFamily: typography.mono, fontSize: 11, fontWeight: 700, letterSpacing: 0.8 },
   statusLabel: { fontFamily: typography.mono, fontSize: 14, fontWeight: 600 },
   basketName: { color: colors.textMuted, fontSize: 12 },
-  metrics: { display: "flex", gap: layout.space.lg },
-  metric: { textAlign: "right" },
+  metrics: { display: "flex", gap: layout.space.lg, flexWrap: "wrap", minWidth: 0 },
+  metric: { textAlign: "right", minWidth: 0 },
   metricValue: { color: colors.text, fontFamily: typography.mono, fontSize: 16, fontWeight: 600 },
   metricLabel: { color: colors.textSoft, fontSize: 10, fontFamily: typography.mono },
   actions: { display: "flex", flexDirection: "column", gap: 6 },
-  actionRow: { display: "flex", alignItems: "center", gap: 8, fontFamily: typography.mono, fontSize: 12 },
-  actionTicker: { color: colors.text, fontWeight: 600 },
-  actionAmount: { color: colors.textMuted, marginLeft: "auto" },
+  actionRow: { display: "flex", alignItems: "center", gap: 8, minWidth: 0, fontFamily: typography.mono, fontSize: 12 },
+  actionTicker: { color: colors.text, fontWeight: 600, minWidth: 0, overflowWrap: "anywhere" },
+  actionAmount: { color: colors.textMuted, marginLeft: "auto", minWidth: 0, overflowWrap: "anywhere" },
   actionTarget: { color: colors.textSoft, minWidth: 50, textAlign: "right" },
   moreActions: { color: colors.textMuted, fontFamily: typography.mono, fontSize: 11 },
 };
