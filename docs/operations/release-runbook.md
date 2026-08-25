@@ -55,6 +55,7 @@ Os serviços emitem uma linha `[observability]` com JSON sanitizado. Os campos `
 - `quote_scheduler_cycle_started` / `quote_scheduler_cycle_finished` / `quote_scheduler_skipped` / `quote_scheduler_failed`: universo, `planned`, `executed`, `successful`, `failed`, `skipped`, `fallbacks`, `retries`, duração e projeção de quota;
 - `quote_quota_projection`: `monthlyQuota`, `observedCalls`, `estimatedCalls`, `remainingCalls`, `projectedMargin` e `status` (`HEALTHY`, `NEAR_LIMIT` ou `LIMIT_REACHED`);
 - `pluggy_scheduler_cycle_started` / `pluggy_scheduler_cycle_finished`: ciclos de fallback de 30 minutos e contadores de conexões;
+- `pluggy_freshness_observed`: estado `FRESH`, `STALE` ou `UNAVAILABLE`, idade da última sincronização e limite de frescor, correlacionado por item;
 - `pluggy_fallback_skipped`: item fresco (`reason=FRESH`) ou bloqueado por lock (`reason=LOCKED`), sem nova chamada ao provedor;
 - `pluggy_sync_finished` / `pluggy_sync_failed`: resultado por item, categoria (`TRANSIENT_FAILURE`, `STALE`, `UNAVAILABLE` ou `QUOTA_LIMIT`) e contagens de contas, posições, transações e empréstimos;
 - `pluggy_webhook_finished` / `pluggy_webhook_failed`: status, tentativa, retryabilidade e categoria do evento processado.

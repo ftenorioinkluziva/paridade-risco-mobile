@@ -16,6 +16,7 @@ export type OperationalEvent =
   | "quote_quota_projection"
   | "pluggy_scheduler_started"
   | "pluggy_scheduler_cycle_started"
+  | "pluggy_freshness_observed"
   | "pluggy_fallback_skipped"
   | "pluggy_sync_finished"
   | "pluggy_sync_failed"

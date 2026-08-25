@@ -8,6 +8,7 @@ import { PluggyClient } from "../lib/pluggy/client";
 import { getUserPluggyConfig, readPluggyConfig, type PluggyConfig } from "../lib/pluggy/config";
 import { listPluggyConnectionsForFallback } from "../lib/pluggy/repository";
 import { isPluggyFallbackDue } from "../lib/pluggy/fallback-policy";
+import { buildPluggyFreshness } from "../lib/pluggy/freshness-rules";
 import { PluggySyncInProgressError, syncConfiguredPluggyItem } from "../lib/pluggy/sync";
 import {
   classifyPluggyOperationalError,
@@ -111,6 +112,22 @@ async function runSync(trigger: "startup" | "schedule") {
   let failed = 0;
   for (const { userId, config } of userConfigs) {
     const connection = connections.find((candidate) => candidate.userId === userId && candidate.itemId === config.sandboxItemId);
+    const freshness = buildPluggyFreshness({
+      latestObservedAt: null,
+      latestSyncAt: connection?.lastSyncAt ?? null,
+      latestSyncStatus: connection?.lastSyncStatus ?? null,
+      staleAfterMinutes: 30,
+    });
+    logOperationalEvent("pluggy_freshness_observed", {
+      scheduler: "pluggy-fallback",
+      trigger,
+      correlationId: operationalCorrelationId(userId, config.sandboxItemId),
+      status: freshness.status,
+      ageMinutes: freshness.ageMinutes,
+      staleAfterMinutes: freshness.staleAfterMinutes,
+      lastSyncStatus: freshness.latestSyncStatus,
+      fallbackIntervalMinutes: 30,
+    });
     if (trigger === "schedule" && connection && !isPluggyFallbackDue({ lastSyncAt: connection.lastSyncAt, lastSyncStatus: connection.lastSyncStatus, now: new Date() })) {
       skipped += 1;
       logOperationalEvent("pluggy_fallback_skipped", {
