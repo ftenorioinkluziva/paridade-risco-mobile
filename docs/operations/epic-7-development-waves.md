@@ -21,8 +21,8 @@ Cada story atravessa implementação, quality gate e evidência antes do início
 ## Estado atual
 
 - Onda 1: concluída; Story 7.1 está `Done` com gate local `PASS`.
-- Onda 2: iniciada; Story 7.2 segue para implementação pelo `@devops`.
-- Onda 3: aguarda o gate da Onda 2.
+- Onda 2: concluída; Story 7.2 está `Done` com gate arquitetural `PASS`.
+- Onda 3: iniciada; Story 7.3 segue para implementação pelo `@ux-design-expert`.
 - Onda 4: coleta de telemetria ativa; não bloqueia 7.1–7.3 e não autoriza remoção.
 
 ## Comandos de gate
