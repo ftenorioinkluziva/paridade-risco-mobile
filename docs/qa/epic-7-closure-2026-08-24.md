@@ -1,7 +1,8 @@
 # Epic 7 — Relatório de fechamento técnico
 
-**Data:** 2026-08-24  
-**Status:** Release gate pendente de runtime
+**Data de abertura:** 2026-08-24
+**Atualização final:** 2026-08-25
+**Status:** Fechado no escopo entregue; Story 7.4 permanece follow-up bloqueado
 
 ## Escopo concluído
 
@@ -19,17 +20,19 @@
 - `npm run validate:pluggy-naming`.
 - Gates individuais das Stories 7.1, 7.2 e 7.3 aprovados.
 
-## Bloqueio do release gate
+## Registro histórico do bloqueio
 
-O rebuild/recreate e smoke final do Compose não puderam ser executados nesta tentativa porque o Docker Desktop Engine retornou HTTP 500 na API `/containers/json` e no endpoint `/_ping`. O estado do runtime não foi alterado e nenhum deploy remoto foi realizado.
+Na tentativa inicial, o Docker Desktop Engine retornou HTTP 500 na API `/containers/json` e no endpoint `/_ping`. Esse bloqueio foi resolvido antes do fechamento final; nenhum deploy remoto foi realizado.
 
-Antes da promoção do Epic, repetir:
+## Gate final de runtime — aprovado em 2026-08-25
 
-1. `docker version` e `docker compose ps` após recuperar o engine.
-2. Rebuild/recreate dos serviços alterados.
-3. Health, migrations, logs `[observability]` e smoke pós-recreate.
-4. `npm run e2e:responsive` e artifact-check, se o Compose iniciar.
-5. Registro do run e decisão final do `@devops`/`@qa`.
+- Docker Desktop operacional (`desktop-linux`, Engine 29.7.2).
+- `paridade-risco-api` recriado com a imagem atual, migrations aplicadas e health HTTP 200 (`{"ok":true,"service":"paridade-risco-api","version":1}`).
+- `pluggy-scheduler` e `pluggy-webhook-worker` recriados; logs confirmam scheduler `*/30`, ciclo concluído, frescor `FRESH`, sincronização bem-sucedida e worker iniciado.
+- `price-scheduler` recriado; logs confirmam janela `*/7`, universo de 9 ETFs e projeções de quota mensal saudáveis (`12.474`/`14.175`, margem `825`).
+- `npm run e2e:critical`: 20 passed, 1 skipped previsto; fixtures limpas e verificadas.
+- `npm run e2e:responsive`: 21 passed; fixtures limpas e verificadas.
+- Nenhuma promoção remota ou remoção do Telegram foi executada.
 
 ## Follow-up contínuo
 
