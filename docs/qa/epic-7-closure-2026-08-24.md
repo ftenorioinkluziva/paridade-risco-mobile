@@ -32,7 +32,7 @@ Na tentativa inicial, o Docker Desktop Engine retornou HTTP 500 na API `/contain
 - `price-scheduler` recriado; logs confirmam janela `*/7`, universo de 9 ETFs e projeções de quota mensal saudáveis (`12.474`/`14.175`, margem `825`).
 - `npm run e2e:critical`: 20 passed, 1 skipped previsto; fixtures limpas e verificadas.
 - `npm run e2e:responsive`: 21 passed; fixtures limpas e verificadas.
-- Nenhuma promoção remota ou remoção do Telegram foi executada.
+- Promoção remota concluída no SHA `898fed4`; API, migrações, Remote MCP e smoke público aprovados. A remoção do Telegram não foi executada.
 
 ## Follow-up contínuo
 

@@ -125,3 +125,16 @@ jobs:
       - name: Configure NPM proxy for remote-mcp
         run: |
           ssh root@${{ secrets.SSH_HOST }} "cd $CODE_DIR && REMOTE_DIR=$REMOTE_DIR CODE_DIR=$CODE_DIR bash apps/remote-mcp/scripts/configure-npm.sh"
+
+      - name: Smoke public Remote MCP route
+        uses: actions/checkout@v6
+
+      - name: Validate public API and MCP route
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Run Remote MCP smoke
+        run: npm run smoke:remote-mcp
+        env:
+          MCP_PUBLIC_URL: https://paridaderisco.blackboxinovacao.com.br
