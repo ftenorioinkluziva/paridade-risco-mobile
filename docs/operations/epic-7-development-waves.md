@@ -18,10 +18,11 @@ Cada story atravessa implementação, quality gate e evidência antes do início
 | 4 | 7.4 — auditoria Telegram | `@dev` | `@qa` | somente coleta; remoção bloqueada até 30 dias e novo GO do `@po` |
 | Release | Epic 7 | `@devops` | `@qa` | regressão, PR, deploy controlado, smoke e rollback prontos |
 
-## Estado inicial
+## Estado atual
 
-- Onda 1: em execução; Story 7.1 já está `InProgress`.
-- Ondas 2 e 3: aguardam o gate da onda anterior.
+- Onda 1: concluída; Story 7.1 está `Done` com gate local `PASS`.
+- Onda 2: iniciada; Story 7.2 segue para implementação pelo `@devops`.
+- Onda 3: aguarda o gate da Onda 2.
 - Onda 4: coleta de telemetria ativa; não bloqueia 7.1–7.3 e não autoriza remoção.
 
 ## Comandos de gate

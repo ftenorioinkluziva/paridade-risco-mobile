@@ -98,7 +98,13 @@ function validatePasswordResetLog(env, compose) {
   if (!output.includes(`Password reset for ${env.E2E_USER_EMAIL}:`)) {
     throw new Error("Password reset log delivery marker was not found");
   }
-  for (const secret of [env.E2E_USER_PASSWORD, env.E2E_AUTH_SECRET, env.E2E_DB_PASSWORD]) {
+  for (const secret of [
+    env.E2E_USER_PASSWORD,
+    env.E2E_AUTH_SECRET,
+    env.E2E_DB_PASSWORD,
+    env.E2E_TELEGRAM_S2S_SECRET,
+    env.E2E_PLUGGY_WEBHOOK_SECRET,
+  ]) {
     if (secret && output.includes(secret)) throw new Error("Sensitive E2E value found in API logs");
   }
   console.log("[e2e] password reset log delivery verified");
@@ -188,7 +194,14 @@ try {
 
   if (mode === "artifact-check") {
     if (testStatus === 0) throw new Error("Artifact probe was expected to fail");
-    validateFailureArtifacts([email, password, authSecret, dbPassword, telegramS2sSecret]);
+    validateFailureArtifacts([
+      email,
+      password,
+      authSecret,
+      dbPassword,
+      telegramS2sSecret,
+      pluggyWebhookSecret,
+    ]);
     exitCode = 0;
   } else {
     exitCode = testStatus;
