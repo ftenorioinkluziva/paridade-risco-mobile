@@ -1,6 +1,6 @@
 # EPIC-7: Observabilidade e experiência de decisão
 
-**Status:** Ready for Development (conditional)  
+**Status:** Ready for Release — runtime gate pending  
 **Owner:** Product / Engineering  
 **Created:** 2026-08-24  
 **Depends on:** Epic 6 (Done)
@@ -50,6 +50,8 @@ O @sm transformou as fatias em stories completas e o @po validou critérios, dep
 
 O desenvolvimento será executado em ondas pelo workflow `story-development-cycle`, conforme `docs/operations/epic-7-development-waves.md`. A Onda 1 iniciou pela Story 7.1; 7.4 permanece limitada à coleta de telemetria.
 
+O fechamento técnico está consolidado em `docs/qa/epic-7-closure-2026-08-24.md`; a promoção aguarda recuperação do Docker Desktop e smoke final.
+
 ## PO Validation
 
 **Verdict:** NO-GO para execução imediata; GO condicional de backlog — 2026-08-24.
@@ -63,3 +65,4 @@ Para a Story 7.4, o período de avaliação é uma janela contínua de 30 dias i
 - 2026-08-24: Epic criado pelo @pm após o fechamento do Epic 6.
 - 2026-08-24: @po revalidou 7.4: CLI de desenvolvimento e MCP permanecem preservados; somente a compatibilidade legada do Telegram pode ser avaliada, condicionada a evidência de uso zero por 30 dias e rollback validado.
 - 2026-08-24: Workflow AIOX em ondas iniciado pela Story 7.1.
+- 2026-08-24: Stories 7.1–7.3 concluídas; release gate final pendente por indisponibilidade do Docker Desktop e Story 7.4 mantida como follow-up de telemetria.
