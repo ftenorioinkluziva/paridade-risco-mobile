@@ -30,6 +30,7 @@
     "e2e:responsive": "node tests/e2e/run.mjs responsive",
     "e2e:webkit": "node tests/e2e/run.mjs webkit",
     "e2e:artifact-check": "node tests/e2e/run.mjs artifact-check",
+    "smoke:remote-mcp": "node scripts/smoke-remote-mcp.mjs",
     "db:generate": "npm run db:generate --workspace @paridade-risco/api",
     "db:migrate": "npm run db:migrate --workspace @paridade-risco/api",
     "db:studio": "npm run db:studio --workspace @paridade-risco/api",
