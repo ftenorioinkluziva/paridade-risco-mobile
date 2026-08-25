@@ -1,6 +1,6 @@
 # EPIC-7: Observabilidade e experiência de decisão
 
-**Status:** Done — delivery scope closed; Story 7.4 follow-up blocked
+**Status:** Done — delivery scope closed; Stories 7.4/7.5 follow-ups pending
 **Owner:** Product / Engineering  
 **Created:** 2026-08-24  
 **Depends on:** Epic 6 (Done)
@@ -43,6 +43,7 @@ O produto já opera com 9 ETFs, scheduler de 7 minutos, Pluggy como fonte operac
 | 7.2 | Observabilidade de quota, scheduler e frescor | `@devops` | `@architect` |
 | 7.3 | Polimento decision-first responsivo | `@ux-design-expert` | `@dev` |
 | 7.4 | Avaliação e retirada controlada de compatibilidade Telegram | `@dev` | `@qa` |
+| 7.5 | Orientar bloqueios e primeiro aporte na tela de investimentos | `@ux-design-expert` | `@dev` |
 
 ## Handoff AIOX
 
@@ -67,3 +68,4 @@ Para a Story 7.4, o período de avaliação é uma janela contínua de 30 dias i
 - 2026-08-24: Workflow AIOX em ondas iniciado pela Story 7.1.
 - 2026-08-24: Stories 7.1–7.3 concluídas; release gate final pendente por indisponibilidade do Docker Desktop e Story 7.4 mantida como follow-up de telemetria.
 - 2026-08-25: Docker Desktop recuperado; API, banco, schedulers, worker e serviços auxiliares recriados e saudáveis. Health HTTP 200, migrations aplicadas, logs de observabilidade verificados, E2E crítico 20 passed/1 skipped e E2E responsivo 21 passed. Epic encerrado no escopo entregue; 7.4 segue bloqueada até a janela de 30 dias.
+- 2026-08-25: Story 7.5 aceita pelo @pm como follow-up pós-fechamento do epic, sem criação de novo epic; desenvolvimento condicionado ao handoff `Ready` da story.

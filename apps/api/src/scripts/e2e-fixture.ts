@@ -22,7 +22,7 @@ import {
 } from "@/db/schema";
 
 type FixtureCommand = "setup" | "cleanup" | "verify-clean" | "scenario";
-type PluggyScenario = "buy" | "sell" | "balanced" | "stale" | "unavailable" | "pending";
+type PluggyScenario = "buy" | "sell" | "balanced" | "stale" | "unavailable" | "pending" | "first-contribution";
 
 const command = process.argv[2] as FixtureCommand | undefined;
 const scenario = process.argv[3] as PluggyScenario | undefined;
@@ -58,8 +58,8 @@ function validateEnvironment() {
   if (password.length < 20) {
     throw new Error("E2E_USER_PASSWORD must contain at least 20 characters");
   }
-  if (command === "scenario" && !["buy", "sell", "balanced", "stale", "unavailable", "pending"].includes(scenario ?? "")) {
-    throw new Error("E2E scenario must be buy, sell, balanced, stale, unavailable or pending");
+  if (command === "scenario" && !["buy", "sell", "balanced", "stale", "unavailable", "pending", "first-contribution"].includes(scenario ?? "")) {
+    throw new Error("E2E scenario must be buy, sell, balanced, stale, unavailable, pending or first-contribution");
   }
 }
 
@@ -98,7 +98,8 @@ async function setupPluggyScenario(selectedScenario: PluggyScenario) {
   const strategicValue = allocations.reduce((sum, allocation) => sum + Number(allocation.targetPercentage) * 100, 0);
   const cashBalance = selectedScenario === "balanced" ? totalValue - strategicValue
     : selectedScenario === "buy" ? 9_900
-      : selectedScenario === "sell" ? 910
+        : selectedScenario === "sell" ? 910
+          : selectedScenario === "first-contribution" ? 4_000
         : 0;
   await db.insert(pluggyAccounts).values({
     id: `e2e-pluggy-account-${namespace}`,
@@ -113,8 +114,10 @@ async function setupPluggyScenario(selectedScenario: PluggyScenario) {
     observedAt,
   });
 
-  const investmentInputs = selectedScenario === "pending"
-    ? [{ asset: null, ticker: "SEM-MAPA", name: "Posição sem mapeamento", value: 1_000 }]
+  const investmentInputs = selectedScenario === "first-contribution"
+    ? []
+    : selectedScenario === "pending"
+      ? [{ asset: null, ticker: "SEM-MAPA", name: "Posição sem mapeamento", value: 1_000 }]
     : allocations.map((allocation) => {
       const price = 100 + fixtureAssets.findIndex((asset) => asset.ticker === allocation.asset.ticker);
       const value = selectedScenario === "balanced"

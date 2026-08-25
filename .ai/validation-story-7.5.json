@@ -1,0 +1,26 @@
+{
+  "story": "docs/stories/7.5.bloqueios-e-primeiro-aporte.story.md",
+  "validatedAt": "2026-08-25T00:00:00-03:00",
+  "validator": "@po",
+  "verdict": "GO",
+  "score": 8,
+  "confidence": "High",
+  "statusTransition": "Draft -> Ready",
+  "checks": {
+    "goalAndContext": "PASS",
+    "technicalGuidance": "PASS",
+    "references": "PASS",
+    "selfContainment": "PASS",
+    "testing": "PASS",
+    "security": "PASS",
+    "taskSequence": "PASS",
+    "codeRabbit": "PASS",
+    "executorAssignment": "PASS",
+    "epicPlacement": "PASS"
+  },
+  "notes": [
+    "O @pm aprovou a story como follow-up pós-fechamento do Epic 7; não é necessário criar um novo epic.",
+    "Os documentos de arquitetura configurados e os fallbacks não existem no checkout; a validação usou código, stories e epic existentes.",
+    "O AC do primeiro aporte foi condicionado à existência de uma cesta ativa; sem cesta, prevalece a orientação de configurar/ativar uma cesta."
+  ]
+}

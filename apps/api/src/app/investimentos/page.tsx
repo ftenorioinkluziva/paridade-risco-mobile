@@ -17,6 +17,7 @@ import {
   usePortfolioSummary,
 } from "@/context/AuthContext";
 import { formatCurrency, formatDateTime, formatPercentage } from "@/lib/formatters";
+import { buildInvestmentPlanGuidance, initialContributionMessage } from "@/lib/investment-plan-guidance";
 import { colors } from "@/theme/colors";
 import { layout } from "@/theme/layout";
 import { typography } from "@/theme/typography";
@@ -73,6 +74,21 @@ export default function InvestimentosPage() {
     : freshnessStatus === "STALE"
       ? "REVISAR SINCRONIZAÇÃO"
       : "SINCRONIZAÇÃO NECESSÁRIA";
+  const planGuidance = plan
+    ? buildInvestmentPlanGuidance({
+      executionReady: plan.executionReady,
+      eligibleForRebalance: plan.eligibleForRebalance,
+      missingProfileFields: plan.missingProfileFields,
+      freshness: plan.freshness,
+      warnings: plan.warnings,
+      targetBasketName: plan.targetBasketName,
+      investedValue,
+      cashForOrders,
+      unresolvedCount: plan.unresolvedCount,
+      analysisStatus: plan.analysisStatus,
+      pendingReviewCount,
+    })
+    : { blockers: [], showInitialContribution: false };
 
   useEffect(() => {
     if (plan && cashForOrdersDraft === "") {
@@ -193,11 +209,30 @@ export default function InvestimentosPage() {
               </div>
               <span style={styles.readOnly}>Somente leitura</span>
             </div>
-            {plan.analysisStatus === "PARCIAL" ? (
-              <InlineAlert title="Análise parcial" message="Existem investimentos sem decisão estratégica. O plano abaixo é indicativo até que todos sejam mapeados ou classificados fora da estratégia." tone="warning" />
-            ) : null}
-            {!plan.executionReady ? (
-              <InlineAlert title="Plano ainda não liberado" message={plan.warnings?.join(" | ") || "Revise os dados pendentes antes de considerar o plano."} tone="warning" />
+            {planGuidance.blockers.length > 0 || planGuidance.showInitialContribution ? (
+              <section style={styles.guidanceSection} aria-label="Orientações da prévia de investimentos">
+                {planGuidance.blockers.length > 0 ? (
+                  <div style={styles.guidanceHeader}>
+                    <div style={styles.sectionLabel}>// PRÓXIMO_PASSO</div>
+                    <h3 style={styles.guidanceTitle}>Resolva os itens abaixo para liberar as sugestões.</h3>
+                  </div>
+                ) : null}
+                <div style={styles.guidanceList}>
+                  {planGuidance.blockers.map((blocker) => (
+                    <InlineAlert
+                      key={blocker.id}
+                      title={blocker.title}
+                      message={blocker.message}
+                      actionLabel={blocker.actionLabel}
+                      onAction={() => router.push(blocker.href)}
+                      tone="warning"
+                    />
+                  ))}
+                  {planGuidance.showInitialContribution ? (
+                    <InlineAlert title="Aporte inicial em simulação" message={initialContributionMessage} tone="warning" />
+                  ) : null}
+                </div>
+              </section>
             ) : null}
             <RebalanceDecisionCard data={plan} isLoading={rebalance.isLoading} error={rebalance.error} showActions={false} showMetrics />
             {actions.length > 0 ? (
@@ -220,15 +255,19 @@ export default function InvestimentosPage() {
               </div>
             ) : (
               <ContentState
-                title="Nenhuma ordem calculada"
-                description="A carteira já está alinhada à cesta ativa ou ainda não há uma ação elegível para este recorte."
-                tone="success"
+                title={planGuidance.blockers.length > 0 ? "Sugestões aguardando dados" : planGuidance.showInitialContribution ? "Prévia do primeiro aporte" : "Nenhuma ordem calculada"}
+                description={planGuidance.blockers.length > 0
+                  ? "Resolva as orientações acima para liberar uma prévia segura da carteira."
+                  : planGuidance.showInitialContribution
+                    ? "A distribuição da cesta ativa será apresentada como simulação, sem executar ordens."
+                    : "A carteira já está alinhada à cesta ativa ou ainda não há uma ação elegível para este recorte."}
+                tone={planGuidance.blockers.length > 0 ? "warning" : "success"}
               />
             )}
           </section>
         ) : null}
 
-        {plan && (pendingReviewCount > 0 || (coverage !== null && coverage < 100)) ? (
+        {plan && planGuidance.blockers.every((blocker) => blocker.id !== "mapping") && (pendingReviewCount > 0 || (coverage !== null && coverage < 100)) ? (
           <section style={styles.coverageGuide}>
             <div>
               <div style={styles.sectionLabel}>// COMO_LER_A_COBERTURA</div>
@@ -305,6 +344,10 @@ const styles: Record<string, React.CSSProperties> = {
   cashInputNotice: { gridColumn: "1 / -1", color: colors.warning, fontSize: 12 },
   section: { display: "flex", flexDirection: "column", gap: layout.space.md },
   sectionHeader: { display: "flex", justifyContent: "space-between", gap: layout.space.md, alignItems: "flex-start", flexWrap: "wrap" },
+  guidanceSection: { display: "flex", flexDirection: "column", gap: layout.space.md, padding: layout.space.md, backgroundColor: colors.surfaceAlt, border: `1px solid ${colors.border}`, borderRadius: layout.radius.md },
+  guidanceHeader: { display: "flex", flexDirection: "column", gap: layout.space.xs },
+  guidanceTitle: { color: colors.text, fontSize: 15, fontWeight: 700, margin: 0 },
+  guidanceList: { display: "flex", flexDirection: "column", gap: layout.space.sm },
   sectionLabel: { color: colors.textSoft, fontFamily: typography.mono, fontSize: 11, fontWeight: 700, letterSpacing: 0.8 },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: 700, marginTop: 5 },
   readOnly: { color: colors.textMuted, fontFamily: typography.mono, fontSize: 11 },

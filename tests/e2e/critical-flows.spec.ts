@@ -31,7 +31,7 @@ function expectStatus(response: APIResponse, status: number) {
   expect(response.status(), `${response.url()} returned ${response.status()}`).toBe(status);
 }
 
-function loadPluggyScenario(scenario: "buy" | "sell" | "balanced" | "stale" | "unavailable" | "pending") {
+function loadPluggyScenario(scenario: "buy" | "sell" | "balanced" | "stale" | "unavailable" | "pending" | "first-contribution") {
   const projectName = requiredEnvironment("E2E_COMPOSE_PROJECT_NAME");
   const result = spawnSync("docker", [
     "compose", "-f", "docker-compose.e2e.yml", "-p", projectName,
@@ -298,6 +298,7 @@ test("Pluggy rebalance covers buy, sell, adjusted, blocked and responsive decisi
       { name: "stale", freshness: "STALE", action: null, executionReady: false },
       { name: "unavailable", freshness: "UNAVAILABLE", action: null, executionReady: false },
       { name: "pending", freshness: "FRESH", action: null, executionReady: false },
+      { name: "first-contribution", freshness: "FRESH", action: null, executionReady: false },
     ] as const;
 
     for (const scenario of scenarios) {
@@ -308,12 +309,48 @@ test("Pluggy rebalance covers buy, sell, adjusted, blocked and responsive decisi
       expect(preview.freshness).toBe(scenario.freshness);
       expect(preview.executionReady).toBe(scenario.executionReady);
       if (scenario.action) expect(preview.actions.some((action: { action: string }) => action.action === scenario.action)).toBe(true);
-      else expect(preview.actions).toHaveLength(0);
+      else if (scenario.name !== "first-contribution") expect(preview.actions).toHaveLength(0);
       if (scenario.name === "pending") {
         expect(preview).toMatchObject({ analysisStatus: "PARCIAL", unresolvedCount: 1 });
       }
+
+      if (scenario.name === "stale" || scenario.name === "unavailable") {
+        await page.goto("/investimentos");
+        await expect(page.getByText("Atualize os dados sincronizados para liberar uma prévia segura da carteira.", { exact: true })).toBeVisible();
+        await page.getByRole("button", { name: "Revisar sincronização" }).click();
+        await expect(page).toHaveURL(/\/pluggy$/);
+      }
+
+      if (scenario.name === "pending") {
+        await page.goto("/investimentos");
+        await expect(page.getByText("Revise os investimentos sincronizados antes de considerar o plano da carteira.", { exact: true })).toBeVisible();
+        await page.getByRole("button", { name: "Revisar mapeamentos" }).first().click();
+        await expect(page).toHaveURL(/\/pluggy$/);
+      }
+
+      if (scenario.name === "first-contribution") {
+        expect(preview).toMatchObject({ investedValue: 0, cashForOrders: 4_000 });
+        await page.goto("/investimentos");
+        await expect(page.getByText("Você ainda não possui posições investidas. O valor informado será usado como simulação de aporte inicial conforme a cesta ativa.", { exact: true })).toBeVisible();
+        await expect(page.getByText("Comprar", { exact: true }).first()).toBeVisible();
+        await expect(page.getByText("Plano ainda não liberado", { exact: true })).toHaveCount(0);
+      }
     }
   }
+
+  loadPluggyScenario("first-contribution");
+  const completeProfile = await request.get("/api/profile");
+  expectStatus(completeProfile, 200);
+  const profile = await completeProfile.json();
+  const incompleteProfile = await request.put("/api/profile", { data: { phone: null, birthDate: null } });
+  expectStatus(incompleteProfile, 200);
+  await page.goto("/investimentos");
+  await expect(page.getByText("Para liberar as sugestões, complete seu perfil com telefone e data de nascimento.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Completar perfil" }).click();
+  await expect(page).toHaveURL(/\/perfil$/);
+  expect(await incompleteProfile.json()).toMatchObject({ phone: null, birthDate: null });
+  const restoredProfile = await request.put("/api/profile", { data: { phone: profile.phone, birthDate: profile.birthDate } });
+  expectStatus(restoredProfile, 200);
 
   loadPluggyScenario("buy");
   await page.goto("/investimentos");

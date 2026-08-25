@@ -1,0 +1,66 @@
+schema: 1
+story: '7.5'
+story_title: 'Orientar bloqueios e primeiro aporte na tela de investimentos'
+gate: PASS
+status_reason: 'Os 12 critérios de aceitação foram rastreados e aprovados por revisão manual e testes determinísticos. Lint, typecheck, testes unitários, E2E crítico e E2E responsivo com Axe passaram, sem alteração de contratos, cálculos ou persistência.'
+reviewer: 'Quinn (Test Architect)'
+reviewed_revision: 'working-tree-sha256:ed359572c73266957b5d26cf3b22492ecfb8d1fc4f9ef071700d66c5c66e2d5e; base:630e133f8496d4c3afe460033533d65d4fdc73ab'
+updated: '2026-08-25T16:22:52-03:00'
+
+top_issues: []
+waiver:
+  active: false
+
+quality_score: 100
+expires: '2026-09-08T16:22:52-03:00'
+
+evidence:
+  tests_reviewed: 172
+  tests_passed: 171
+  risks_identified: 1
+  commands:
+    lint: PASS
+    typecheck: PASS
+    unit_workspaces: 'PASS — 129 tests'
+    e2e_critical: 'PASS — 20 passed, 1 expected skip'
+    e2e_responsive: 'PASS — 22 passed, Axe and overflow checks included'
+    validate_structure: PASS
+    validate_agents: 'PASS — 0 errors, 121 pre-existing framework warnings'
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    ac_gaps: []
+  manual_review:
+    blocker_mapping: 'profile, freshness, mapping, basket and fallback are explicit and ordered'
+    first_contribution: 'separate simulation message; buy suggestions remain visible; no execution claim'
+    technical_code_leakage: 'not found in user-facing guidance'
+    core_changes: 'none'
+  operational_limitation: 'qa-master-checklist.md and configured framework reference documents are absent from this checkout; review continued with qa-review-story.md, qa-gate.md, AGENTS.md and executable gates.'
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'No authentication, authorization, persistence, endpoint or order-execution changes; existing routes only.'
+  performance:
+    status: PASS
+    notes: 'Guidance resolution is pure and synchronous; no new network calls, polling or dependencies.'
+  reliability:
+    status: PASS
+    notes: 'Known blockers have deterministic coverage and a safe fallback; isolated E2E Compose cleanup and fixture verification passed.'
+  maintainability:
+    status: PASS
+    notes: 'User guidance is separated from the page component and covered by focused unit tests; no financial formula is duplicated.'
+  accessibility:
+    status: PASS
+    notes: 'Textual alerts, navigable buttons, semantic section/alert roles, Axe checks and mobile overflow validation passed.'
+  responsiveness:
+    status: PASS
+    notes: 'Desktop and mobile responsive suites passed, including the first-contribution state at 390x844.'
+  core_integrity:
+    status: PASS
+    notes: 'Shared contracts, rebalance formulas, CLI/MCP and Pluggy source behavior were not modified.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Restaurar qa-master-checklist.md e as referências de framework ausentes para reduzir warnings de governança do AIOX.'
+      refs: ['.aiox-core/development/tasks/qa-review-story.md', '.aiox-core/core-config.yaml']
