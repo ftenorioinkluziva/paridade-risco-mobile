@@ -1,6 +1,6 @@
 # EPIC-5: Confiabilidade, simplificação e experiência responsiva
 
-**Status:** Planning
+**Status:** Done
 **Owner:** Product / Architecture
 **Created:** 2026-08-20
 
@@ -98,14 +98,14 @@ baseline auditada
 
 ## Definition of Done
 
-- [ ] As nove stories foram concluídas na ordem compatível com suas dependências.
-- [ ] A suíte E2E cobre autenticação, perfil/cesta, carteira, cotações, rebalanceamento e integrações críticas.
-- [ ] Nenhum consumidor ativo depende de sessão legada de CLI/Telegram.
-- [ ] O vocabulário interno e público vigente usa “ativação de fonte”, com compatibilidade residual explicitamente inventariada ou removida.
-- [ ] As quatro moderadas do toolchain Drizzle não aparecem no audit e as migrações existentes continuam válidas.
-- [ ] As telas críticas passam nos viewports desktop e mobile definidos, sem overflow horizontal e com alvos de toque adequados.
-- [ ] Docker Compose, logs, scheduler de 8 minutos e conjunto de 11 ETFs permanecem validados.
-- [ ] Documentação, contratos e runtime descrevem a mesma solução.
+- [x] As nove stories foram concluídas na ordem compatível com suas dependências.
+- [x] A suíte E2E cobre autenticação, perfil/cesta, carteira, cotações, rebalanceamento e integrações críticas.
+- [x] Nenhum consumidor ativo depende de sessão legada de CLI/Telegram.
+- [x] O vocabulário interno e público vigente usa “ativação de fonte”, com compatibilidade residual explicitamente inventariada ou removida.
+- [x] As quatro moderadas do toolchain Drizzle não aparecem no audit e as migrações existentes continuam válidas.
+- [x] As telas críticas passam nos viewports desktop e mobile definidos, sem overflow horizontal e com alvos de toque adequados.
+- [x] Docker Compose, logs, scheduler de 8 minutos e conjunto de 11 ETFs permanecem validados.
+- [x] Documentação, contratos e runtime descrevem a mesma solução.
 
 ## Referências
 
@@ -123,3 +123,4 @@ baseline auditada
 - 2026-08-20: Epic criado por @pm para o ciclo de confiabilidade, simplificação e responsividade.
 - 2026-08-20: Stories 5.1–5.9 validadas GO por @po; dependência 5.5 → 5.4 explicitada.
 - 2026-08-20: Story 5.1 encerrada administrativamente; próxima elegível: 5.2. [closure-key: 5.1:commit:01af84123e53eab7fea2401b96a3aa60923bb572]
+- 2026-08-24: Epic encerrado após merge `414ac1b`, E2E pós-merge `32730159966` e deploy `32730159903`.
